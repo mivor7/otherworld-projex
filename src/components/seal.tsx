@@ -1,7 +1,8 @@
-// The house mark — an angular OWP monogram in the $RIBBIT coin's glyph
-// language: same luminous green, segmented ring, circuit ticks. Coin = the
-// token, monogram = the house. Static IDs keep it usable in server
-// components; duplicate defs across instances render fine.
+// The house mark v4 — angular OWP monogram in the $RIBBIT coin's glyph
+// language (coin = R, house = OWP). Geometry and gradients mirror
+// src/app/icon.svg and the brand/ exports exactly; keep all three in sync.
+// Static IDs keep it usable in server components; duplicate defs across
+// instances render fine.
 export function SealMark({ size = 36 }: { size?: number }) {
   return (
     <svg
@@ -13,75 +14,70 @@ export function SealMark({ size = 36 }: { size?: number }) {
       aria-label="Other World Projex mark"
     >
       <defs>
-        <radialGradient id="owp3-disc" cx="0.5" cy="0.45" r="0.65">
-          <stop offset="0" stopColor="#122019" />
-          <stop offset="0.75" stopColor="#0a100e" />
-          <stop offset="1" stopColor="#070b0a" />
+        <radialGradient id="owp4-disc" cx="0.5" cy="0.42" r="0.68">
+          <stop offset="0" stopColor="#15241c" />
+          <stop offset="0.55" stopColor="#0c1410" />
+          <stop offset="1" stopColor="#060908" />
         </radialGradient>
-        <linearGradient id="owp3-ring" x1="10" y1="10" x2="86" y2="86" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#b8f7c4" />
-          <stop offset="0.5" stopColor="#5fe98a" />
-          <stop offset="1" stopColor="#2f9a55" />
+        <linearGradient id="owp4-ring" x1="12" y1="10" x2="84" y2="86" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#c8fcd4" />
+          <stop offset="0.45" stopColor="#6ef09a" />
+          <stop offset="1" stopColor="#2d8f52" />
         </linearGradient>
-        <radialGradient id="owp3-halo" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0.55" stopColor="#78f5a0" stopOpacity="0" />
-          <stop offset="0.85" stopColor="#78f5a0" stopOpacity="0.16" />
-          <stop offset="1" stopColor="#78f5a0" stopOpacity="0" />
-        </radialGradient>
-        <filter id="owp3-glow" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="1.5" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+        <linearGradient id="owp4-glyph" x1="20" y1="34" x2="78" y2="62" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#b8f7c4" />
+          <stop offset="0.55" stopColor="#9df7b5" />
+          <stop offset="1" stopColor="#6eea94" />
+        </linearGradient>
       </defs>
 
-      <circle cx="48" cy="48" r="45" fill="url(#owp3-disc)" />
-      <circle cx="48" cy="48" r="45" fill="url(#owp3-halo)" />
-      <circle cx="48" cy="48" r="44" stroke="url(#owp3-ring)" strokeWidth="2" />
+      <circle cx="48" cy="48" r="45.5" fill="url(#owp4-disc)" />
+      <circle cx="48" cy="48" r="44.2" stroke="url(#owp4-ring)" strokeWidth="2.2" />
       <circle
-        cx="48" cy="48" r="39.5"
-        stroke="#5fe98a" strokeOpacity="0.55" strokeWidth="1.4" strokeDasharray="5 3.2"
+        cx="48" cy="48" r="39.2"
+        stroke="#5fe98a" strokeOpacity="0.5" strokeWidth="1.35"
+        strokeDasharray="4.8 3.4" strokeLinecap="round"
       />
+      <circle cx="48" cy="48" r="35.4" stroke="#5fe98a" strokeOpacity="0.18" strokeWidth="0.8" />
 
-      <g stroke="#5fe98a" strokeOpacity="0.7" strokeWidth="1.3" strokeLinecap="round">
-        <path d="M18.5 18.5 L24 24" />
-        <path d="M77.5 18.5 L72 24" />
-        <path d="M18.5 77.5 L24 72" />
-        <path d="M77.5 77.5 L72 72" />
+      <g stroke="#5fe98a" strokeOpacity="0.72" strokeWidth="1.25" strokeLinecap="round">
+        <path d="M18.2 18.2 L23.6 23.6" />
+        <path d="M77.8 18.2 L72.4 23.6" />
+        <path d="M18.2 77.8 L23.6 72.4" />
+        <path d="M77.8 77.8 L72.4 72.4" />
       </g>
       <g fill="#5fe98a">
-        <circle cx="17" cy="17" r="1.6" />
-        <circle cx="79" cy="17" r="1.6" />
-        <circle cx="17" cy="79" r="1.6" />
-        <circle cx="79" cy="79" r="1.6" />
+        <circle cx="16.8" cy="16.8" r="1.55" />
+        <circle cx="79.2" cy="16.8" r="1.55" />
+        <circle cx="16.8" cy="79.2" r="1.55" />
+        <circle cx="79.2" cy="79.2" r="1.55" />
       </g>
 
-      {/* OWP — angular letterforms, chamfered like the coin's R */}
-      <g filter="url(#owp3-glow)">
-        <path
-          fillRule="evenodd"
-          clipRule="evenodd"
-          fill="#9df7b5"
-          d="M24.5 36 L32 36 L36.5 40.5 L36.5 55.5 L32 60 L24.5 60 L20 55.5 L20 40.5 Z
-             M26.5 41 L30 41 L31.5 42.5 L31.5 53.5 L30 55 L26.5 55 L25 53.5 L25 42.5 Z"
-        />
-        <path
-          d="M40 36.5 L43.7 59.5 L48.5 45.5 L53.3 59.5 L57 36.5"
-          stroke="#9df7b5"
-          strokeWidth="5.4"
-          fill="none"
-          strokeLinejoin="miter"
-        />
-        <path
-          fillRule="evenodd"
-          clipRule="evenodd"
-          fill="#9df7b5"
-          d="M61 36 L72.5 36 L77 40.5 L77 46.5 L72.5 51 L66.5 51 L66.5 60 L63.2 60 L61 57.8 Z
-             M66.5 41 L70.8 41 L72 42.2 L72 44.8 L70.8 46 L66.5 46 Z"
-        />
-      </g>
+      {/* O — octagonal / chamfered ring */}
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        fill="url(#owp4-glyph)"
+        d="M23.2 36.2 L31.4 36.2 L36.2 41 L36.2 55 L31.4 59.8 L23.2 59.8 L18.4 55 L18.4 41 Z
+           M25.6 41.4 L29.4 41.4 L31.4 43.4 L31.4 52.6 L29.4 54.6 L25.6 54.6 L23.6 52.6 L23.6 43.4 Z"
+      />
+      {/* W — mitered zigzag, coin-weight stroke */}
+      <path
+        d="M39.6 36.4 L43.5 59.6 L48 46.2 L52.5 59.6 L56.4 36.4"
+        stroke="url(#owp4-glyph)"
+        strokeWidth="5.2"
+        fill="none"
+        strokeLinejoin="miter"
+        strokeLinecap="butt"
+      />
+      {/* P — chamfered bowl + stem */}
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        fill="url(#owp4-glyph)"
+        d="M60.2 36.2 L72.2 36.2 L76.8 40.8 L76.8 47 L72.2 51.6 L65.8 51.6 L65.8 59.8 L62.4 59.8 L60.2 57.6 Z
+           M65.8 40.8 L70.4 40.8 L71.8 42.2 L71.8 45.4 L70.4 46.8 L65.8 46.8 Z"
+      />
     </svg>
   );
 }

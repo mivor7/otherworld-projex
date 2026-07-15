@@ -1,24 +1,57 @@
 <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- OWP house mark v4 — angular monogram in $RIBBIT coin glyph language.
+       Coin = R · House = OWP. No frog. -->
   <defs>
-    <radialGradient id="disc" cx="0.5" cy="0.45" r="0.65">
-      <stop offset="0" stop-color="#122019"/>
-      <stop offset="0.75" stop-color="#0a100e"/>
-      <stop offset="1" stop-color="#070b0a"/>
+    <radialGradient id="disc" cx="0.5" cy="0.42" r="0.68">
+      <stop offset="0" stop-color="#15241c"/>
+      <stop offset="0.55" stop-color="#0c1410"/>
+      <stop offset="1" stop-color="#060908"/>
     </radialGradient>
-    <linearGradient id="ring" x1="10" y1="10" x2="86" y2="86" gradientUnits="userSpaceOnUse">
+    <linearGradient id="ring" x1="12" y1="10" x2="84" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c8fcd4"/>
+      <stop offset="0.45" stop-color="#6ef09a"/>
+      <stop offset="1" stop-color="#2d8f52"/>
+    </linearGradient>
+    <linearGradient id="glyph" x1="20" y1="34" x2="78" y2="62" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#b8f7c4"/>
-      <stop offset="0.5" stop-color="#5fe98a"/>
-      <stop offset="1" stop-color="#2f9a55"/>
+      <stop offset="0.55" stop-color="#9df7b5"/>
+      <stop offset="1" stop-color="#6eea94"/>
     </linearGradient>
   </defs>
-  <circle cx="48" cy="48" r="45" fill="url(#disc)"/>
-  <circle cx="48" cy="48" r="44" stroke="url(#ring)" stroke-width="2.5"/>
-  <circle cx="48" cy="48" r="39.5" stroke="#5fe98a" stroke-opacity="0.55" stroke-width="1.4" stroke-dasharray="5 3.2"/>
-  <path fill-rule="evenodd" clip-rule="evenodd" fill="#9df7b5"
-    d="M24.5 36 L32 36 L36.5 40.5 L36.5 55.5 L32 60 L24.5 60 L20 55.5 L20 40.5 Z
-       M26.5 41 L30 41 L31.5 42.5 L31.5 53.5 L30 55 L26.5 55 L25 53.5 L25 42.5 Z"/>
-  <path d="M40 36.5 L43.7 59.5 L48.5 45.5 L53.3 59.5 L57 36.5" stroke="#9df7b5" stroke-width="5.4" fill="none" stroke-linejoin="miter"/>
-  <path fill-rule="evenodd" clip-rule="evenodd" fill="#9df7b5"
-    d="M61 36 L72.5 36 L77 40.5 L77 46.5 L72.5 51 L66.5 51 L66.5 60 L63.2 60 L61 57.8 Z
-       M66.5 41 L70.8 41 L72 42.2 L72 44.8 L70.8 46 L66.5 46 Z"/>
+
+  <!-- Disc -->
+  <circle cx="48" cy="48" r="45.5" fill="url(#disc)"/>
+  <circle cx="48" cy="48" r="44.2" stroke="url(#ring)" stroke-width="2.2"/>
+  <!-- Segmented tick ring -->
+  <circle cx="48" cy="48" r="39.2" stroke="#5fe98a" stroke-opacity="0.5" stroke-width="1.35" stroke-dasharray="4.8 3.4" stroke-linecap="round"/>
+  <!-- Inner hairline -->
+  <circle cx="48" cy="48" r="35.4" stroke="#5fe98a" stroke-opacity="0.18" stroke-width="0.8"/>
+
+  <!-- Circuit corner ticks -->
+  <g stroke="#5fe98a" stroke-opacity="0.72" stroke-width="1.25" stroke-linecap="round">
+    <path d="M18.2 18.2 L23.6 23.6"/>
+    <path d="M77.8 18.2 L72.4 23.6"/>
+    <path d="M18.2 77.8 L23.6 72.4"/>
+    <path d="M77.8 77.8 L72.4 72.4"/>
+  </g>
+  <g fill="#5fe98a">
+    <circle cx="16.8" cy="16.8" r="1.55"/>
+    <circle cx="79.2" cy="16.8" r="1.55"/>
+    <circle cx="16.8" cy="79.2" r="1.55"/>
+    <circle cx="79.2" cy="79.2" r="1.55"/>
+  </g>
+
+  <!-- O — octagonal / chamfered ring -->
+  <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#glyph)"
+    d="M23.2 36.2 L31.4 36.2 L36.2 41 L36.2 55 L31.4 59.8 L23.2 59.8 L18.4 55 L18.4 41 Z
+       M25.6 41.4 L29.4 41.4 L31.4 43.4 L31.4 52.6 L29.4 54.6 L25.6 54.6 L23.6 52.6 L23.6 43.4 Z"/>
+
+  <!-- W — mitered zigzag, coin-weight stroke -->
+  <path d="M39.6 36.4 L43.5 59.6 L48 46.2 L52.5 59.6 L56.4 36.4"
+        stroke="url(#glyph)" stroke-width="5.2" fill="none" stroke-linejoin="miter" stroke-linecap="butt"/>
+
+  <!-- P — chamfered bowl + stem -->
+  <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#glyph)"
+    d="M60.2 36.2 L72.2 36.2 L76.8 40.8 L76.8 47 L72.2 51.6 L65.8 51.6 L65.8 59.8 L62.4 59.8 L60.2 57.6 Z
+       M65.8 40.8 L70.4 40.8 L71.8 42.2 L71.8 45.4 L70.4 46.8 L65.8 46.8 Z"/>
 </svg>
