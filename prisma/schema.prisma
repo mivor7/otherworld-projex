@@ -1,16 +1,16 @@
 // Other World Projex — data model
-// Dev: SQLite (default). Production (Vercel): switch provider to "postgresql"
-// and set DATABASE_URL to your Postgres connection string, then run
-// `npx prisma migrate deploy`. No enums/Json types are used so the schema
-// works unchanged on both providers.
+// Postgres (Neon). DATABASE_URL is the pooled connection (runtime);
+// DATABASE_URL_UNPOOLED is the direct connection Prisma needs for
+// migrations. Both are auto-injected by the Neon/Vercel integration.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {

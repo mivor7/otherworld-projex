@@ -19,16 +19,16 @@ one transparent treasury.
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript · Tailwind 4 · Prisma (SQLite dev /
-Postgres prod) · @solana/web3.js + wallet-adapter · Anchor (treasury program).
+Next.js 16 (App Router) · TypeScript · Tailwind 4 · Prisma + Postgres (Neon)
+· @solana/web3.js + wallet-adapter · Anchor (treasury program).
 
 ## Local development
 
 ```bash
 npm install
-cp .env.example .env          # defaults work out of the box
-npx prisma migrate dev        # creates dev.db
-npm run db:seed               # demo auctions + bounties
+cp .env.example .env          # fill in the two Neon DATABASE_URLs
+npx prisma migrate dev        # applies migrations to your database
+npm run db:seed               # launch auctions + episode contracts
 DEV_FAUCET=true NEXT_PUBLIC_DEV_FAUCET=true npm run dev
 ```
 
@@ -69,13 +69,13 @@ Money out (never from the web server):
 
 ## Deploying to production (Vercel + same domain)
 
-1. **Database**: create a Postgres DB (Vercel Postgres / Neon / Supabase).
-   In `prisma/schema.prisma` change `provider = "sqlite"` → `"postgresql"`,
-   then `npx prisma migrate dev --name init-pg` locally against it once.
-2. **Vercel**: import the repo, set env vars from `.env.example` —
-   at minimum `DATABASE_URL`, `SESSION_SECRET`, a **paid RPC URL** (both the
+1. **Database**: a Neon Postgres store connected through the Vercel
+   marketplace injects `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED`
+   (direct, used for migrations) automatically.
+2. **Vercel**: import the repo, set the remaining env vars from
+   `.env.example` — at minimum `SESSION_SECRET`, a **paid RPC URL** (both the
    server and `NEXT_PUBLIC_` variants), `TREASURY_WALLET`, `ADMIN_WALLETS`.
-   Build command: `prisma migrate deploy && next build`.
+   The `vercel-build` script runs `prisma migrate deploy` on every deploy.
 3. **Domain**: point `otherworldprojex.com` at the Vercel project
    (Settings → Domains; update the DNS A/CNAME records at the registrar).
 4. **Treasury**: deploy `program/` (see its README), make a
