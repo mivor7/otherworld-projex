@@ -1,26 +1,177 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ——— Other World Projex design tokens: swamp-noir ———
+   Near-black bog background, neon-green signal color, a violet "portal"
+   accent for the otherworld, gold for prizes. Dark theme only, by design. */
+@theme {
+  --color-abyss: #05090b;
+  --color-surface: #0b1311;
+  --color-surface-2: #101c17;
+  --color-edge: #1c2e25;
+  --color-edge-bright: #2c4a39;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-neon: #36f581;
+  --color-neon-soft: #7dffb0;
+  --color-neon-dim: #17864a;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-portal: #a586ff;
+  --color-portal-dim: #5b41b3;
+
+  --color-frost: #e9f6ee;
+  --color-fog: #8ba899;
+  --color-gold: #ffce4f;
+  --color-danger: #ff5470;
+
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-abyss);
+  color: var(--color-frost);
+  font-family: var(--font-display), system-ui, sans-serif;
+}
+
+/* Subtle scanline + radial glow backdrop for the arcade feel. */
+.arcade-bg {
+  background:
+    radial-gradient(1200px 500px at 50% -100px, rgba(54, 245, 129, 0.07), transparent 70%),
+    radial-gradient(800px 400px at 85% 10%, rgba(165, 134, 255, 0.05), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px);
+}
+
+.panel {
+  border-radius: 0.9rem;
+  border: 1px solid var(--color-edge);
+  background: linear-gradient(180deg, var(--color-surface-2), var(--color-surface));
+}
+
+.panel-glow {
+  box-shadow: 0 0 0 1px rgba(54, 245, 129, 0.12), 0 0 40px -12px rgba(54, 245, 129, 0.25);
+}
+
+.neon-text {
+  color: var(--color-neon);
+  text-shadow: 0 0 18px rgba(54, 245, 129, 0.45);
+}
+
+.portal-text {
+  color: var(--color-portal);
+  text-shadow: 0 0 18px rgba(165, 134, 255, 0.4);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.6rem;
+  padding: 0.6rem 1.1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--color-neon);
+  color: #04170c;
+  box-shadow: 0 0 24px -6px rgba(54, 245, 129, 0.55);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-neon-soft);
+}
+.btn-ghost {
+  border-color: var(--color-edge-bright);
+  color: var(--color-frost);
+  background: transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--color-neon-dim);
+  color: var(--color-neon-soft);
+}
+.btn-portal {
+  background: var(--color-portal-dim);
+  color: #f1eaff;
+}
+.btn-portal:hover:not(:disabled) {
+  background: var(--color-portal);
+  color: #14082e;
+}
+
+.input {
+  width: 100%;
+  border-radius: 0.6rem;
+  border: 1px solid var(--color-edge);
+  background: var(--color-abyss);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.92rem;
+  color: var(--color-frost);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.input:focus {
+  border-color: var(--color-neon-dim);
+}
+.input::placeholder {
+  color: #4e6558;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-edge-bright);
+  color: var(--color-fog);
+}
+.badge-live {
+  border-color: rgba(54, 245, 129, 0.4);
+  color: var(--color-neon);
+  background: rgba(54, 245, 129, 0.08);
+}
+.badge-gold {
+  border-color: rgba(255, 206, 79, 0.45);
+  color: var(--color-gold);
+  background: rgba(255, 206, 79, 0.07);
+}
+.badge-portal {
+  border-color: rgba(165, 134, 255, 0.45);
+  color: var(--color-portal);
+  background: rgba(165, 134, 255, 0.08);
+}
+
+.stat-number {
+  font-family: var(--font-mono), monospace;
+  font-weight: 700;
+}
+
+.table-row {
+  border-bottom: 1px solid var(--color-edge);
+}
+.table-row:last-child {
+  border-bottom: none;
+}
+
+/* Restyle the wallet-adapter modal to match the theme. */
+.wallet-adapter-modal-wrapper {
+  background: var(--color-surface-2) !important;
+  border: 1px solid var(--color-edge-bright) !important;
+}
+.wallet-adapter-button-trigger {
+  background: var(--color-neon) !important;
+  color: #04170c !important;
+}
+.wallet-adapter-modal-button-close {
+  background: var(--color-edge) !important;
 }

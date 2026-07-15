@@ -1,0 +1,222 @@
+// Other World Projex — data model
+// Dev: SQLite (default). Production (Vercel): switch provider to "postgresql"
+// and set DATABASE_URL to your Postgres connection string, then run
+// `npx prisma migrate deploy`. No enums/Json types are used so the schema
+// works unchanged on both providers.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  wallet        String   @unique // base58 Solana pubkey
+  createdAt     DateTime @default(now())
+  // Play credits earned by burning $RIBBIT (integer, smallest unit = 1 credit)
+  credits       Int      @default(0)
+  // Auction balance: $RIBBIT deposited to the treasury for bidding (raw token units)
+  ribbitBalance BigInt   @default(0)
+  // Portion of ribbitBalance currently locked in active bids
+  ribbitLocked  BigInt   @default(0)
+  isBanned      Boolean  @default(false)
+
+  burns        BurnEvent[]
+  rounds       GameRound[]
+  bids         Bid[]
+  deposits     Deposit[]
+  withdrawals  Withdrawal[]
+  applications ListingApplication[]
+  scores       ArcadeScore[]
+  seeds        ServerSeed[]
+  ledger       LedgerEntry[]
+}
+
+// Every credit movement is written to an append-only ledger for auditability.
+model LedgerEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  delta     Int // credits, +/-
+  kind      String // "burn" | "wager" | "payout" | "bounty" | "admin"
+  ref       String? // tx signature, round id, bounty id...
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// A verified on-chain burn of $RIBBIT that granted play credits.
+model BurnEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  signature String   @unique // tx signature — unique prevents replay
+  amountRaw BigInt // raw token units burned
+  credits   Int // credits granted
+  createdAt DateTime @default(now())
+}
+
+// Provably-fair server seed (commit-reveal). Hash is shown before play;
+// seed is revealed after rotation so players can verify every round.
+model ServerSeed {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  seed       String // hex, secret until revealed
+  seedHash   String // sha256(seed) hex, public immediately
+  nonce      Int       @default(0) // increments per round
+  active     Boolean   @default(true)
+  revealedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  rounds GameRound[]
+
+  @@index([userId, active])
+}
+
+model GameRound {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  seedId     String
+  seed       ServerSeed @relation(fields: [seedId], references: [id])
+  game       String // "flip" | "dice"
+  nonce      Int
+  clientSeed String
+  params     String // JSON: game-specific inputs (side, target...)
+  outcome    String // JSON: result details
+  wager      Int // credits
+  payout     Int // credits (0 on loss)
+  houseTake  Int // credits kept by house on this round (edge portion)
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([game, createdAt])
+}
+
+// ------------------------- Auction house -------------------------
+
+// $RIBBIT deposited to the treasury token account to fund bidding.
+model Deposit {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  signature String   @unique
+  amountRaw BigInt
+  createdAt DateTime @default(now())
+}
+
+model Withdrawal {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  amountRaw   BigInt
+  destination String // wallet pubkey
+  status      String    @default("pending") // "pending" | "sent" | "rejected"
+  signature   String? // payout tx signature once sent
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([status, createdAt])
+}
+
+model Auction {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  imageUrl     String?
+  category     String   @default("collectible")
+  sellerWallet String? // null = house listing
+  // amounts in raw $RIBBIT units
+  startBidRaw  BigInt
+  minIncrement BigInt
+  currentRaw   BigInt   @default(0)
+  winnerUserId String?
+  status       String   @default("live") // "live" | "settled" | "cancelled"
+  startsAt     DateTime @default(now())
+  endsAt       DateTime
+  createdAt    DateTime @default(now())
+
+  bids Bid[]
+
+  @@index([status, endsAt])
+}
+
+model Bid {
+  id        String   @id @default(cuid())
+  auctionId String
+  auction   Auction  @relation(fields: [auctionId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amountRaw BigInt
+  // "active" = current high bid (funds locked), "outbid" = released, "won"
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  @@index([auctionId, createdAt])
+}
+
+// Community members apply to list items in the auction house.
+model ListingApplication {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  description String
+  imageUrl    String?
+  category    String   @default("collectible")
+  askRaw      BigInt // suggested starting bid, raw $RIBBIT
+  contact     String? // X handle / discord etc.
+  status      String   @default("pending") // "pending" | "approved" | "rejected"
+  reviewNote  String?
+  createdAt   DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+// ------------------------- Bounties & competitions -------------------------
+
+model Bounty {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  game        String? // linked game for leaderboard bounties ("hopper", "flip", "dice")
+  kind        String   @default("leaderboard") // "leaderboard" | "challenge"
+  prizeRibbit BigInt // prize pool in raw $RIBBIT units
+  prizeText   String? // display override e.g. "5,000 $RIBBIT + badge"
+  status      String   @default("open") // "open" | "closed" | "paid"
+  startsAt    DateTime @default(now())
+  endsAt      DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([status, endsAt])
+}
+
+model ArcadeScore {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  game      String // "hopper"
+  score     Int
+  runToken  String   @unique // server-issued token, one score per run
+  createdAt DateTime @default(now())
+
+  @@index([game, score])
+}
+
+// Treasury movements mirrored off-chain for the transparency dashboard.
+model TreasuryEvent {
+  id        String   @id @default(cuid())
+  kind      String // "house_take" | "payout" | "prize" | "deposit" | "ops"
+  amount    BigInt // lamports (SOL) or raw RIBBIT depending on `asset`
+  asset     String   @default("RIBBIT") // "SOL" | "RIBBIT" | "CREDITS"
+  note      String?
+  ref       String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

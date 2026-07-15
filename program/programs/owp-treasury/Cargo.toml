@@ -1,0 +1,20 @@
+[package]
+name = "owp-treasury"
+version = "0.1.0"
+description = "Other World Projex treasury vault"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "owp_treasury"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = "0.31.1"

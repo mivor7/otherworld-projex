@@ -1,0 +1,49 @@
+import { NextResponse } from "next/server";
+import { ZodError } from "zod";
+import { getSession, isAdminWallet, type Session } from "./session";
+import { jsonSafe } from "./db";
+import { InsufficientCredits } from "./credits";
+
+export function ok(data: unknown, init?: number) {
+  return NextResponse.json(jsonSafe(data), { status: init ?? 200 });
+}
+
+export function err(message: string, status = 400) {
+  return NextResponse.json({ error: message }, { status });
+}
+
+export class ApiError extends Error {
+  constructor(message: string, public status = 400) {
+    super(message);
+  }
+}
+
+export async function requireSession(): Promise<Session> {
+  const session = await getSession();
+  if (!session) throw new ApiError("Sign in with your wallet first", 401);
+  return session;
+}
+
+export async function requireAdmin(): Promise<Session> {
+  const session = await requireSession();
+  if (!isAdminWallet(session.wallet)) throw new ApiError("Admin only", 403);
+  return session;
+}
+
+/** Wrap a route handler with uniform error handling. */
+export function handler<A extends unknown[]>(
+  fn: (...args: A) => Promise<Response>
+): (...args: A) => Promise<Response> {
+  return async (...args: A) => {
+    try {
+      return await fn(...args);
+    } catch (e) {
+      if (e instanceof ApiError) return err(e.message, e.status);
+      if (e instanceof InsufficientCredits) return err("Insufficient credits", 400);
+      if (e instanceof ZodError)
+        return err(e.issues.map((i) => i.message).join("; "), 422);
+      console.error(e);
+      return err("Internal error", 500);
+    }
+  };
+}

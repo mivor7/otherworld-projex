@@ -1,0 +1,28 @@
+import { handler, ok, requireSession } from "@/lib/api";
+import { prisma } from "@/lib/db";
+
+export const GET = handler(async () => {
+  const session = await requireSession();
+  const rounds = await prisma.gameRound.findMany({
+    where: { userId: session.userId },
+    orderBy: { createdAt: "desc" },
+    take: 25,
+    include: { seed: { select: { seedHash: true, seed: true, active: true } } },
+  });
+  return ok(
+    rounds.map((r) => ({
+      id: r.id,
+      game: r.game,
+      nonce: r.nonce,
+      clientSeed: r.clientSeed,
+      params: JSON.parse(r.params),
+      outcome: JSON.parse(r.outcome),
+      wager: r.wager,
+      payout: r.payout,
+      seedHash: r.seed.seedHash,
+      // Server seed only exposed after rotation (commit–reveal).
+      serverSeed: r.seed.active ? null : r.seed.seed,
+      createdAt: r.createdAt,
+    }))
+  );
+});
