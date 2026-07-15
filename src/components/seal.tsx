@@ -1,12 +1,8 @@
-// The house seal — faceted frog on a hex plate. Vector twin of the raster
-// seal art, crisp at every size from favicon to hero. Gradient IDs are
-// static: multiple instances per page share identical defs, which renders
-// fine everywhere and keeps this usable in server components.
+// The house mark — companion piece to the $RIBBIT coin: same luminous
+// green, segmented ring and circuit ticks, with the angular frog glyph at
+// the center. Static IDs keep it usable in server components; duplicate
+// defs across instances render fine.
 export function SealMark({ size = 36 }: { size?: number }) {
-  const plate = "owpseal-plate";
-  const rim = "owpseal-rim";
-  const frog = "owpseal-frog";
-  const glow = "owpseal-glow";
   return (
     <svg
       width={size}
@@ -14,81 +10,70 @@ export function SealMark({ size = 36 }: { size?: number }) {
       viewBox="0 0 96 96"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Other World Projex seal"
+      aria-label="Other World Projex mark"
     >
       <defs>
-        <linearGradient id={plate} x1="48" y1="6" x2="48" y2="90" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#232d2a" />
-          <stop offset="1" stopColor="#0b100f" />
-        </linearGradient>
-        <linearGradient id={rim} x1="14" y1="14" x2="82" y2="86" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#8be79e" />
-          <stop offset="0.55" stopColor="#3f9d5f" />
-          <stop offset="1" stopColor="#8b79c9" />
-        </linearGradient>
-        <linearGradient id={frog} x1="30" y1="30" x2="66" y2="66" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#a9f5b8" />
-          <stop offset="1" stopColor="#4fc776" />
-        </linearGradient>
-        <radialGradient id={glow} cx="0.5" cy="0.52" r="0.5">
-          <stop offset="0" stopColor="#7dffb0" stopOpacity="0.5" />
-          <stop offset="1" stopColor="#7dffb0" stopOpacity="0" />
+        <radialGradient id="owp2-disc" cx="0.5" cy="0.45" r="0.65">
+          <stop offset="0" stopColor="#122019" />
+          <stop offset="0.75" stopColor="#0a100e" />
+          <stop offset="1" stopColor="#070b0a" />
         </radialGradient>
+        <linearGradient id="owp2-ring" x1="10" y1="10" x2="86" y2="86" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#b8f7c4" />
+          <stop offset="0.5" stopColor="#5fe98a" />
+          <stop offset="1" stopColor="#2f9a55" />
+        </linearGradient>
+        <radialGradient id="owp2-halo" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0.55" stopColor="#78f5a0" stopOpacity="0" />
+          <stop offset="0.85" stopColor="#78f5a0" stopOpacity="0.16" />
+          <stop offset="1" stopColor="#78f5a0" stopOpacity="0" />
+        </radialGradient>
+        <filter id="owp2-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="2.2" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
-      <polygon
-        points="88,48 68,82.6 28,82.6 8,48 28,13.4 68,13.4"
-        fill={`url(#${plate})`}
-        stroke={`url(#${rim})`}
-        strokeWidth="3.5"
-        strokeLinejoin="round"
+
+      <circle cx="48" cy="48" r="45" fill="url(#owp2-disc)" />
+      <circle cx="48" cy="48" r="45" fill="url(#owp2-halo)" />
+
+      <circle cx="48" cy="48" r="44" stroke="url(#owp2-ring)" strokeWidth="2" />
+      <circle
+        cx="48" cy="48" r="39.5"
+        stroke="#5fe98a" strokeOpacity="0.55" strokeWidth="1.4" strokeDasharray="5 3.2"
       />
-      <polygon
-        points="83,48 65.5,78.3 30.5,78.3 13,48 30.5,17.7 65.5,17.7"
-        fill="none"
-        stroke="#8be79e"
-        strokeOpacity="0.14"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-      <circle cx="48" cy="49" r="29" stroke="#ffffff" strokeOpacity="0.09" strokeWidth="1" />
-      <circle cx="48" cy="49" r="25.5" stroke="#8be79e" strokeOpacity="0.18" strokeWidth="0.8" strokeDasharray="2.5 4" />
-      <circle cx="48" cy="49" r="24" fill={`url(#${glow})`} />
-      {/* faceted frog head */}
+      <circle cx="48" cy="48" r="35.5" stroke="#5fe98a" strokeOpacity="0.2" strokeWidth="0.8" />
+
+      <g stroke="#5fe98a" strokeOpacity="0.7" strokeWidth="1.3" strokeLinecap="round">
+        <path d="M18.5 18.5 L24 24" />
+        <path d="M77.5 18.5 L72 24" />
+        <path d="M18.5 77.5 L24 72" />
+        <path d="M77.5 77.5 L72 72" />
+      </g>
+      <g fill="#5fe98a">
+        <circle cx="17" cy="17" r="1.6" />
+        <circle cx="79" cy="17" r="1.6" />
+        <circle cx="17" cy="79" r="1.6" />
+        <circle cx="79" cy="79" r="1.6" />
+      </g>
+
+      <g filter="url(#owp2-glow)">
+        <path
+          d="M28 52.5 L29 42 L32 33.5 L38.5 31 L43.5 36 L48 37.2 L52.5 36 L57.5 31 L64 33.5 L67 42 L68 52.5 L59 61 L48 63.5 L37 61 Z"
+          fill="#9df7b5"
+        />
+      </g>
+      <circle cx="37" cy="38" r="4.2" fill="#0a100e" />
+      <circle cx="59" cy="38" r="4.2" fill="#0a100e" />
+      <ellipse cx="37" cy="38" rx="1.1" ry="2.9" fill="#9df7b5" />
+      <ellipse cx="59" cy="38" rx="1.1" ry="2.9" fill="#9df7b5" />
+      <path d="M44.6 63.3 L48 58.8 L51.4 63.3 Z" fill="#0a100e" />
       <path
-        d="M26 52 L27 42 L30 33 L37 30.5 L42 35.5 L48 37 L54 35.5 L59 30.5 L66 33 L69 42 L70 52 L60 61 L48 63.5 L36 61 Z"
-        fill={`url(#${frog})`}
-        stroke="#d9c66b"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M42 35.5 L48 47 L54 35.5 M48 47 L48 63.5 M27 42 L42 35.5 M69 42 L54 35.5 M26 52 L48 47 L70 52"
-        stroke="#d9c66b"
-        strokeOpacity="0.32"
-        strokeWidth="0.7"
-        fill="none"
-      />
-      <circle cx="36" cy="37" r="4.4" fill="#0b100f" />
-      <circle cx="60" cy="37" r="4.4" fill="#0b100f" />
-      <ellipse cx="36" cy="37" rx="1.15" ry="3" fill="#8be79e" />
-      <ellipse cx="60" cy="37" rx="1.15" ry="3" fill="#8be79e" />
-      <circle cx="44.5" cy="48.5" r="0.9" fill="#0b100f" fillOpacity="0.75" />
-      <circle cx="51.5" cy="48.5" r="0.9" fill="#0b100f" fillOpacity="0.75" />
-      <path
-        d="M32 53.5 Q48 57 64 53.5"
-        stroke="#0b100f"
-        strokeOpacity="0.5"
-        strokeWidth="1.1"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <path
-        d="M34 69.5 q14 4 28 0"
-        stroke="#8be79e"
-        strokeOpacity="0.4"
-        strokeWidth="1.1"
-        fill="none"
-        strokeLinecap="round"
+        d="M34.5 51.5 Q48 55 61.5 51.5"
+        stroke="#0a100e" strokeOpacity="0.65" strokeWidth="1.6" fill="none" strokeLinecap="round"
       />
     </svg>
   );

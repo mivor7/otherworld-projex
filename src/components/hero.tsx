@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Ticker } from "./ticker";
+import { HeroScene } from "./hero-scene";
 
 export function LivePulse({ label = "Live" }: { label?: string }) {
   return (
@@ -25,6 +26,7 @@ export function PageHero({
   imagePosition,
   compact = false,
   brand = false,
+  interactive = false,
   stats,
 }: {
   kicker?: string;
@@ -37,17 +39,22 @@ export function PageHero({
   imagePosition?: string;
   compact?: boolean;
   brand?: boolean;
+  interactive?: boolean;
   stats?: { value: string; label: string }[];
 }) {
   return (
     <section className={`page-hero${compact ? " page-hero--compact" : ""}`}>
-      <div
-        className="page-hero-bg"
-        style={{
-          backgroundImage: `url(${image})`,
-          ...(imagePosition ? { backgroundPosition: imagePosition } : {}),
-        }}
-      />
+      {interactive ? (
+        <HeroScene image={image} imagePosition={imagePosition} />
+      ) : (
+        <div
+          className="page-hero-bg"
+          style={{
+            backgroundImage: `url(${image})`,
+            ...(imagePosition ? { backgroundPosition: imagePosition } : {}),
+          }}
+        />
+      )}
       <div className="page-hero-overlay" />
       <div className="page-hero-frame" aria-hidden />
 

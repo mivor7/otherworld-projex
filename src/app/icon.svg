@@ -1,24 +1,24 @@
 <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="plate" x1="48" y1="6" x2="48" y2="90" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#232d2a"/>
-      <stop offset="1" stop-color="#0b100f"/>
-    </linearGradient>
-    <linearGradient id="rim" x1="14" y1="14" x2="82" y2="86" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#8be79e"/>
-      <stop offset="0.55" stop-color="#3f9d5f"/>
-      <stop offset="1" stop-color="#8b79c9"/>
-    </linearGradient>
-    <linearGradient id="frog" x1="30" y1="30" x2="66" y2="66" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#a9f5b8"/>
-      <stop offset="1" stop-color="#4fc776"/>
+    <radialGradient id="disc" cx="0.5" cy="0.45" r="0.65">
+      <stop offset="0" stop-color="#122019"/>
+      <stop offset="0.75" stop-color="#0a100e"/>
+      <stop offset="1" stop-color="#070b0a"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="10" y1="10" x2="86" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#b8f7c4"/>
+      <stop offset="0.5" stop-color="#5fe98a"/>
+      <stop offset="1" stop-color="#2f9a55"/>
     </linearGradient>
   </defs>
-  <polygon points="88,48 68,82.6 28,82.6 8,48 28,13.4 68,13.4" fill="url(#plate)" stroke="url(#rim)" stroke-width="3.5" stroke-linejoin="round"/>
-  <path d="M26 52 L27 42 L30 33 L37 30.5 L42 35.5 L48 37 L54 35.5 L59 30.5 L66 33 L69 42 L70 52 L60 61 L48 63.5 L36 61 Z" fill="url(#frog)" stroke="#d9c66b" stroke-width="1.3" stroke-linejoin="round"/>
-  <circle cx="36" cy="37" r="4.4" fill="#0b100f"/>
-  <circle cx="60" cy="37" r="4.4" fill="#0b100f"/>
-  <ellipse cx="36" cy="37" rx="1.15" ry="3" fill="#8be79e"/>
-  <ellipse cx="60" cy="37" rx="1.15" ry="3" fill="#8be79e"/>
-  <path d="M32 53.5 Q48 57 64 53.5" stroke="#0b100f" stroke-opacity="0.5" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+  <circle cx="48" cy="48" r="45" fill="url(#disc)"/>
+  <circle cx="48" cy="48" r="44" stroke="url(#ring)" stroke-width="2.5"/>
+  <circle cx="48" cy="48" r="39.5" stroke="#5fe98a" stroke-opacity="0.55" stroke-width="1.4" stroke-dasharray="5 3.2"/>
+  <path d="M28 52.5 L29 42 L32 33.5 L38.5 31 L43.5 36 L48 37.2 L52.5 36 L57.5 31 L64 33.5 L67 42 L68 52.5 L59 61 L48 63.5 L37 61 Z" fill="#9df7b5"/>
+  <circle cx="37" cy="38" r="4.2" fill="#0a100e"/>
+  <circle cx="59" cy="38" r="4.2" fill="#0a100e"/>
+  <ellipse cx="37" cy="38" rx="1.1" ry="2.9" fill="#9df7b5"/>
+  <ellipse cx="59" cy="38" rx="1.1" ry="2.9" fill="#9df7b5"/>
+  <path d="M44.6 63.3 L48 58.8 L51.4 63.3 Z" fill="#0a100e"/>
+  <path d="M34.5 51.5 Q48 55 61.5 51.5" stroke="#0a100e" stroke-opacity="0.65" stroke-width="1.6" fill="none" stroke-linecap="round"/>
 </svg>
