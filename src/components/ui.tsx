@@ -53,8 +53,13 @@ export function Countdown({ to }: { to: string | Date }) {
   const str =
     d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${sec}s` : `${m}m ${sec}s`;
   const urgent = ms < 10 * 60 * 1000;
+  const critical = ms < 60 * 1000;
   return (
-    <span className={`stat-number ${urgent ? "text-gold" : "text-frost"}`}>{str}</span>
+    <span
+      className={`stat-number ${urgent ? "text-gold" : "text-frost"} ${critical ? "countdown-pulse" : ""}`}
+    >
+      {str}
+    </span>
   );
 }
 

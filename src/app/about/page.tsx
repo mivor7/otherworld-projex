@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHero } from "@/components/hero";
 import { Reveal } from "@/components/reveal";
+import { CopyChip } from "@/components/copy-chip";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 
 export const metadata = {
@@ -175,12 +176,15 @@ export default function AboutPage() {
               held by the treasury. It is the only currency the house accepts:
               burn it to play, bid it on lots, win it from bounty pools.
             </p>
-            <code
-              className="mono text-xs rounded-md border px-3.5 py-2.5 inline-block break-all mb-5"
-              style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
-            >
-              {CLIENT_CONFIG.ribbitMint}
-            </code>
+            <div className="flex items-center gap-2 flex-wrap mb-5">
+              <code
+                className="mono text-xs rounded-md border px-3.5 py-2.5 inline-block break-all"
+                style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
+              >
+                {CLIENT_CONFIG.ribbitMint}
+              </code>
+              <CopyChip text={CLIENT_CONFIG.ribbitMint} />
+            </div>
             <div className="flex flex-wrap gap-2.5">
               <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
                 pump.fun ↗

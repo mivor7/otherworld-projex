@@ -879,6 +879,115 @@ h1, h2, h3, h4 {
   to { opacity: 1; }
 }
 
+/* ── Micro-details ── */
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Card media: bottom scrim so badges never fight the art, plus the fine
+   inner "print edge" from the house heroes. */
+.card-media::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 36%;
+  background: linear-gradient(0deg, oklch(0.1 0.006 270 / 0.5), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+.card-media::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid oklch(1 0 0 / 0.06);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 1;
+}
+.card-media .badge {
+  z-index: 2;
+}
+
+/* Etched double-border for the most important panels. */
+.panel-etched {
+  position: relative;
+}
+.panel-etched::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid oklch(1 0 0 / 0.05);
+  border-radius: calc(var(--radius-lg) - 4px);
+  pointer-events: none;
+}
+
+/* Quiet row hover on data tables. */
+tr.table-row {
+  transition: background 0.12s;
+}
+tr.table-row:hover {
+  background: oklch(1 0 0 / 0.025);
+}
+
+/* Numeric inputs: no native spinners — quick-amount chips do that job. */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Live dot: faint bloom. */
+.live-dot {
+  box-shadow: 0 0 6px oklch(0.78 0.11 150 / 0.7);
+}
+
+/* Countdown: urgency pulse inside the final minute. */
+.countdown-pulse {
+  animation: countdown-pulse 1s ease-in-out infinite;
+}
+@keyframes countdown-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .countdown-pulse { animation: none; }
+}
+
+/* Circuit-mesh band — bg-mesh art at whisper volume behind a section. */
+.mesh-band {
+  position: relative;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--hairline);
+  overflow: hidden;
+  isolation: isolate;
+}
+.mesh-band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/art/bg-mesh.jpg") center / cover;
+  opacity: 0.14;
+  z-index: -1;
+}
+.mesh-band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 50% 0%, transparent 40%, oklch(0.12 0.008 270 / 0.9));
+  z-index: -1;
+}
+
+/* Ticker items become links. */
+a.ticker-item:hover {
+  color: var(--color-frost);
+}
+
 /* ── Accessibility: visible keyboard focus ── */
 a:focus-visible,
 button:focus-visible,

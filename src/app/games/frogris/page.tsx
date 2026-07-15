@@ -39,6 +39,7 @@ type Game = {
   lines: number;
   over: boolean;
   started: boolean;
+  paused: boolean;
   dropMs: number;
   acc: number;
   last: number;
@@ -74,7 +75,7 @@ export default function FrogrisPage() {
   const nextRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const runTokenRef = useRef<string | null>(null);
-  const [hud, setHud] = useState({ score: 0, lines: 0, level: 0, over: true, started: false });
+  const [hud, setHud] = useState({ score: 0, lines: 0, level: 0, over: true, started: false, paused: false });
   const [board, setBoard] = useState<{ rank: number; player: string; score: number }[]>([]);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
@@ -170,6 +171,7 @@ export default function FrogrisPage() {
       lines: 0,
       over: false,
       started: true,
+      paused: false,
       dropMs: 760,
       acc: 0,
       last: performance.now(),
@@ -180,13 +182,13 @@ export default function FrogrisPage() {
 
   const move = useCallback((dx: number) => {
     const g = gameRef.current;
-    if (!g || g.over) return;
+    if (!g || g.over || g.paused) return;
     if (!collides(g, g.piece, g.rot, g.x + dx, g.y)) g.x += dx;
   }, []);
 
   const rotate = useCallback((dir: 1 | -1) => {
     const g = gameRef.current;
-    if (!g || g.over) return;
+    if (!g || g.over || g.paused) return;
     const states = PIECES[g.piece].cells.length;
     const rot = (g.rot + dir + states) % states;
     for (const kick of [0, -1, 1, -2, 2]) {
@@ -200,14 +202,14 @@ export default function FrogrisPage() {
 
   const softDrop = useCallback(() => {
     const g = gameRef.current;
-    if (!g || g.over) return;
+    if (!g || g.over || g.paused) return;
     if (!collides(g, g.piece, g.rot, g.x, g.y + 1)) g.y += 1;
     else lock(g);
   }, [lock]);
 
   const hardDrop = useCallback(() => {
     const g = gameRef.current;
-    if (!g || g.over) return;
+    if (!g || g.over || g.paused) return;
     while (!collides(g, g.piece, g.rot, g.x, g.y + 1)) g.y += 1;
     lock(g);
   }, [lock]);
@@ -220,7 +222,7 @@ export default function FrogrisPage() {
         start();
         return;
       }
-      if (!g || g.over) return;
+      if (!g || g.over || g.paused) return;
       switch (e.key) {
         case "ArrowLeft": case "a": e.preventDefault(); move(-1); break;
         case "ArrowRight": case "d": e.preventDefault(); move(1); break;
@@ -258,7 +260,7 @@ export default function FrogrisPage() {
 
     const tick = (now: number) => {
       const g = gameRef.current;
-      if (g && !g.over) {
+      if (g && !g.over && !g.paused) {
         g.acc += now - g.last;
         g.last = now;
         while (g.acc >= g.dropMs) {
@@ -311,8 +313,8 @@ export default function FrogrisPage() {
         setHud((h) => {
           const level = Math.floor(g.lines / 10);
           return h.score !== g.score || h.lines !== g.lines || h.level !== level ||
-            h.over !== g.over || h.started !== g.started
-            ? { score: g.score, lines: g.lines, level, over: g.over, started: g.started }
+            h.over !== g.over || h.started !== g.started || h.paused !== g.paused
+            ? { score: g.score, lines: g.lines, level, over: g.over, started: g.started, paused: g.paused }
             : h;
         });
       }
@@ -342,6 +344,14 @@ export default function FrogrisPage() {
               className="rounded-lg border"
               style={{ borderColor: "var(--hairline-strong)" }}
             />
+            {hud.paused && !hud.over && (
+              <div
+                className="absolute inset-0 flex items-center justify-center rounded-lg"
+                style={{ background: "oklch(0.12 0.008 270 / 0.7)" }}
+              >
+                <span className="badge badge-live">Paused — press P</span>
+              </div>
+            )}
             {hud.over && (
               <div
                 className="absolute inset-0 flex flex-col items-center justify-center rounded-lg"

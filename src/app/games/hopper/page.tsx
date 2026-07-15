@@ -25,6 +25,7 @@ type GameState = {
   level: number;
   over: boolean;
   started: boolean;
+  paused: boolean;
 };
 
 const CAR_COLORS = ["#a586ff", "#ff5470", "#ffce4f", "#4fc3ff"];
@@ -62,9 +63,10 @@ export default function HopperPage() {
     level: 0,
     over: true,
     started: false,
+    paused: false,
   });
   const runTokenRef = useRef<string | null>(null);
-  const [hud, setHud] = useState({ score: 0, lives: 3, over: true, started: false });
+  const [hud, setHud] = useState({ score: 0, lives: 3, over: true, started: false, paused: false });
   const [board, setBoard] = useState<{ rank: number; player: string; score: number }[]>([]);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
@@ -112,12 +114,13 @@ export default function HopperPage() {
     s.level = 0;
     s.over = false;
     s.started = true;
+    s.paused = false;
   }, [me.signedIn]);
 
   const hop = useCallback(
     (dc: number, dr: number) => {
       const s = stateRef.current;
-      if (s.over) return;
+      if (s.over || s.paused) return;
       const col = Math.min(COLS - 1, Math.max(0, s.frog.col + dc));
       const row = Math.min(ROWS - 1, Math.max(0, s.frog.row + dr));
       if (dr < 0 && row < s.frog.row) s.score += 1;
@@ -149,6 +152,9 @@ export default function HopperPage() {
         e.preventDefault();
         start();
       }
+      if (e.key === "p" && stateRef.current.started && !stateRef.current.over) {
+        stateRef.current.paused = !stateRef.current.paused;
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -162,7 +168,7 @@ export default function HopperPage() {
 
     const tick = () => {
       const s = stateRef.current;
-      if (!s.over) {
+      if (!s.over && !s.paused) {
         // Move cars & wrap.
         for (const car of s.cars) {
           car.x += car.speed;
@@ -220,8 +226,9 @@ export default function HopperPage() {
       ctx.textBaseline = "alphabetic";
 
       setHud((h) =>
-        h.score !== s.score || h.lives !== s.lives || h.over !== s.over || h.started !== s.started
-          ? { score: s.score, lives: s.lives, over: s.over, started: s.started }
+        h.score !== s.score || h.lives !== s.lives || h.over !== s.over ||
+        h.started !== s.started || h.paused !== s.paused
+          ? { score: s.score, lives: s.lives, over: s.over, started: s.started, paused: s.paused }
           : h
       );
       raf = requestAnimationFrame(tick);
@@ -253,6 +260,14 @@ export default function HopperPage() {
               height={H}
               className="w-full rounded-lg border border-edge"
             />
+            {hud.paused && !hud.over && (
+              <div
+                className="absolute inset-0 flex items-center justify-center rounded-lg"
+                style={{ background: "oklch(0.12 0.008 270 / 0.7)" }}
+              >
+                <span className="badge badge-live">Paused — press P</span>
+              </div>
+            )}
             {hud.over && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-abyss/80 rounded-lg">
                 {hud.started && (

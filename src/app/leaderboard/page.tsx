@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHero } from "@/components/hero";
+import { EmptyState } from "@/components/empty-state";
 
 type Row = { rank: number; player: string; score: number; volume?: number };
 
@@ -101,14 +102,17 @@ export default function LeaderboardPage() {
             ))}
           </div>
         ) : rows.length === 0 ? (
-          <div className="p-12 text-center text-fog text-sm">
-            No {meta.label} scores yet — be the first.{" "}
-            <Link
-              href={meta.kind === "arcade" ? `/games/${game}` : `/games/${game}`}
-              className="text-neon hover:underline"
-            >
-              Take the seat →
-            </Link>
+          <div className="p-4">
+            <EmptyState
+              image="/art/lot-card-shark.jpg"
+              title={`No ${meta.label} entries yet`}
+              hint="The podium is open — the first score takes it."
+              action={
+                <Link href={`/games/${game}`} className="btn btn-primary">
+                  Take the seat →
+                </Link>
+              }
+            />
           </div>
         ) : (
           <table className="w-full text-sm">

@@ -136,7 +136,7 @@ export default function AuctionDetailPage({
 
         {/* Bid rail */}
         <div className="md:sticky md:top-24 space-y-4">
-          <div className="panel panel-glow p-6">
+          <div className="panel panel-glow panel-etched p-6">
             <div className="flex justify-between items-start mb-5">
               <div>
                 <div className="kicker mb-1.5">

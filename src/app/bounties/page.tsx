@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { PageHero } from "@/components/hero";
 import { Countdown } from "@/components/ui";
 import { RowSkeleton } from "@/components/skeletons";
+import { EmptyState } from "@/components/empty-state";
 import { fmtRibbit } from "@/lib/client-config";
 
 type Bounty = {
@@ -79,9 +80,16 @@ export default function BountiesPage() {
             </>
           )}
           {loaded && open.length === 0 && (
-            <div className="panel p-12 text-center text-fog">
-              No open bounties at this moment — new hunts are posted regularly.
-            </div>
+            <EmptyState
+              image="/art/art-empty-chest.jpg"
+              title="The board is quiet"
+              hint="No open contracts at this moment — new hunts are posted regularly."
+              action={
+                <Link href="/games" className="btn btn-ghost">
+                  Warm up in the arcade →
+                </Link>
+              }
+            />
           )}
           {open.map((b) => (
             <div key={b.id} className="panel panel-hover p-6">

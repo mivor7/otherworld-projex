@@ -3,6 +3,7 @@ import { PageHero } from "@/components/hero";
 import { Reveal } from "@/components/reveal";
 import { VaultIntro } from "@/components/vault-intro";
 import { ActivityTicker } from "@/components/activity-ticker";
+import { CopyChip } from "@/components/copy-chip";
 import { prisma } from "@/lib/db";
 import { getTreasuryStats } from "@/lib/solana";
 import { fromRaw } from "@/lib/config";
@@ -141,7 +142,7 @@ export default async function Home() {
           <div className="kicker mb-2">Protocol</div>
           <h2 className="text-[1.5rem] mb-6">How the loop works</h2>
         </Reveal>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mesh-band p-4 sm:p-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             ["01", "Connect & sign", "A free message signature proves wallet ownership. No custody, no email, no password."],
             ["02", "Burn for credits", `${CLIENT_CONFIG.ribbitPerCredit} $RIBBIT per credit — verified on-chain, removed from supply forever.`],
@@ -208,21 +209,38 @@ export default async function Home() {
       <section className="mt-16">
         <Reveal>
           <div
-            className="panel p-7 flex flex-wrap items-center justify-between gap-5"
+            className="panel overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_240px]"
             style={{ borderColor: "oklch(0.74 0.07 290 / 0.25)" }}
           >
-            <div className="min-w-0">
+            <div className="p-7">
               <div className="kicker mb-1.5">Beyond the arcade</div>
               <h2 className="text-[1.25rem] mb-1">Want to know what OWP actually is?</h2>
-              <p className="text-fog text-[0.9rem] leading-relaxed max-w-lg">
+              <p className="text-fog text-[0.9rem] leading-relaxed max-w-lg mb-5">
                 Seven bounty episodes. Each cabinet is a contract — pick a
                 target, clear the arcade, claim the reward. The full dossier
                 covers the story, the house rules and the treasury.
               </p>
+              <Link href="/about" className="btn btn-portal">
+                Read the dossier →
+              </Link>
             </div>
-            <Link href="/about" className="btn btn-portal shrink-0">
-              Read the dossier →
-            </Link>
+            <div className="hidden md:block relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/art/art-brand-frog.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ filter: "brightness(0.85)" }}
+                loading="lazy"
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(90deg, var(--color-surface) 0%, transparent 45%)",
+                }}
+              />
+            </div>
           </div>
         </Reveal>
       </section>
@@ -239,11 +257,14 @@ export default async function Home() {
                 it from bounty pools. Launched fair on pump.fun — the treasury
                 holds no premine.
               </p>
-              <div
-                className="mono text-xs rounded-md border px-3.5 py-2.5 inline-block break-all mb-6"
-                style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
-              >
-                {CLIENT_CONFIG.ribbitMint}
+              <div className="flex items-center gap-2 flex-wrap mb-6">
+                <div
+                  className="mono text-xs rounded-md border px-3.5 py-2.5 inline-block break-all"
+                  style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
+                >
+                  {CLIENT_CONFIG.ribbitMint}
+                </div>
+                <CopyChip text={CLIENT_CONFIG.ribbitMint} />
               </div>
               <div className="flex flex-wrap gap-2.5">
                 <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">

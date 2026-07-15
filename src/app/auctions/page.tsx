@@ -7,6 +7,7 @@ import { useChain } from "@/components/use-chain";
 import { PageHero } from "@/components/hero";
 import { Countdown, Notice } from "@/components/ui";
 import { LotCardSkeleton } from "@/components/skeletons";
+import { EmptyState } from "@/components/empty-state";
 import { fmtRibbit } from "@/lib/client-config";
 
 type AuctionRow = {
@@ -201,12 +202,16 @@ export default function AuctionsPage() {
               <LotCardSkeleton />
             </div>
           ) : shown.length === 0 ? (
-            <div className="panel p-12 text-center text-fog">
-              Nothing here right now.{" "}
-              <Link href="/auctions/apply" className="text-neon hover:underline">
-                Consign something →
-              </Link>
-            </div>
+            <EmptyState
+              image="/art/art-empty-chest.jpg"
+              title="Nothing under the gavel here"
+              hint="New lots go live as consignments clear review — or put your own on the block."
+              action={
+                <Link href="/auctions/apply" className="btn btn-portal">
+                  Consign a lot →
+                </Link>
+              }
+            />
           ) : (
             <div
               className={`grid sm:grid-cols-2 gap-4 ${filter === "past" ? "opacity-70" : ""}`}
@@ -218,7 +223,7 @@ export default function AuctionsPage() {
           )}
         </div>
 
-        <aside className="panel panel-glow p-5 h-fit lg:sticky lg:top-24">
+        <aside className="panel panel-glow panel-etched p-5 h-fit lg:sticky lg:top-24">
           <div className="kicker mb-3">Bidding account</div>
           {!me.signedIn ? (
             <Notice kind="info">
@@ -252,6 +257,17 @@ export default function AuctionsPage() {
                 <button className="btn btn-primary" onClick={doDeposit} disabled={busy}>
                   {busy ? "…" : "Deposit"}
                 </button>
+              </div>
+              <div className="flex gap-1.5 mb-2.5">
+                {[1_000, 5_000, 25_000].map((amt) => (
+                  <button
+                    key={amt}
+                    className="btn btn-ghost !text-xs !min-h-[1.8rem] !px-2.5"
+                    onClick={() => setAmount(amt)}
+                  >
+                    {amt.toLocaleString()}
+                  </button>
+                ))}
               </div>
               <button
                 className="btn btn-ghost w-full"

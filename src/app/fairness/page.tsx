@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
-import { Notice, SectionTitle } from "@/components/ui";
+import { PageHero } from "@/components/hero";
+import { Notice } from "@/components/ui";
 
 async function hmacSha256Hex(key: string, message: string): Promise<string> {
   const enc = new TextEncoder();
@@ -46,6 +47,19 @@ export default function FairnessPage() {
     if (me.signedIn) load();
   }, [me.signedIn]);
 
+  // Deep-link prefill: /fairness?seed=…&client=…&nonce=… from round history.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const s = p.get("seed");
+    const c = p.get("client");
+    const n = p.get("nonce");
+    // Mount-time init from the URL, not a render loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (s) setVSeed(s);
+    if (c) setVClient(c);
+    if (n && Number.isFinite(Number(n))) setVNonce(Number(n));
+  }, []);
+
   const rotate = async () => {
     const res = await fetch("/api/fairness/rotate", { method: "POST" });
     const d = await res.json();
@@ -66,12 +80,17 @@ export default function FairnessPage() {
   };
 
   return (
-    <div className="pt-10 max-w-3xl mx-auto">
-      <SectionTitle
+    <div className="pt-6 max-w-3xl mx-auto">
+      <PageHero
+        compact
+        image="/art/hero-atelier.jpg"
         kicker="Commit–reveal"
-        title="Provable fairness"
-        desc="Before you play a single round, the house commits to a secret seed by publishing its SHA-256 hash. Outcomes are HMAC-SHA256(serverSeed, clientSeed:nonce) — the house cannot bend a roll without breaking its own commitment."
+        badge="Verifiable by anyone"
+        title="Provable"
+        titleAccent="fairness"
+        subtitle="Before you play a single round, the house commits to a secret seed by publishing its SHA-256 hash. Outcomes are HMAC-SHA256(serverSeed, clientSeed:nonce) — the house cannot bend a roll without breaking its own commitment."
       />
+      <div className="mb-6" />
 
       <div className="panel p-6 mb-6">
         <h3 className="font-bold mb-3">How to verify any round</h3>

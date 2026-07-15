@@ -3,9 +3,10 @@
 // Live house activity — an auto-scrolling strip of recent (anonymized) wins,
 // bids, burns and arcade scores. Pauses on hover; static under
 // prefers-reduced-motion; hidden entirely while the house is quiet.
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type Event = { at: string; kind: string; text: string };
+type Event = { at: string; kind: string; text: string; href?: string };
 
 const DOT: Record<string, string> = {
   win: "var(--color-gold)",
@@ -32,12 +33,28 @@ export function ActivityTicker() {
   if (events.length === 0) return null;
 
   const items = (keyPrefix: string) =>
-    events.map((e, i) => (
-      <span key={`${keyPrefix}-${i}`} className="ticker-item">
-        <span className="ticker-dot" style={{ background: DOT[e.kind] ?? DOT.play }} />
-        {e.text}
-      </span>
-    ));
+    events.map((e, i) => {
+      const inner = (
+        <>
+          <span className="ticker-dot" style={{ background: DOT[e.kind] ?? DOT.play }} />
+          {e.text}
+        </>
+      );
+      return e.href ? (
+        <Link
+          key={`${keyPrefix}-${i}`}
+          href={e.href}
+          className="ticker-item"
+          tabIndex={-1}
+        >
+          {inner}
+        </Link>
+      ) : (
+        <span key={`${keyPrefix}-${i}`} className="ticker-item">
+          {inner}
+        </span>
+      );
+    });
 
   return (
     <div className="ticker-strip mt-4" aria-label="Recent house activity">

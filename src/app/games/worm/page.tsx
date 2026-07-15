@@ -23,6 +23,7 @@ type Game = {
   flies: number;
   over: boolean;
   started: boolean;
+  paused: boolean;
   stepMs: number;
   acc: number;
   last: number;
@@ -40,7 +41,7 @@ export default function WormPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const runTokenRef = useRef<string | null>(null);
-  const [hud, setHud] = useState({ score: 0, flies: 0, over: true, started: false });
+  const [hud, setHud] = useState({ score: 0, flies: 0, over: true, started: false, paused: false });
   const [board, setBoard] = useState<{ rank: number; player: string; score: number }[]>([]);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
@@ -99,6 +100,7 @@ export default function WormPage() {
       flies: 0,
       over: false,
       started: true,
+      paused: false,
       stepMs: BASE_MS,
       acc: 0,
       last: performance.now(),
@@ -107,7 +109,7 @@ export default function WormPage() {
 
   const turn = useCallback((dx: number, dy: number) => {
     const g = gameRef.current;
-    if (!g || g.over) return;
+    if (!g || g.over || g.paused) return;
     // No 180° reversals.
     if (dx === -g.dir.x && dy === -g.dir.y) return;
     g.nextDir = { x: dx, y: dy };
@@ -128,6 +130,9 @@ export default function WormPage() {
       if (e.key === " " && (!gameRef.current || gameRef.current.over)) {
         e.preventDefault();
         start();
+      }
+      if (e.key === "p" && gameRef.current?.started && !gameRef.current.over) {
+        gameRef.current.paused = !gameRef.current.paused;
       }
     };
     window.addEventListener("keydown", onKey);
@@ -164,7 +169,7 @@ export default function WormPage() {
 
     const tick = (now: number) => {
       const g = gameRef.current;
-      if (g && !g.over) {
+      if (g && !g.over && !g.paused) {
         g.acc += now - g.last;
         g.last = now;
         while (g.acc >= g.stepMs) {
@@ -211,8 +216,9 @@ export default function WormPage() {
         ctx.fill();
 
         setHud((prev) =>
-          prev.score !== g.score || prev.flies !== g.flies || prev.over !== g.over || prev.started !== g.started
-            ? { score: g.score, flies: g.flies, over: g.over, started: g.started }
+          prev.score !== g.score || prev.flies !== g.flies || prev.over !== g.over ||
+          prev.started !== g.started || prev.paused !== g.paused
+            ? { score: g.score, flies: g.flies, over: g.over, started: g.started, paused: g.paused }
             : prev
         );
       }
@@ -246,6 +252,14 @@ export default function WormPage() {
               className="w-full rounded-lg border"
               style={{ borderColor: "var(--hairline-strong)" }}
             />
+            {hud.paused && !hud.over && (
+              <div
+                className="absolute inset-0 flex items-center justify-center rounded-lg"
+                style={{ background: "oklch(0.12 0.008 270 / 0.7)" }}
+              >
+                <span className="badge badge-live">Paused — press P</span>
+              </div>
+            )}
             {hud.over && (
               <div
                 className="absolute inset-0 flex flex-col items-center justify-center rounded-lg"

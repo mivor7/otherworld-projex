@@ -39,10 +39,16 @@ export const GET = handler(async () => {
   ]);
 
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const ARCADE_NAMES: Record<string, string> = {
+    hopper: "Hopper",
+    frogris: "Frogris",
+    worm: "Worm Frog",
+  };
   const events = [
     ...rounds.map((r) => ({
       at: r.createdAt,
       kind: r.payout > r.wager ? "win" : "play",
+      href: `/games/${r.game}`,
       text:
         r.payout > r.wager
           ? `${short(r.user.wallet)} won ${fmt(r.payout)} credits at ${GAME_NAMES[r.game] ?? r.game}`
@@ -51,17 +57,20 @@ export const GET = handler(async () => {
     ...bids.map((b) => ({
       at: b.createdAt,
       kind: "bid",
+      href: `/auctions/${b.auctionId}`,
       text: `${short(b.user.wallet)} bid ${fmt(fromRaw(b.amountRaw))} $RIBBIT on “${b.auction.title}”`,
     })),
     ...burns.map((b) => ({
       at: b.createdAt,
       kind: "burn",
+      href: "/games",
       text: `${short(b.user.wallet)} burned ${fmt(fromRaw(b.amountRaw))} $RIBBIT for ${b.credits} credits`,
     })),
     ...scores.map((s) => ({
       at: s.createdAt,
       kind: "score",
-      text: `${short(s.user.wallet)} scored ${fmt(s.score)} in ${s.game === "frogris" ? "Frogris" : "Hopper"}`,
+      href: `/games/${s.game}`,
+      text: `${short(s.user.wallet)} scored ${fmt(s.score)} in ${ARCADE_NAMES[s.game] ?? s.game}`,
     })),
   ]
     .sort((a, b) => b.at.getTime() - a.at.getTime())

@@ -171,7 +171,7 @@ export default function BlackjackPage() {
         desc="Single deck, dealer stands on 17, blackjack pays 3:2. The whole deck order is committed before your first card — verifiably fair."
       />
 
-      <div className="panel panel-glow p-6 sm:p-8">
+      <div className="panel panel-glow panel-etched p-6 sm:p-8">
         {/* Table felt */}
         <div
           className="rounded-lg p-5 sm:p-6 mb-6"

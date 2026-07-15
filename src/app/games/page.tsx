@@ -59,6 +59,9 @@ type HistoryRow = {
   wager: number;
   payout: number;
   outcome: Record<string, unknown>;
+  clientSeed: string;
+  nonce: number;
+  serverSeed: string | null;
   createdAt: string;
 };
 
@@ -160,6 +163,15 @@ export default function GamesPage() {
                         <td className="py-2 text-xs text-right" style={{ color: "var(--text-dim)" }}>
                           {new Date(h.createdAt).toLocaleTimeString()}
                         </td>
+                        <td className="py-2 pl-3 text-right">
+                          <Link
+                            href={`/fairness?client=${encodeURIComponent(h.clientSeed)}&nonce=${h.nonce}${h.serverSeed ? `&seed=${h.serverSeed}` : ""}`}
+                            className="text-xs text-neon hover:underline"
+                            title={h.serverSeed ? "Recompute this round" : "Seed not yet revealed — rotate on the fairness page"}
+                          >
+                            verify
+                          </Link>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -170,7 +182,7 @@ export default function GamesPage() {
         </div>
 
         {/* Credits rail */}
-        <aside className="panel panel-glow p-5 h-fit lg:sticky lg:top-24">
+        <aside className="panel panel-glow panel-etched p-5 h-fit lg:sticky lg:top-24">
           <div className="kicker mb-2">Play credits</div>
           <div className="stat-number text-[2.2rem] text-neon leading-none mb-5">
             {me.signedIn ? (me.credits ?? 0) : "—"}
@@ -196,6 +208,17 @@ export default function GamesPage() {
                 <button className="btn btn-primary" onClick={doBurn} disabled={busy}>
                   {busy ? "…" : "Burn"}
                 </button>
+              </div>
+              <div className="flex gap-1.5 mb-2.5">
+                {[1_000, 5_000, 10_000].map((amt) => (
+                  <button
+                    key={amt}
+                    className="btn btn-ghost !text-xs !min-h-[1.8rem] !px-2.5"
+                    onClick={() => setBurnAmount(amt)}
+                  >
+                    {amt.toLocaleString()}
+                  </button>
+                ))}
               </div>
               <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
                 {CLIENT_CONFIG.ribbitPerCredit.toLocaleString()} $RIBBIT = 1 credit —

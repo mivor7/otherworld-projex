@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useSession } from "./session";
+import { CopyChip } from "./copy-chip";
 import { fmtRibbit, shortWallet } from "@/lib/client-config";
 
 export function WalletButton() {
@@ -74,8 +75,11 @@ export function WalletButton() {
       {open && (
         <div className="wallet-menu" role="menu">
           <div className="kicker !text-[0.6rem] mb-1">Signed in as</div>
-          <div className="mono text-xs break-all mb-4" title={me.wallet}>
+          <div className="mono text-xs break-all mb-2" title={me.wallet}>
             {me.wallet}
+          </div>
+          <div className="mb-4">
+            <CopyChip text={me.wallet ?? ""} label="Copy address" />
           </div>
 
           <div className="space-y-2 text-sm mb-4">
