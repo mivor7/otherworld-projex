@@ -487,12 +487,39 @@ h1, h2, h3, h4 {
     padding: 1.5rem 1.25rem 1.35rem;
     gap: 1.25rem;
   }
+  /* The brand lockup eats prime hero space on phones — the token panel
+     carries that story further down the page. */
   .page-hero-brand {
-    justify-content: flex-start;
-    order: -1;
+    display: none;
   }
   .page-hero-frame {
     inset: 8px;
+  }
+}
+
+/* Mobile nav strip: fade the clipped edge so the scroll is discoverable. */
+.mobile-nav-scroll {
+  mask-image: linear-gradient(90deg, #000 85%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+}
+
+/* Route transition — subtle rise on navigation. */
+.page-enter {
+  animation: page-enter 0.28s var(--hs-ease);
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
   }
 }
 

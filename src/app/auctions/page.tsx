@@ -60,7 +60,7 @@ function LotCard({ a, now }: { a: AuctionRow; now: number }) {
             <span className="badge">house</span>
           )}
         </div>
-        <h3 className="mt-1">{a.title}</h3>
+        <h3 className="mt-1 line-clamp-2">{a.title}</h3>
         <div className="card-price-row">
           <div>
             <div className="card-price-label">
@@ -185,6 +185,7 @@ export default function AuctionsPage() {
               <button
                 key={key}
                 className={`chip ${filter === key ? "active" : ""}`}
+                aria-pressed={filter === key}
                 onClick={() => setFilter(key)}
               >
                 {label}

@@ -61,6 +61,7 @@ export default function LeaderboardPage() {
             <button
               key={g.id}
               className={`chip ${game === g.id ? "active" : ""}`}
+              aria-pressed={game === g.id}
               onClick={() => setGame(g.id)}
             >
               {g.label}
@@ -70,12 +71,14 @@ export default function LeaderboardPage() {
         <div className="chips">
           <button
             className={`chip ${window_ === "week" ? "active" : ""}`}
+            aria-pressed={window_ === "week"}
             onClick={() => setWindow("week")}
           >
             This week
           </button>
           <button
             className={`chip ${window_ === "all" ? "active" : ""}`}
+            aria-pressed={window_ === "all"}
             onClick={() => setWindow("all")}
           >
             All time

@@ -202,6 +202,29 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Beyond the arcade */}
+      <section className="mt-16">
+        <Reveal>
+          <div
+            className="panel p-7 flex flex-wrap items-center justify-between gap-5"
+            style={{ borderColor: "oklch(0.74 0.07 290 / 0.25)" }}
+          >
+            <div className="min-w-0">
+              <div className="kicker mb-1.5">Beyond the arcade</div>
+              <h2 className="text-[1.25rem] mb-1">Want to know what OWP actually is?</h2>
+              <p className="text-fog text-[0.9rem] leading-relaxed max-w-lg">
+                Seven bounty episodes. Each cabinet is a contract — pick a
+                target, clear the arcade, claim the reward. The full dossier
+                covers the story, the house rules and the treasury.
+              </p>
+            </div>
+            <Link href="/about" className="btn btn-portal shrink-0">
+              Read the dossier →
+            </Link>
+          </div>
+        </Reveal>
+      </section>
+
       {/* Token */}
       <section className="mt-16">
         <Reveal>

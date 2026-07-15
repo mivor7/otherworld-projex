@@ -150,6 +150,7 @@ export default function BountiesPage() {
               <button
                 key={key}
                 onClick={() => setBoardGame(key)}
+                aria-pressed={boardGame === key}
                 className={`chip !text-xs !min-h-[1.75rem] ${boardGame === key ? "active" : ""}`}
               >
                 {label}

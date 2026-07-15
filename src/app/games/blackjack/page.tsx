@@ -162,6 +162,9 @@ export default function BlackjackPage() {
 
   return (
     <div className="pt-10 max-w-3xl mx-auto">
+      <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
+        ← Arcade
+      </Link>
       <SectionTitle
         kicker="Wing I — table 03"
         title="Blackjack"

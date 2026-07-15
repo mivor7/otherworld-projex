@@ -84,6 +84,9 @@ export default function FlipPage() {
 
   return (
     <div className="pt-10 max-w-2xl mx-auto">
+      <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
+        ← Arcade
+      </Link>
       <SectionTitle
         kicker="Wing I — table 01"
         title="Frog Flip"
@@ -93,10 +96,10 @@ export default function FlipPage() {
       <div className="panel panel-glow p-8 text-center">
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
-            <button className={`chip ${!sandbox ? "active" : ""}`} onClick={() => setSandbox(false)}>
+            <button className={`chip ${!sandbox ? "active" : ""}`} aria-pressed={!sandbox} onClick={() => setSandbox(false)}>
               Live table
             </button>
-            <button className={`chip ${sandbox ? "active" : ""}`} onClick={() => setSandbox(true)}>
+            <button className={`chip ${sandbox ? "active" : ""}`} aria-pressed={sandbox} onClick={() => setSandbox(true)}>
               Sandbox
             </button>
           </div>

@@ -324,6 +324,9 @@ export default function FrogrisPage() {
 
   return (
     <div className="pt-10">
+      <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
+        ← Arcade
+      </Link>
       <SectionTitle
         kicker="Wing I — free arcade"
         title="Frogris"
@@ -385,11 +388,12 @@ export default function FrogrisPage() {
             </div>
           </div>
           {/* Mobile controls */}
-          <div className="grid grid-cols-4 gap-2 sm:hidden w-full">
-            <button className="btn btn-ghost" onClick={() => move(-1)}>←</button>
-            <button className="btn btn-ghost" onClick={() => rotate(1)}>⟳</button>
-            <button className="btn btn-ghost" onClick={() => move(1)}>→</button>
-            <button className="btn btn-ghost" onClick={hardDrop}>⤓</button>
+          <div className="grid grid-cols-5 gap-2 sm:hidden w-full">
+            <button className="btn btn-ghost" onClick={() => move(-1)} aria-label="Move left">←</button>
+            <button className="btn btn-ghost" onClick={softDrop} aria-label="Soft drop">↓</button>
+            <button className="btn btn-ghost" onClick={() => move(1)} aria-label="Move right">→</button>
+            <button className="btn btn-ghost" onClick={() => rotate(1)} aria-label="Rotate">⟳</button>
+            <button className="btn btn-ghost" onClick={hardDrop} aria-label="Hard drop">⤓</button>
           </div>
           {submitMsg && (
             <div className="w-full sm:hidden">

@@ -85,30 +85,27 @@ export default function TreasuryPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
         <StatCard
-          label="Treasury SOL"
-          value={data.chain.solBalance !== null ? data.chain.solBalance.toFixed(3) : "—"}
-          sub="live balance"
-          tone="neon"
+          label="House net"
+          value={`${data.totals.houseTakeCredits >= 0 ? "+" : ""}${data.totals.houseTakeCredits.toLocaleString()}`}
+          sub="credits · wagers minus payouts"
+          tone={data.totals.houseTakeCredits >= 0 ? "neon" : "plain"}
         />
         <StatCard
-          label="Treasury $RIBBIT"
-          value={
-            data.chain.ribbitBalance !== null
-              ? data.chain.ribbitBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })
-              : "—"
-          }
-          sub="escrow + prize pools"
+          label="Wagered volume"
+          value={data.totals.wageredCredits.toLocaleString()}
+          sub="credits across all tables"
         />
         <StatCard
-          label="$RIBBIT burned"
-          value={fmtRibbit(data.totals.ribbitBurnedRaw)}
-          sub={`${data.totals.burnCount} burns — out of supply`}
+          label="Rounds settled"
+          value={data.totals.rounds.toLocaleString()}
+          sub="provably fair"
+          tone="portal"
+        />
+        <StatCard
+          label="Burn events"
+          value={String(data.totals.burnCount)}
+          sub={`${fmtRibbit(data.totals.ribbitBurnedRaw)} $RIBBIT destroyed`}
           tone="gold"
-        />
-        <StatCard
-          label="House take"
-          value={data.totals.houseTakeCredits.toLocaleString()}
-          sub={`credits · ${data.totals.rounds.toLocaleString()} rounds`}
         />
       </div>
 

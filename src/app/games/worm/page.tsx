@@ -224,6 +224,9 @@ export default function WormPage() {
 
   return (
     <div className="pt-10">
+      <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
+        ← Arcade
+      </Link>
       <SectionTitle
         kicker="Wing I — free arcade · EP 04"
         title="Worm Frog"

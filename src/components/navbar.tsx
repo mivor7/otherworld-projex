@@ -80,7 +80,7 @@ export function Navbar() {
       </div>
 
       <nav
-        className="md:hidden flex gap-0.5 px-3 pb-2 overflow-x-auto"
+        className="md:hidden flex gap-0.5 px-3 pb-2 overflow-x-auto mobile-nav-scroll"
         aria-label="Sections"
       >
         {LINKS.map((l) => (
