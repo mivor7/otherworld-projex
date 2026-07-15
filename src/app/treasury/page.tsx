@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Notice, SectionTitle, StatCard } from "@/components/ui";
+import { PageHero } from "@/components/hero";
+import { Notice, StatCard } from "@/components/ui";
 import { fmtRibbit } from "@/lib/client-config";
 
 type TreasuryData = {
@@ -42,18 +43,38 @@ export default function TreasuryPage() {
       .catch(() => {});
   }, []);
 
-  if (!data) return <div className="pt-20 text-center text-fog">Loading treasury…</div>;
+  if (!data) {
+    return <div className="pt-24 text-center text-fog">Opening the vault…</div>;
+  }
 
   return (
-    <div className="pt-10">
-      <SectionTitle
+    <div className="pt-6">
+      <PageHero
+        compact
+        image="/art/banner-vault.jpeg"
         kicker="Full transparency"
-        title="The Treasury 🏦"
-        desc="One treasury backs the whole arcade. Balances are read live from Solana; every house-take split and payout is published below."
+        badge="Live on-chain"
+        title="The"
+        titleAccent="Treasury"
+        subtitle="One vault backs the whole house. Balances read live from Solana; every take split and payout is published below."
+        stats={[
+          {
+            value: data.chain.solBalance !== null ? `${data.chain.solBalance.toFixed(3)} SOL` : "—",
+            label: "Vault balance",
+          },
+          {
+            value:
+              data.chain.ribbitBalance !== null
+                ? data.chain.ribbitBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                : "—",
+            label: "$RIBBIT held",
+          },
+          { value: fmtRibbit(data.totals.ribbitBurnedRaw), label: "Burned forever" },
+        ]}
       />
 
       {!data.chain.configured && (
-        <div className="mb-6">
+        <div className="mt-6">
           <Notice kind="info">
             The on-chain treasury address hasn’t been configured on this
             deployment yet (set TREASURY_WALLET). Off-chain accounting below is
@@ -62,11 +83,12 @@ export default function TreasuryPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
         <StatCard
           label="Treasury SOL"
           value={data.chain.solBalance !== null ? data.chain.solBalance.toFixed(3) : "—"}
           sub="live balance"
+          tone="neon"
         />
         <StatCard
           label="Treasury $RIBBIT"
@@ -76,43 +98,47 @@ export default function TreasuryPage() {
               : "—"
           }
           sub="escrow + prize pools"
-          tone="portal"
         />
         <StatCard
           label="$RIBBIT burned"
           value={fmtRibbit(data.totals.ribbitBurnedRaw)}
-          sub={`${data.totals.burnCount} burns — gone forever`}
+          sub={`${data.totals.burnCount} burns — out of supply`}
           tone="gold"
         />
         <StatCard
           label="House take"
           value={data.totals.houseTakeCredits.toLocaleString()}
-          sub={`credits over ${data.totals.rounds.toLocaleString()} rounds`}
-          tone="plain"
+          sub={`credits · ${data.totals.rounds.toLocaleString()} rounds`}
         />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+      <div className="grid md:grid-cols-2 gap-4 mt-4">
         <div className="panel p-6">
-          <h3 className="font-bold mb-4">Where the house take goes</h3>
+          <div className="kicker mb-5">Allocation of the take</div>
           {(
             [
-              ["Treasury reserve", data.houseSplit.treasury, "bg-neon"],
-              ["Bounty prize pools", data.houseSplit.prizePool, "bg-gold"],
-              ["Operations", data.houseSplit.ops, "bg-portal"],
+              ["Treasury reserve", data.houseSplit.treasury, "var(--color-neon)"],
+              ["Bounty prize pools", data.houseSplit.prizePool, "var(--color-gold)"],
+              ["Operations", data.houseSplit.ops, "var(--color-portal)"],
             ] as const
           ).map(([label, frac, color]) => (
-            <div key={label} className="mb-3">
-              <div className="flex justify-between text-sm mb-1">
-                <span>{label}</span>
+            <div key={label} className="mb-4">
+              <div className="flex justify-between text-sm mb-1.5">
+                <span className="text-fog">{label}</span>
                 <span className="stat-number">{Math.round(frac * 100)}%</span>
               </div>
-              <div className="h-2 rounded-full bg-abyss border border-edge overflow-hidden">
-                <div className={`h-full ${color}`} style={{ width: `${frac * 100}%` }} />
+              <div
+                className="h-1.5 rounded-full overflow-hidden"
+                style={{ background: "oklch(0.1 0.006 270)", border: "1px solid var(--hairline)" }}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${frac * 100}%`, background: color, opacity: 0.85 }}
+                />
               </div>
             </div>
           ))}
-          <p className="text-xs text-fog mt-4 leading-relaxed">
+          <p className="text-xs mt-5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
             House edge is a flat {Math.round(data.houseEdge * 100)}% on game
             payouts. The take accrues in credits and is swept on-chain by the
             treasury program.
@@ -120,27 +146,26 @@ export default function TreasuryPage() {
         </div>
 
         <div className="panel p-6">
-          <h3 className="font-bold mb-4">Custody</h3>
-          <ul className="text-sm text-fog space-y-3 leading-relaxed">
+          <div className="kicker mb-5">Custody</div>
+          <ul className="text-sm text-fog space-y-3.5 leading-relaxed">
             <li>
-              <span className="text-frost font-semibold">Vault:</span> SOL sits in
-              a program-derived vault (see <code className="text-neon">program/</code>)
-              — payouts require the multisig admin and respect a daily cap.
+              <span className="text-frost font-medium">Vault.</span> SOL sits in a
+              program-derived vault — payouts require the multisig admin and
+              respect an on-chain daily cap.
             </li>
             <li>
-              <span className="text-frost font-semibold">Escrow:</span> auction
+              <span className="text-frost font-medium">Escrow.</span> Auction
               deposits go to the treasury token account and are verified
               on-chain before any bidding balance is credited.
             </li>
             <li>
-              <span className="text-frost font-semibold">Burns:</span>{" "}
-              burn-to-play $RIBBIT is destroyed at the mint — it never touches
-              the treasury.
+              <span className="text-frost font-medium">Burns.</span> Burn-to-play
+              $RIBBIT is destroyed at the mint — it never touches the treasury.
             </li>
           </ul>
           {data.chain.wallet && (
             <a
-              className="btn btn-ghost w-full mt-4"
+              className="btn btn-ghost w-full mt-5"
               href={`https://solscan.io/account/${data.chain.wallet}`}
               target="_blank"
               rel="noreferrer"
@@ -151,8 +176,8 @@ export default function TreasuryPage() {
         </div>
       </div>
 
-      <div className="panel p-6">
-        <h3 className="font-bold mb-4">Recent treasury events</h3>
+      <div className="panel p-6 mt-4">
+        <div className="kicker mb-5">Recent treasury events</div>
         {data.recent.length === 0 ? (
           <p className="text-fog text-sm">No events recorded yet.</p>
         ) : (
@@ -161,15 +186,18 @@ export default function TreasuryPage() {
               <tbody>
                 {data.recent.map((e) => (
                   <tr key={e.id} className="table-row">
-                    <td className="py-2 pr-3">
+                    <td className="py-2.5 pr-3">
                       <span className="badge">{e.kind}</span>
                     </td>
-                    <td className="py-2 pr-3 stat-number">
+                    <td className="py-2.5 pr-3 stat-number">
                       {e.asset.startsWith("RIBBIT") ? fmtRibbit(e.amount) : e.amount}{" "}
-                      <span className="text-fog text-xs">{e.asset}</span>
+                      <span className="text-fog text-xs font-normal">{e.asset}</span>
                     </td>
-                    <td className="py-2 pr-3 text-fog">{e.note}</td>
-                    <td className="py-2 text-fog/60 text-xs whitespace-nowrap">
+                    <td className="py-2.5 pr-3 text-fog">{e.note}</td>
+                    <td
+                      className="py-2.5 text-xs whitespace-nowrap text-right"
+                      style={{ color: "var(--text-dim)" }}
+                    >
                       {new Date(e.createdAt).toLocaleString()}
                     </td>
                   </tr>

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { useChain } from "@/components/use-chain";
-import { Countdown, Notice, SectionTitle } from "@/components/ui";
+import { PageHero } from "@/components/hero";
+import { Countdown, Notice } from "@/components/ui";
 import { fmtRibbit } from "@/lib/client-config";
 
 type AuctionRow = {
@@ -20,40 +21,61 @@ type AuctionRow = {
   _count: { bids: number };
 };
 
-function AuctionCard({ a }: { a: AuctionRow }) {
+function LotCard({ a, now }: { a: AuctionRow; now: number }) {
   const current = BigInt(a.currentRaw) > 0n ? a.currentRaw : a.startBidRaw;
+  const msLeft = new Date(a.endsAt).getTime() - now;
+  const urgent = a.status === "live" && msLeft > 0 && msLeft < 60 * 60 * 1000;
   return (
-    <Link
-      href={`/auctions/${a.id}`}
-      className="panel overflow-hidden hover:border-portal-dim transition-colors group"
-    >
-      <div className="h-36 bg-gradient-to-br from-portal-dim/30 via-surface-2 to-neon-dim/20 flex items-center justify-center overflow-hidden">
+    <Link href={`/auctions/${a.id}`} className="lot-card group">
+      <div className="card-media">
         {a.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover" />
+          <img src={a.imageUrl} alt={a.title} loading="lazy" />
         ) : (
-          <span className="text-5xl opacity-60">🏛️</span>
+          <div className="w-full h-full flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/art/art-empty-chest.jpg" alt="" className="opacity-60" loading="lazy" />
+          </div>
+        )}
+        {urgent && (
+          <span className="badge badge-urgent absolute top-2 right-2">
+            Ending soon
+          </span>
         )}
       </div>
-      <div className="p-4">
-        <div className="flex items-center gap-2 mb-1.5">
+      <div className="card-body">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="badge">{a.category}</span>
           {a.status === "live" ? (
-            <span className="badge badge-live">live</span>
+            <span className="badge badge-live">
+              <span className="live-dot" /> live
+            </span>
           ) : (
             <span className="badge">{a.status}</span>
           )}
-          {!a.sellerWallet && <span className="badge badge-portal">house</span>}
+          {a.sellerWallet ? (
+            <span className="badge badge-portal">consigned</span>
+          ) : (
+            <span className="badge">house</span>
+          )}
         </div>
-        <h3 className="font-semibold group-hover:text-portal truncate">{a.title}</h3>
-        <div className="flex justify-between items-end mt-2 text-sm">
+        <h3 className="mt-1">{a.title}</h3>
+        <div className="card-price-row">
           <div>
-            <div className="text-xs text-fog">{BigInt(a.currentRaw) > 0n ? "current bid" : "starting bid"}</div>
-            <div className="stat-number text-neon">{fmtRibbit(current)} RIBBIT</div>
+            <div className="card-price-label">
+              {BigInt(a.currentRaw) > 0n ? "Current bid" : "Opening bid"}
+            </div>
+            <div className="price text-neon">
+              {fmtRibbit(current)} <span className="text-fog text-xs font-normal">RIBBIT</span>
+            </div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-fog">{a._count.bids} bids</div>
-            {a.status === "live" && <Countdown to={a.endsAt} />}
+            <div className="card-price-label">{a._count.bids} bids</div>
+            {a.status === "live" && (
+              <div className="text-[0.8rem]">
+                <Countdown to={a.endsAt} />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -66,9 +88,16 @@ export default function AuctionsPage() {
   const { depositForBidding } = useChain();
   const [live, setLive] = useState<AuctionRow[]>([]);
   const [past, setPast] = useState<AuctionRow[]>([]);
+  const [filter, setFilter] = useState<"live" | "ending" | "past">("live");
   const [amount, setAmount] = useState(1000);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   const load = useCallback(() => {
     fetch("/api/auctions")
@@ -91,7 +120,7 @@ export default function AuctionsPage() {
     const res = await depositForBidding(amount);
     setMsg(
       res.ok
-        ? { kind: "ok", text: `Deposit verified — bidding balance updated.` }
+        ? { kind: "ok", text: "Deposit verified — bidding balance updated." }
         : { kind: "err", text: res.error }
     );
     await refresh();
@@ -117,75 +146,91 @@ export default function AuctionsPage() {
     setBusy(false);
   };
 
-  return (
-    <div className="pt-10">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <SectionTitle
-          kicker="Auction house"
-          title="Bid with $RIBBIT"
-          desc="Escrowed bids, instant refunds when outbid, anti-snipe extensions. Community members can apply to list their own items."
-        />
-        <Link href="/auctions/apply" className="btn btn-portal">
-          Apply to list an item
-        </Link>
-      </div>
+  const ending = live.filter(
+    (a) => new Date(a.endsAt).getTime() - now < 60 * 60 * 1000
+  );
+  const shown = filter === "live" ? live : filter === "ending" ? ending : past;
 
-      <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+  return (
+    <div className="pt-6">
+      <PageHero
+        compact
+        image="/art/art-gavel.jpg"
+        imagePosition="75% 25%"
+        kicker="Wing II — under the gavel"
+        badge={`${live.length} lots live`}
+        title="The"
+        titleAccent="Auction House"
+        subtitle="Escrowed $RIBBIT bids, instant refunds when outbid, two-minute anti-snipe closings. Community members consign their own lots."
+        actions={
+          <Link href="/auctions/apply" className="btn btn-portal">
+            Apply to consign a lot
+          </Link>
+        }
+      />
+
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 mt-8">
         <div>
-          {live.length === 0 ? (
-            <div className="panel p-10 text-center text-fog">
-              No live auctions right now — check back soon or{" "}
-              <Link href="/auctions/apply" className="text-portal hover:underline">
-                apply to list something
+          <div className="chips mb-5">
+            {(
+              [
+                ["live", `Live · ${live.length}`],
+                ["ending", `Ending soon · ${ending.length}`],
+                ["past", `Past · ${past.length}`],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                className={`chip ${filter === key ? "active" : ""}`}
+                onClick={() => setFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {shown.length === 0 ? (
+            <div className="panel p-12 text-center text-fog">
+              Nothing here right now.{" "}
+              <Link href="/auctions/apply" className="text-neon hover:underline">
+                Consign something →
               </Link>
-              .
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
-              {live.map((a) => (
-                <AuctionCard key={a.id} a={a} />
+            <div
+              className={`grid sm:grid-cols-2 gap-4 ${filter === "past" ? "opacity-70" : ""}`}
+            >
+              {shown.map((a) => (
+                <LotCard key={a.id} a={a} now={now} />
               ))}
             </div>
           )}
-
-          {past.length > 0 && (
-            <>
-              <h2 className="font-bold mt-10 mb-4 text-fog uppercase text-sm tracking-wider">
-                Recently ended
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-4 opacity-70">
-                {past.map((a) => (
-                  <AuctionCard key={a.id} a={a} />
-                ))}
-              </div>
-            </>
-          )}
         </div>
 
-        <aside className="panel panel-glow p-6 h-fit sticky top-24">
-          <h3 className="font-bold mb-3">Bidding balance</h3>
+        <aside className="panel panel-glow p-5 h-fit lg:sticky lg:top-24">
+          <div className="kicker mb-3">Bidding account</div>
           {!me.signedIn ? (
-            <Notice kind="info">Connect & sign in to deposit $RIBBIT and bid.</Notice>
+            <Notice kind="info">
+              Connect &amp; sign in to deposit $RIBBIT and bid on lots.
+            </Notice>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="grid grid-cols-2 gap-3 mb-5">
                 <div>
-                  <div className="text-xs text-fog uppercase tracking-wider">Available</div>
-                  <div className="stat-number text-neon text-xl">
+                  <div className="kicker !text-[0.6rem] mb-1">Available</div>
+                  <div className="stat-number text-neon text-lg">
                     {fmtRibbit(me.ribbitAvailable ?? 0)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-fog uppercase tracking-wider">Locked in bids</div>
-                  <div className="stat-number text-portal text-xl">
+                  <div className="kicker !text-[0.6rem] mb-1">In bids</div>
+                  <div className="stat-number text-lg">
                     {fmtRibbit(me.ribbitLocked ?? 0)}
                   </div>
                 </div>
               </div>
-              <label className="text-xs uppercase tracking-wider text-fog">
-                Deposit $RIBBIT
-              </label>
-              <div className="flex gap-2 mt-2 mb-3">
+              <label className="kicker !text-[0.6rem]">Deposit $RIBBIT</label>
+              <div className="flex gap-2 mt-1.5 mb-2.5">
                 <input
                   type="number"
                   className="input"
@@ -204,10 +249,9 @@ export default function AuctionsPage() {
               >
                 Withdraw available balance
               </button>
-              <p className="text-xs text-fog mt-3 leading-relaxed">
-                Deposits go to the treasury escrow and are verified on-chain.
-                Outbid amounts unlock instantly; withdrawals are paid out by the
-                treasury signer.
+              <p className="text-xs mt-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                Deposits are held in treasury escrow and verified on-chain.
+                Outbid amounts release instantly.
               </p>
             </>
           )}

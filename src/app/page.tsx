@@ -1,12 +1,48 @@
 import Link from "next/link";
-import { Logo } from "@/components/logo";
-import { StatCard } from "@/components/ui";
+import { PageHero } from "@/components/hero";
+import { Reveal } from "@/components/reveal";
 import { prisma } from "@/lib/db";
 import { getTreasuryStats } from "@/lib/solana";
-import { CONFIG, fromRaw } from "@/lib/config";
+import { fromRaw } from "@/lib/config";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 
 export const dynamic = "force-dynamic";
+
+const WINGS = [
+  {
+    href: "/games",
+    image: "/art/owp_hero.jpg",
+    kicker: "Wing I",
+    title: "The Arcade",
+    desc: "Provably-fair games at a published house edge. Burn $RIBBIT for credits, call your shots, verify every roll.",
+    cta: "Enter",
+  },
+  {
+    href: "/auctions",
+    image: "/art/art-gavel.jpg",
+    kicker: "Wing II",
+    title: "The Auction House",
+    desc: "Collectibles, 1/1s and services under the gavel. Escrowed $RIBBIT bids, anti-snipe closings, community consignments.",
+    cta: "View lots",
+  },
+  {
+    href: "/bounties",
+    image: "/art/lot-card-shark.jpg",
+    kicker: "Wing III",
+    title: "The Bounty Board",
+    desc: "Weekly competitions and one-off challenges, funded by the house take. Top hunters split the pool.",
+    cta: "Open board",
+  },
+];
+
+const EPISODES = [
+  { image: "/art/owp_ff.jpg", title: "Fraud Frog Exterminator" },
+  { image: "/art/owp_frogris.png", title: "Frogris" },
+  { image: "/art/owp_frogger.png", title: "Frogger" },
+  { image: "/art/owp_worm.png", title: "Worm Frog" },
+  { image: "/art/owp_bj.png", title: "Blackjack" },
+  { image: "/art/owp_poker.png", title: "Poker Face" },
+];
 
 export default async function Home() {
   const [chain, burnAgg, roundCount, liveAuctions, openBounties] =
@@ -20,127 +56,184 @@ export default async function Home() {
   const burned = fromRaw(burnAgg._sum.amountRaw ?? 0n);
 
   return (
-    <div>
-      {/* Hero */}
-      <section className="pt-16 pb-12 text-center flex flex-col items-center">
-        <div className="mb-6 drop-shadow-[0_0_45px_rgba(54,245,129,0.35)]">
-          <Logo size={110} />
-        </div>
-        <div className="text-xs uppercase tracking-[0.3em] text-neon mb-3">
-          Decentralized bounty arcade on Solana
-        </div>
-        <h1 className="text-4xl sm:text-6xl font-bold tracking-tight max-w-3xl leading-[1.05]">
-          Enter the <span className="neon-text">Other World</span>.
-        </h1>
-        <p className="text-fog max-w-2xl mt-5 text-lg leading-relaxed">
-          Burn <span className="text-neon font-semibold">$RIBBIT</span> to play
-          provably-fair games. Bid in community auctions. Hunt bounties for big
-          prizes. Every credit, every roll, every payout — verifiable against one
-          transparent treasury.
-        </p>
-        <div className="flex flex-wrap gap-3 justify-center mt-8">
-          <Link href="/games" className="btn btn-primary text-base px-7 py-3">
-            Enter the Arcade
-          </Link>
-          <Link href="/auctions" className="btn btn-portal text-base px-7 py-3">
-            Auction House
-          </Link>
-        </div>
-      </section>
+    <div className="pt-6">
+      <PageHero
+        image="/art/hero-auction.jpg"
+        kicker="Decentralized bounty arcade · Solana"
+        badge="The hunt is always open"
+        title="Token holders become"
+        titleAccent="bounty hunters."
+        subtitle={
+          <>
+            Burn $RIBBIT to play provably-fair games. Bid on lots in the
+            auction house. Hunt bounties funded by the house take. Every
+            credit, roll and payout settles against one transparent treasury.
+          </>
+        }
+        actions={
+          <>
+            <Link href="/games" className="btn btn-primary btn-lg">
+              Enter the arcade
+            </Link>
+            <Link href="/auctions" className="btn btn-ghost btn-lg">
+              View the lots
+            </Link>
+          </>
+        }
+        stats={[
+          {
+            value: chain.solBalance !== null ? `${chain.solBalance.toFixed(2)} SOL` : "—",
+            label: "Treasury",
+          },
+          {
+            value: burned.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+            label: "$RIBBIT burned",
+          },
+          { value: roundCount.toLocaleString(), label: "Rounds settled" },
+          { value: `${liveAuctions} · ${openBounties}`, label: "Lots · bounties" },
+        ]}
+        brand
+      />
 
-      {/* Live stats */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-16">
-        <StatCard
-          label="Treasury SOL"
-          value={chain.solBalance !== null ? chain.solBalance.toFixed(2) : "—"}
-          sub={chain.configured ? "live on-chain" : "treasury not configured"}
-        />
-        <StatCard
-          label="$RIBBIT burned"
-          value={burned.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          sub="burn-to-play, forever out of supply"
-          tone="gold"
-        />
-        <StatCard label="Rounds played" value={roundCount.toLocaleString()} sub="provably fair" tone="portal" />
-        <StatCard
-          label="Live now"
-          value={`${liveAuctions} / ${openBounties}`}
-          sub="auctions / bounties"
-          tone="plain"
-        />
-      </section>
-
-      {/* Pillars */}
-      <section className="grid md:grid-cols-3 gap-4 mb-16">
-        <Link href="/games" className="panel panel-glow p-6 hover:border-neon-dim transition-colors group">
-          <div className="text-3xl mb-3">🎮</div>
-          <h3 className="font-bold text-lg mb-2 group-hover:text-neon">The Arcade</h3>
-          <p className="text-fog text-sm leading-relaxed">
-            Frog Flip, Pond Dice and the Hopper arcade. Burn $RIBBIT for credits,
-            play against the house at a published {Math.round(CONFIG.houseEdge * 100)}% edge,
-            withdraw or keep hunting. Every outcome is commit–reveal verifiable.
-          </p>
-        </Link>
-        <Link href="/auctions" className="panel p-6 hover:border-portal-dim transition-colors group">
-          <div className="text-3xl mb-3">🏛️</div>
-          <h3 className="font-bold text-lg mb-2 group-hover:text-portal">Auction House</h3>
-          <p className="text-fog text-sm leading-relaxed">
-            Bid with $RIBBIT on listed items — collectibles, NFTs, merch.
-            Community members apply to list their own items. Anti-snipe timers,
-            escrowed bids, instant refunds when outbid.
-          </p>
-        </Link>
-        <Link href="/bounties" className="panel p-6 hover:border-gold/40 transition-colors group">
-          <div className="text-3xl mb-3">🏆</div>
-          <h3 className="font-bold text-lg mb-2 group-hover:text-gold">Bounties</h3>
-          <p className="text-fog text-sm leading-relaxed">
-            Weekly leaderboard competitions and one-off challenges, funded by the
-            house take. Top hunters split prize pools paid in $RIBBIT.
-          </p>
-        </Link>
-      </section>
-
-      {/* How it works */}
-      <section className="mb-16">
-        <h2 className="text-xl font-bold mb-6 text-center">How the loop works</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {[
-            ["1", "Connect & sign", "Prove wallet ownership with a free message signature. No custody, no email, no password."],
-            ["2", "Burn for credits", `Burn ${CLIENT_CONFIG.ribbitPerCredit} $RIBBIT per play credit — verified on-chain, gone from supply forever.`],
-            ["3", "Play, bid, hunt", "Wager credits in the arcade, bid deposited $RIBBIT in auctions, climb bounty leaderboards."],
-            ["4", "House take flows back", "50% treasury · 30% bounty prize pools · 20% operations. All movements published."],
-          ].map(([n, title, desc]) => (
-            <div key={n} className="panel p-5">
-              <div className="stat-number text-neon text-sm mb-2">{n}</div>
-              <div className="font-semibold mb-1.5">{title}</div>
-              <p className="text-fog text-sm leading-relaxed">{desc}</p>
+      {/* The wings */}
+      <section className="mt-16">
+        <Reveal>
+          <div className="flex items-end justify-between mb-6">
+            <div>
+              <div className="kicker mb-2">The house</div>
+              <h2 className="text-[1.5rem]">Three wings, one treasury</h2>
             </div>
+          </div>
+        </Reveal>
+        <div className="grid md:grid-cols-3 gap-4">
+          {WINGS.map((w, i) => (
+            <Reveal key={w.href} delay={i * 70}>
+              <Link href={w.href} className="lot-card h-full group">
+                <div className="card-media">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={w.image} alt="" loading="lazy" />
+                </div>
+                <div className="card-body">
+                  <div className="kicker !text-[0.6rem]">{w.kicker}</div>
+                  <h3 className="!text-[1.05rem]">{w.title}</h3>
+                  <p className="text-fog text-[0.85rem] leading-relaxed">{w.desc}</p>
+                  <div className="card-price-row">
+                    <span className="card-price-label">{w.cta}</span>
+                    <span className="text-fog group-hover:text-neon transition-colors">→</span>
+                  </div>
+                </div>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* How the loop works */}
+      <section className="mt-16">
+        <Reveal>
+          <div className="kicker mb-2">Protocol</div>
+          <h2 className="text-[1.5rem] mb-6">How the loop works</h2>
+        </Reveal>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            ["01", "Connect & sign", "A free message signature proves wallet ownership. No custody, no email, no password."],
+            ["02", "Burn for credits", `${CLIENT_CONFIG.ribbitPerCredit} $RIBBIT per credit — verified on-chain, removed from supply forever.`],
+            ["03", "Play, bid, hunt", "Wager credits in the arcade, bid escrowed $RIBBIT on lots, climb the bounty boards."],
+            ["04", "The take flows back", "House take splits 50% treasury · 30% bounty pools · 20% operations. Every movement is published."],
+          ].map(([n, title, desc], i) => (
+            <Reveal key={n} delay={i * 60}>
+              <div className="panel panel-hover p-5 h-full">
+                <div className="mono text-xs text-neon mb-3">{n}</div>
+                <div className="font-medium mb-1.5 tracking-tight">{title}</div>
+                <p className="text-fog text-[0.85rem] leading-relaxed">{desc}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* Episodes — production slate */}
+      <section className="mt-16">
+        <Reveal>
+          <div className="flex items-end justify-between mb-6 gap-4 flex-wrap">
+            <div>
+              <div className="kicker mb-2">In production</div>
+              <h2 className="text-[1.5rem]">The episodes</h2>
+            </div>
+            <p className="text-fog text-sm max-w-xs leading-relaxed">
+              The original five arcade episodes, remastered for the new house.
+              Badge rewards for the card tables.
+            </p>
+          </div>
+        </Reveal>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {EPISODES.map((e, i) => (
+            <Reveal key={e.title} delay={i * 50}>
+              <div className="lot-card">
+                <div className="card-media !aspect-square">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={e.image} alt={e.title} loading="lazy" />
+                  <span className="badge badge-urgent absolute top-2 right-2">
+                    Soon
+                  </span>
+                </div>
+                <div className="card-body !p-3">
+                  <h3 className="!text-[0.8rem] !min-h-0">{e.title}</h3>
+                </div>
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* Token */}
-      <section className="panel panel-glow p-8 text-center">
-        <div className="text-xs uppercase tracking-[0.25em] text-neon mb-2">The token</div>
-        <h2 className="text-2xl font-bold mb-3">$RIBBIT</h2>
-        <p className="text-fog max-w-xl mx-auto text-sm leading-relaxed mb-5">
-          $RIBBIT is the fuel of the Other World: burn it to play, bid it in
-          auctions, win it from bounty pools. Launched fair on pump.fun.
-        </p>
-        <code className="stat-number text-xs sm:text-sm text-neon-soft bg-abyss border border-edge rounded-lg px-4 py-2 inline-block break-all">
-          {CLIENT_CONFIG.ribbitMint}
-        </code>
-        <div className="flex flex-wrap gap-3 justify-center mt-6">
-          <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
-            Buy on pump.fun ↗
-          </a>
-          <a href={CLIENT_CONFIG.xUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
-            Follow @OWProjex ↗
-          </a>
-          <Link href="/treasury" className="btn btn-ghost">
-            Inspect the treasury
-          </Link>
-        </div>
+      <section className="mt-16">
+        <Reveal>
+          <div className="panel panel-glow overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="p-8">
+              <div className="kicker mb-2">Settlement currency</div>
+              <h2 className="text-[1.5rem] mb-3">$RIBBIT</h2>
+              <p className="text-fog text-[0.9375rem] leading-relaxed max-w-lg mb-5">
+                One token fuels the house: burn it to play, bid it on lots, win
+                it from bounty pools. Launched fair on pump.fun — the treasury
+                holds no premine.
+              </p>
+              <div
+                className="mono text-xs rounded-md border px-3.5 py-2.5 inline-block break-all mb-6"
+                style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
+              >
+                {CLIENT_CONFIG.ribbitMint}
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
+                  Acquire on pump.fun ↗
+                </a>
+                <a href={CLIENT_CONFIG.xUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                  @OWProjex ↗
+                </a>
+                <Link href="/treasury" className="btn btn-ghost">
+                  Inspect the treasury
+                </Link>
+              </div>
+            </div>
+            <div className="hidden md:block relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/art/ribbit-mark.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ filter: "brightness(0.85)" }}
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(90deg, var(--color-surface) 0%, transparent 45%)",
+                }}
+              />
+            </div>
+          </div>
+        </Reveal>
       </section>
     </div>
   );

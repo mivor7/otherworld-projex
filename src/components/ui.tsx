@@ -6,7 +6,7 @@ export function StatCard({
   label,
   value,
   sub,
-  tone = "neon",
+  tone = "plain",
 }: {
   label: string;
   value: string;
@@ -14,12 +14,22 @@ export function StatCard({
   tone?: "neon" | "portal" | "gold" | "plain";
 }) {
   const toneClass =
-    tone === "neon" ? "neon-text" : tone === "portal" ? "portal-text" : tone === "gold" ? "text-gold" : "text-frost";
+    tone === "neon"
+      ? "text-neon"
+      : tone === "portal"
+        ? "text-portal"
+        : tone === "gold"
+          ? "text-gold"
+          : "text-frost";
   return (
-    <div className="panel p-4">
-      <div className="text-xs uppercase tracking-wider text-fog mb-1">{label}</div>
-      <div className={`stat-number text-2xl ${toneClass}`}>{value}</div>
-      {sub && <div className="text-xs text-fog mt-1">{sub}</div>}
+    <div className="panel panel-hover px-4 py-4">
+      <div className="kicker mb-1.5">{label}</div>
+      <div className={`stat-number text-[1.35rem] ${toneClass}`}>{value}</div>
+      {sub && (
+        <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
@@ -31,7 +41,7 @@ export function Countdown({ to }: { to: string | Date }) {
     return () => clearInterval(t);
   }, []);
   const ms = new Date(to).getTime() - now;
-  if (ms <= 0) return <span className="text-danger">ended</span>;
+  if (ms <= 0) return <span className="text-danger stat-number">ended</span>;
   const s = Math.floor(ms / 1000);
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
@@ -41,7 +51,7 @@ export function Countdown({ to }: { to: string | Date }) {
     d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${sec}s` : `${m}m ${sec}s`;
   const urgent = ms < 10 * 60 * 1000;
   return (
-    <span className={`stat-number ${urgent ? "text-danger" : "text-neon"}`}>{str}</span>
+    <span className={`stat-number ${urgent ? "text-gold" : "text-frost"}`}>{str}</span>
   );
 }
 
@@ -55,12 +65,14 @@ export function SectionTitle({
   desc?: string;
 }) {
   return (
-    <div className="mb-6">
-      {kicker && (
-        <div className="text-xs uppercase tracking-[0.2em] text-neon mb-1.5">{kicker}</div>
+    <div className="mb-7">
+      {kicker && <div className="kicker mb-2">{kicker}</div>}
+      <h1 className="text-[1.6rem] sm:text-[1.9rem]">{title}</h1>
+      {desc && (
+        <p className="text-fog mt-2.5 max-w-2xl leading-relaxed text-[0.9375rem]">
+          {desc}
+        </p>
       )}
-      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{title}</h1>
-      {desc && <p className="text-fog mt-2 max-w-2xl leading-relaxed">{desc}</p>}
     </div>
   );
 }
@@ -72,14 +84,29 @@ export function Notice({
   kind: "ok" | "err" | "info";
   children: React.ReactNode;
 }) {
-  const cls =
+  const style =
     kind === "ok"
-      ? "border-neon-dim text-neon-soft bg-neon/5"
+      ? {
+          borderColor: "oklch(0.78 0.11 150 / 0.3)",
+          color: "var(--color-neon-soft)",
+          background: "oklch(0.78 0.11 150 / 0.05)",
+        }
       : kind === "err"
-        ? "border-danger/40 text-danger bg-danger/5"
-        : "border-edge-bright text-fog bg-surface-2";
+        ? {
+            borderColor: "oklch(0.64 0.18 25 / 0.35)",
+            color: "var(--color-danger)",
+            background: "oklch(0.64 0.18 25 / 0.06)",
+          }
+        : {
+            borderColor: "var(--border-solid)",
+            color: "var(--color-fog)",
+            background: "var(--color-surface)",
+          };
   return (
-    <div className={`rounded-lg border px-4 py-3 text-sm leading-relaxed ${cls}`}>
+    <div
+      className="rounded-lg border px-4 py-3 text-sm leading-relaxed"
+      style={style}
+    >
       {children}
     </div>
   );

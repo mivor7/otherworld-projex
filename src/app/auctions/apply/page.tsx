@@ -61,9 +61,9 @@ export default function ApplyPage() {
   return (
     <div className="pt-10 max-w-2xl mx-auto">
       <SectionTitle
-        kicker="Community listings"
-        title="Apply to list an item"
-        desc="RIBBIT community members can auction their own items — collectibles, NFTs, merch, services. Approved listings go live in the auction house with your wallet as seller."
+        kicker="Wing II — consignments"
+        title="Consign a lot"
+        desc="RIBBIT community members can put their own lots under the gavel — collectibles, 1/1s, merch, services. Approved consignments go live in the auction house with your wallet on record as seller."
       />
 
       {!me.signedIn ? (

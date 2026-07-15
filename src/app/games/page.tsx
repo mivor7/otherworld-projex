@@ -4,30 +4,31 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { useChain } from "@/components/use-chain";
-import { Notice, SectionTitle } from "@/components/ui";
+import { PageHero } from "@/components/hero";
+import { Notice } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 
 const GAMES = [
   {
     href: "/games/flip",
-    icon: "🪙",
+    image: "/art/art-brand-frog.jpg",
     name: "Frog Flip",
     desc: "Frog or fly — call the flip. 1.92× on a win.",
-    badge: "50% odds",
+    badge: "Even odds",
   },
   {
     href: "/games/dice",
-    icon: "🎲",
+    image: "/art/hero-flagship.jpg",
     name: "Pond Dice",
-    desc: "Pick your target, roll under it. Up to 47× payouts.",
-    badge: "choose your risk",
+    desc: "Set your own line, roll under it. Up to 47× payouts.",
+    badge: "Choose your risk",
   },
   {
     href: "/games/hopper",
-    icon: "🐸",
+    image: "/art/owp_frogger.png",
     name: "Hopper",
-    desc: "Free arcade action. Cross the traffic, climb the weekly bounty board.",
-    badge: "free · bounty",
+    desc: "Free arcade action — cross the traffic, climb the weekly bounty board.",
+    badge: "Free · bounty",
   },
 ];
 
@@ -85,48 +86,57 @@ export default function GamesPage() {
   };
 
   return (
-    <div className="pt-10">
-      <SectionTitle
-        kicker="The arcade"
-        title="Pick your game"
-        desc="Casino games run on play credits from burned $RIBBIT — provably fair, published house edge. The Hopper arcade is free and feeds the weekly bounty board."
+    <div className="pt-6">
+      <PageHero
+        compact
+        image="/art/owp_hero.jpg"
+        imagePosition="center 60%"
+        kicker="Wing I — the arcade"
+        badge="Tables open"
+        title="Step into the"
+        titleAccent="arcade"
+        subtitle="Casino tables run on credits from burned $RIBBIT — provably fair, 4% published edge. The Hopper arcade is free and feeds the weekly bounty board."
       />
 
-      <div className="grid lg:grid-cols-[1fr_340px] gap-6">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
         <div className="grid sm:grid-cols-2 gap-4 content-start">
           {GAMES.map((g) => (
-            <Link
-              key={g.href}
-              href={g.href}
-              className="panel p-6 hover:border-neon-dim hover:panel-glow transition-all group"
-            >
-              <div className="flex items-start justify-between">
-                <div className="text-4xl mb-3">{g.icon}</div>
-                <span className="badge">{g.badge}</span>
+            <Link key={g.href} href={g.href} className="lot-card group">
+              <div className="card-media">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={g.image} alt="" loading="lazy" />
+                <span className="badge absolute top-2 right-2">{g.badge}</span>
               </div>
-              <h3 className="font-bold text-lg group-hover:text-neon">{g.name}</h3>
-              <p className="text-fog text-sm mt-1.5 leading-relaxed">{g.desc}</p>
+              <div className="card-body">
+                <h3 className="!text-[1rem] group-hover:text-neon transition-colors">
+                  {g.name}
+                </h3>
+                <p className="text-fog text-[0.85rem] leading-relaxed">{g.desc}</p>
+                <div className="card-price-row">
+                  <span className="card-price-label">Play</span>
+                  <span className="text-fog group-hover:text-neon transition-colors">→</span>
+                </div>
+              </div>
             </Link>
           ))}
 
           {me.signedIn && history.length > 0 && (
             <div className="panel p-5 sm:col-span-2">
-              <h3 className="font-semibold mb-3 text-sm uppercase tracking-wider text-fog">
-                Your recent rounds
-              </h3>
+              <div className="kicker mb-3">Your recent rounds</div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <tbody>
                     {history.slice(0, 8).map((h) => (
                       <tr key={h.id} className="table-row">
                         <td className="py-2 pr-3 capitalize">{h.game}</td>
-                        <td className="py-2 pr-3 text-fog">−{h.wager}</td>
+                        <td className="py-2 pr-3 text-fog mono text-xs">−{h.wager}</td>
                         <td
-                          className={`py-2 pr-3 stat-number ${h.payout > 0 ? "text-neon" : "text-fog/60"}`}
+                          className={`py-2 pr-3 mono text-xs ${h.payout > 0 ? "text-neon" : ""}`}
+                          style={h.payout === 0 ? { color: "var(--text-dim)" } : undefined}
                         >
                           {h.payout > 0 ? `+${h.payout}` : "0"}
                         </td>
-                        <td className="py-2 text-fog/60 text-xs">
+                        <td className="py-2 text-xs text-right" style={{ color: "var(--text-dim)" }}>
                           {new Date(h.createdAt).toLocaleTimeString()}
                         </td>
                       </tr>
@@ -138,24 +148,22 @@ export default function GamesPage() {
           )}
         </div>
 
-        {/* Credits panel */}
-        <aside className="panel panel-glow p-6 h-fit sticky top-24">
-          <h3 className="font-bold mb-1">Play credits</h3>
-          <div className="stat-number text-4xl neon-text mb-4">
+        {/* Credits rail */}
+        <aside className="panel panel-glow p-5 h-fit lg:sticky lg:top-24">
+          <div className="kicker mb-2">Play credits</div>
+          <div className="stat-number text-[2.2rem] text-neon leading-none mb-5">
             {me.signedIn ? (me.credits ?? 0) : "—"}
           </div>
 
           {!me.signedIn ? (
             <Notice kind="info">
               Connect your wallet and sign in (top right) to burn $RIBBIT for
-              credits and start playing.
+              credits and take a seat.
             </Notice>
           ) : (
             <>
-              <label className="text-xs uppercase tracking-wider text-fog">
-                Burn $RIBBIT → credits
-              </label>
-              <div className="flex gap-2 mt-2 mb-2">
+              <label className="kicker !text-[0.6rem]">Burn $RIBBIT → credits</label>
+              <div className="flex gap-2 mt-1.5 mb-2">
                 <input
                   type="number"
                   className="input"
@@ -168,17 +176,17 @@ export default function GamesPage() {
                   {busy ? "…" : "Burn"}
                 </button>
               </div>
-              <p className="text-xs text-fog mb-3">
-                {CLIENT_CONFIG.ribbitPerCredit.toLocaleString()} $RIBBIT = 1 credit ·
-                you’ll get{" "}
+              <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                {CLIENT_CONFIG.ribbitPerCredit.toLocaleString()} $RIBBIT = 1 credit —
+                you’ll receive{" "}
                 <span className="text-neon">
                   {Math.floor(burnAmount / CLIENT_CONFIG.ribbitPerCredit)}
-                </span>{" "}
-                credits. Burns are permanent and verified on-chain.
+                </span>
+                . Burns are permanent and verified on-chain.
               </p>
               {CLIENT_CONFIG.devFaucet && (
                 <button className="btn btn-ghost w-full mb-3" onClick={doFaucet} disabled={busy}>
-                  Dev faucet: +100 credits
+                  Dev faucet · +100 credits
                 </button>
               )}
             </>
@@ -190,9 +198,12 @@ export default function GamesPage() {
             </div>
           )}
 
-          <div className="mt-4 pt-4 border-t border-edge text-xs text-fog leading-relaxed">
-            House edge is a flat {Math.round(0.04 * 100)}% on payouts, split 50%
-            treasury / 30% bounty pools / 20% ops.{" "}
+          <div
+            className="mt-4 pt-4 text-xs leading-relaxed"
+            style={{ borderTop: "1px solid var(--hairline)", color: "var(--text-dim)" }}
+          >
+            House edge is a flat 4% on payouts, split 50% treasury · 30% bounty
+            pools · 20% ops.{" "}
             <Link href="/fairness" className="text-neon hover:underline">
               Verify fairness →
             </Link>

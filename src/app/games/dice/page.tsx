@@ -47,9 +47,9 @@ export default function DicePage() {
   return (
     <div className="pt-10 max-w-2xl mx-auto">
       <SectionTitle
-        kicker="Pond Dice"
-        title="Roll under the line 🎲"
-        desc="Slide to set your risk. Lower target, bigger multiplier — roll under it and win."
+        kicker="Wing I — table 02"
+        title="Pond Dice"
+        desc="Set your own line and roll under it. Lower target, bigger multiplier."
       />
 
       <div className="panel panel-glow p-8">

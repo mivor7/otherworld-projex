@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/session";
-import { Countdown, Notice, SectionTitle } from "@/components/ui";
+import { Countdown, Notice } from "@/components/ui";
 import { fmtRibbit, fromRawClient, toRawClient } from "@/lib/client-config";
 
 type BidRow = {
@@ -55,7 +55,7 @@ export default function AuctionDetailPage({
   }, [load]);
 
   if (!auction) {
-    return <div className="pt-20 text-center text-fog">Loading auction…</div>;
+    return <div className="pt-24 text-center text-fog">Retrieving the lot…</div>;
   }
 
   const minNext =
@@ -75,7 +75,7 @@ export default function AuctionDetailPage({
     });
     const data = await res.json();
     if (res.ok) {
-      setMsg({ kind: "ok", text: "You're the highest bidder! 🐸" });
+      setMsg({ kind: "ok", text: "You hold the high bid." });
       load();
       await refresh();
     } else {
@@ -85,49 +85,75 @@ export default function AuctionDetailPage({
   };
 
   return (
-    <div className="pt-10 max-w-4xl mx-auto">
-      <Link href="/auctions" className="text-fog text-sm hover:text-neon">
-        ← All auctions
-      </Link>
-      <div className="grid md:grid-cols-2 gap-6 mt-4">
-        <div className="panel overflow-hidden">
-          <div className="h-64 bg-gradient-to-br from-portal-dim/30 via-surface-2 to-neon-dim/20 flex items-center justify-center">
+    <div className="pt-8 max-w-5xl mx-auto">
+      <div className="flex items-center gap-2 text-sm mb-5">
+        <Link href="/auctions" className="text-fog hover:text-frost transition-colors">
+          Auction House
+        </Link>
+        <span style={{ color: "var(--text-dim)" }}>/</span>
+        <span className="kicker !normal-case !tracking-normal">{auction.title}</span>
+      </div>
+
+      <div className="grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-6 items-start">
+        {/* Media theater */}
+        <div className="panel panel-glow overflow-hidden">
+          <div className="relative" style={{ background: "oklch(0.09 0.006 270)" }}>
             {auction.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={auction.imageUrl} alt={auction.title} className="w-full h-full object-cover" />
+              <img
+                src={auction.imageUrl}
+                alt={auction.title}
+                className="w-full aspect-[4/3] object-cover"
+              />
             ) : (
-              <span className="text-7xl opacity-60">🏛️</span>
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/art/art-empty-chest.jpg"
+                alt=""
+                className="w-full aspect-[4/3] object-cover opacity-80"
+              />
             )}
+            <div
+              className="absolute inset-2.5 pointer-events-none rounded-md"
+              style={{ border: "1px solid oklch(1 0 0 / 0.08)" }}
+            />
           </div>
-          <div className="p-5">
-            <div className="flex gap-2 mb-2">
+          <div className="p-6">
+            <div className="flex gap-1.5 mb-3 flex-wrap">
               <span className="badge">{auction.category}</span>
               {auction.sellerWallet ? (
-                <span className="badge">community · {auction.sellerWallet.slice(0, 4)}…</span>
+                <span className="badge badge-portal">
+                  consigned · {auction.sellerWallet.slice(0, 4)}…
+                </span>
               ) : (
-                <span className="badge badge-portal">house listing</span>
+                <span className="badge">house lot</span>
               )}
             </div>
-            <SectionTitle title={auction.title} />
-            <p className="text-fog text-sm leading-relaxed -mt-4">{auction.description}</p>
+            <h1 className="text-[1.4rem] mb-3">{auction.title}</h1>
+            <p className="text-fog text-[0.9rem] leading-relaxed">{auction.description}</p>
           </div>
         </div>
 
-        <div>
-          <div className="panel panel-glow p-6 mb-4">
-            <div className="flex justify-between items-start mb-4">
+        {/* Bid rail */}
+        <div className="md:sticky md:top-24 space-y-4">
+          <div className="panel panel-glow p-6">
+            <div className="flex justify-between items-start mb-5">
               <div>
-                <div className="text-xs text-fog uppercase tracking-wider mb-1">
-                  {BigInt(auction.currentRaw) > 0n ? "Current bid" : "Starting bid"}
+                <div className="kicker mb-1.5">
+                  {BigInt(auction.currentRaw) > 0n ? "Current bid" : "Opening bid"}
                 </div>
-                <div className="stat-number text-3xl neon-text">
-                  {fmtRibbit(BigInt(auction.currentRaw) > 0n ? auction.currentRaw : auction.startBidRaw)}
+                <div className="stat-number text-[2rem] text-neon leading-none">
+                  {fmtRibbit(
+                    BigInt(auction.currentRaw) > 0n ? auction.currentRaw : auction.startBidRaw
+                  )}
                 </div>
-                <div className="text-xs text-fog mt-0.5">$RIBBIT</div>
+                <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
+                  $RIBBIT
+                </div>
               </div>
               <div className="text-right">
-                <div className="text-xs text-fog uppercase tracking-wider mb-1">
-                  {auction.status === "live" ? "Ends in" : "Status"}
+                <div className="kicker mb-1.5">
+                  {auction.status === "live" ? "Hammer in" : "Status"}
                 </div>
                 {auction.status === "live" ? (
                   <Countdown to={auction.endsAt} />
@@ -157,19 +183,22 @@ export default function AuctionDetailPage({
                     onClick={placeBid}
                     disabled={busy || !me.signedIn || youAreHigh}
                   >
-                    {busy ? "…" : "Bid"}
+                    {busy ? "…" : "Place bid"}
                   </button>
                 </div>
-                <p className="text-xs text-fog mt-2">
-                  Minimum next bid: {fmtRibbit(minNext)} $RIBBIT · paid from your{" "}
-                  <Link href="/auctions" className="text-neon hover:underline">
-                    deposited balance
-                  </Link>{" "}
-                  (available: {fmtRibbit(me.ribbitAvailable ?? 0)})
-                </p>
-                <p className="text-xs text-fog mt-1">
-                  Bids in the final 2 minutes extend the auction by 2 minutes.
-                </p>
+                <div
+                  className="text-xs mt-3 space-y-1 leading-relaxed"
+                  style={{ color: "var(--text-dim)" }}
+                >
+                  <p>
+                    Minimum next bid {fmtRibbit(minNext)} · from your{" "}
+                    <Link href="/auctions" className="text-neon hover:underline">
+                      bidding account
+                    </Link>{" "}
+                    ({fmtRibbit(me.ribbitAvailable ?? 0)} available)
+                  </p>
+                  <p>Bids in the final 2 minutes extend the hammer by 2 minutes.</p>
+                </div>
               </>
             )}
             {msg && (
@@ -180,19 +209,17 @@ export default function AuctionDetailPage({
           </div>
 
           <div className="panel p-5">
-            <h3 className="font-semibold mb-3 text-sm uppercase tracking-wider text-fog">
-              Bid history
-            </h3>
+            <div className="kicker mb-3">Bid record</div>
             {auction.bids.length === 0 ? (
-              <p className="text-fog text-sm">No bids yet — set the pace.</p>
+              <p className="text-fog text-sm">No bids yet — open the lot.</p>
             ) : (
               <table className="w-full text-sm">
                 <tbody>
                   {auction.bids.map((b) => (
                     <tr key={b.id} className="table-row">
-                      <td className="py-2 pr-2">
+                      <td className="py-2 pr-2 mono text-xs">
                         {b.bidder}
-                        {b.isYou && <span className="text-neon"> (you)</span>}
+                        {b.isYou && <span className="text-neon"> · you</span>}
                       </td>
                       <td className="py-2 pr-2 stat-number text-right">
                         {fmtRibbit(b.amountRaw)}

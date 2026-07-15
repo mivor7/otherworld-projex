@@ -13,7 +13,7 @@ export function WalletButton() {
   if (!publicKey) {
     return (
       <button className="btn btn-primary" onClick={() => setVisible(true)}>
-        Connect Wallet
+        Connect wallet
       </button>
     );
   }
@@ -25,7 +25,7 @@ export function WalletButton() {
           {signingIn ? "Check your wallet…" : "Sign in"}
         </button>
         <button
-          className="btn btn-ghost"
+          className="btn btn-ghost mono !text-xs"
           onClick={() => disconnect()}
           title={publicKey.toBase58()}
         >
@@ -37,18 +37,23 @@ export function WalletButton() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="badge badge-live" title="Play credits">
-        ⚡ {me.credits ?? 0}
+      <span
+        className="hidden sm:inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs mono"
+        style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
+        title="Play credits"
+      >
+        {me.credits ?? 0}
+        <span className="kicker !text-[0.55rem]">cr</span>
       </span>
       <button
-        className="btn btn-ghost"
+        className="btn btn-ghost mono !text-xs"
         onClick={async () => {
           await signOut();
           await disconnect();
         }}
         title={`Signed in as ${me.wallet} — click to sign out`}
       >
-        {shortWallet(me.wallet ?? "")} ✕
+        {shortWallet(me.wallet ?? "")}
       </button>
     </div>
   );

@@ -69,8 +69,8 @@ export default function FairnessPage() {
     <div className="pt-10 max-w-3xl mx-auto">
       <SectionTitle
         kicker="Commit–reveal"
-        title="Provable fairness 🔍"
-        desc="Before you play a single round, the server commits to a secret seed by publishing its SHA-256 hash. Outcomes are HMAC-SHA256(serverSeed, clientSeed:nonce) — the house cannot bend a roll without breaking its own commitment."
+        title="Provable fairness"
+        desc="Before you play a single round, the house commits to a secret seed by publishing its SHA-256 hash. Outcomes are HMAC-SHA256(serverSeed, clientSeed:nonce) — the house cannot bend a roll without breaking its own commitment."
       />
 
       <div className="panel p-6 mb-6">

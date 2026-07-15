@@ -49,9 +49,9 @@ export default function FlipPage() {
   return (
     <div className="pt-10 max-w-2xl mx-auto">
       <SectionTitle
-        kicker="Frog Flip"
-        title="Call the flip 🪙"
-        desc="Frog or fly, 50/50 odds, 1.92× payout on a win (4% house edge)."
+        kicker="Wing I — table 01"
+        title="Frog Flip"
+        desc="Frog or fly, even odds, 1.92× payout on a win — 4% published edge."
       />
 
       <div className="panel panel-glow p-8 text-center">

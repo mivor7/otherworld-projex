@@ -233,9 +233,9 @@ export default function HopperPage() {
   return (
     <div className="pt-10">
       <SectionTitle
-        kicker="Hopper — free arcade"
-        title="Cross the neon traffic 🐸"
-        desc="Arrows / WASD to hop. +1 per forward hop, +10 per crossing, three lives. Signed-in runs post to the weekly bounty leaderboard."
+        kicker="Wing I — free arcade"
+        title="Hopper"
+        desc="Arrows / WASD to hop. +1 per forward hop, +10 per crossing, three lives. Signed-in runs post to the weekly bounty board."
       />
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
         <div className="panel panel-glow p-4 flex flex-col items-center">

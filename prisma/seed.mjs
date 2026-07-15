@@ -16,28 +16,41 @@ async function main() {
   await prisma.auction.createMany({
     data: [
       {
-        title: "Genesis Frog — founders' 1/1",
+        title: "Vault Door — archive print 1/1",
         description:
-          "The first collectible minted for the Other World. The winner receives the 1/1 NFT plus a permanent 'Founder' badge on all leaderboards.",
-        category: "nft",
+          "Signed 1/1 archive print of the Otherworld vault door, sealed in a museum glass case. The winner receives the physical print plus its on-chain certificate.",
+        category: "collectible",
+        imageUrl: "/art/lot-vault-print.jpg",
         startBidRaw: raw(25_000),
         minIncrement: raw(1_000),
         endsAt: hours(72),
       },
       {
-        title: "OWP embroidered varsity jacket",
+        title: "Card Shark — gold badge medallion",
         description:
-          "Heavyweight varsity jacket with the frog-portal mark embroidered on the back. Shipped worldwide by the team.",
-        category: "merch",
-        startBidRaw: raw(8_000),
+          "The Card Shark seal, struck for the house's card tables. Grants the permanent 'Card Shark' badge on all leaderboards.",
+        category: "nft",
+        imageUrl: "/art/lot-card-shark.jpg",
+        startBidRaw: raw(15_000),
         minIncrement: raw(500),
         endsAt: hours(48),
       },
       {
-        title: "Your X banner, designed by the OWP artist",
+        title: "Founders' sketch — concept sheet No. 3",
         description:
-          "The artist behind the Other World designs a custom animated banner + avatar set for the winner's X profile.",
-        category: "service",
+          "Original concept sketch from the Other World production archive. Shipped framed, worldwide, by the team.",
+        category: "collectible",
+        imageUrl: "/art/lot-sketch.jpg",
+        startBidRaw: raw(8_000),
+        minIncrement: raw(500),
+        endsAt: hours(36),
+      },
+      {
+        title: "Otherworld wallpaper suite — early access",
+        description:
+          "The full 4K/mobile wallpaper suite from the house artist, delivered before public release, plus your name in the credits.",
+        category: "other",
+        imageUrl: "/art/lot-wallpapers.jpg",
         startBidRaw: raw(3_000),
         minIncrement: raw(250),
         endsAt: hours(24),
@@ -77,7 +90,7 @@ async function main() {
     ],
   });
 
-  console.log("Seeded 3 auctions and 3 bounties. Welcome to the Other World. 🐸");
+  console.log("Seeded 4 auctions and 3 bounties. Welcome to the Other World. 🐸");
 }
 
 main()
