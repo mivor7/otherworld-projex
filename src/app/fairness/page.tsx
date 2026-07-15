@@ -84,6 +84,12 @@ export default function FairnessPage() {
             chars ÷ 2³² give the roll. Flip wins under 0.5 for frog; dice wins when
             roll × 100 is under your target.
           </li>
+          <li>
+            Blackjack: the deck is a Fisher–Yates shuffle whose i-th swap uses the
+            roll from HMAC-SHA256(seed, <code>clientSeed:nonce:i</code>) — re-derive all
+            52 cards and compare with the hand you were dealt. Open hands block seed
+            rotation so a reveal can never expose a live deck.
+          </li>
         </ol>
       </div>
 

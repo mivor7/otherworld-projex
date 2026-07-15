@@ -24,10 +24,24 @@ const GAMES = [
     badge: "Choose your risk",
   },
   {
+    href: "/games/blackjack",
+    image: "/art/owp_bj.png",
+    name: "Blackjack",
+    desc: "Single deck, dealer stands on 17, naturals pay 3:2. Every deck order is committed before the deal.",
+    badge: "3:2 tables",
+  },
+  {
     href: "/games/hopper",
     image: "/art/owp_frogger.png",
     name: "Hopper",
     desc: "Free arcade action — cross the traffic, climb the weekly bounty board.",
+    badge: "Free · bounty",
+  },
+  {
+    href: "/games/frogris",
+    image: "/art/owp_frogris.png",
+    name: "Frogris",
+    desc: "The falling-block episode. Clear lines, chase levels, top the weekly board.",
     badge: "Free · bounty",
   },
 ];
@@ -95,7 +109,7 @@ export default function GamesPage() {
         badge="Tables open"
         title="Step into the"
         titleAccent="arcade"
-        subtitle="Casino tables run on credits from burned $RIBBIT — provably fair, 4% published edge. The Hopper arcade is free and feeds the weekly bounty board."
+        subtitle="Casino tables run on credits from burned $RIBBIT — provably fair, published edge. The arcade episodes are free and feed the weekly bounty boards."
       />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">

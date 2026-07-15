@@ -6,7 +6,7 @@ import { toRaw } from "@/lib/config";
 const body = z.object({
   title: z.string().min(3).max(80),
   description: z.string().min(10).max(2000),
-  game: z.enum(["hopper", "flip", "dice"]).optional(),
+  game: z.enum(["hopper", "frogris", "flip", "dice", "blackjack"]).optional(),
   kind: z.enum(["leaderboard", "challenge"]).default("leaderboard"),
   prizeRibbit: z.number().positive(),
   prizeText: z.string().max(120).optional(),

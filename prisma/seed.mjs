@@ -87,10 +87,28 @@ async function main() {
         prizeRibbit: raw(5_000),
         endsAt: hours(30 * 24),
       },
+      {
+        title: "Frogris Weekly — Episode 1",
+        description:
+          "Top 3 Frogris scores this week split the pool 60/25/15. Every signed-in run counts; only your best score matters.",
+        game: "frogris",
+        kind: "leaderboard",
+        prizeRibbit: raw(15_000),
+        endsAt: hours(7 * 24),
+      },
+      {
+        title: "Card Shark — Blackjack",
+        description:
+          "Biggest net winner at the blackjack table this week earns the Card Shark badge and the pool. Minimum 100 credits wagered to qualify.",
+        game: "blackjack",
+        kind: "leaderboard",
+        prizeRibbit: raw(10_000),
+        endsAt: hours(7 * 24),
+      },
     ],
   });
 
-  console.log("Seeded 4 auctions and 3 bounties. Welcome to the Other World. 🐸");
+  console.log("Seeded 4 auctions and 5 bounties. Welcome to the Other World. 🐸");
 }
 
 main()

@@ -84,17 +84,22 @@ model GameRound {
   user       User     @relation(fields: [userId], references: [id])
   seedId     String
   seed       ServerSeed @relation(fields: [seedId], references: [id])
-  game       String // "flip" | "dice"
+  game       String // "flip" | "dice" | "blackjack"
   nonce      Int
   clientSeed String
   params     String // JSON: game-specific inputs (side, target...)
-  outcome    String // JSON: result details
+  outcome    String // JSON: result details / in-progress state
   wager      Int // credits
   payout     Int // credits (0 on loss)
   houseTake  Int // credits kept by house on this round (edge portion)
+  // Multi-request games (blackjack) stay false until the round resolves.
+  // Unsettled rounds block seed rotation so a revealed seed can never
+  // expose cards still in play.
+  settled    Boolean  @default(true)
   createdAt  DateTime @default(now())
 
   @@index([userId, createdAt])
+  @@index([userId, settled])
   @@index([game, createdAt])
 }
 

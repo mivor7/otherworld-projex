@@ -1,15 +1,19 @@
 // Issues a signed single-use run token before an arcade run. Scores are only
 // accepted with a valid token, a plausible elapsed time, and a sane score —
 // basic but effective anti-cheat for a leaderboard with prizes.
+import { z } from "zod";
 import { SignJWT } from "jose";
 import { handler, ok, requireSession } from "@/lib/api";
 import { requireSessionSecret } from "@/lib/config";
 
-export const POST = handler(async () => {
+const body = z.object({ game: z.enum(["hopper", "frogris"]).default("hopper") });
+
+export const POST = handler(async (req: Request) => {
   const session = await requireSession();
+  const { game } = body.parse(await req.json().catch(() => ({})));
   const runToken = await new SignJWT({
     uid: session.userId,
-    game: "hopper",
+    game,
     startedAt: Date.now(),
   })
     .setProtectedHeader({ alg: "HS256" })

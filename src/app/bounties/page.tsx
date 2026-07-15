@@ -22,8 +22,10 @@ type BoardRow = { rank: number; player: string; score: number };
 
 const GAME_LABELS: Record<string, string> = {
   hopper: "Hopper",
+  frogris: "Frogris",
   flip: "Frog Flip",
   dice: "Pond Dice",
+  blackjack: "Blackjack",
 };
 
 export default function BountiesPage() {
@@ -123,7 +125,7 @@ export default function BountiesPage() {
           <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
             Rolling 7 days · best per hunter
           </p>
-          <div className="chips mb-4">
+          <div className="chips mb-4 flex-wrap">
             {Object.entries(GAME_LABELS).map(([key, label]) => (
               <button
                 key={key}

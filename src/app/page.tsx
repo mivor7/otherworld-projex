@@ -35,12 +35,12 @@ const WINGS = [
   },
 ];
 
-const EPISODES = [
+const EPISODES: { image: string; title: string; href?: string }[] = [
+  { image: "/art/owp_frogris.png", title: "Frogris", href: "/games/frogris" },
+  { image: "/art/owp_bj.png", title: "Blackjack", href: "/games/blackjack" },
+  { image: "/art/owp_frogger.png", title: "Hopper", href: "/games/hopper" },
   { image: "/art/owp_ff.jpg", title: "Fraud Frog Exterminator" },
-  { image: "/art/owp_frogris.png", title: "Frogris" },
-  { image: "/art/owp_frogger.png", title: "Frogger" },
   { image: "/art/owp_worm.png", title: "Worm Frog" },
-  { image: "/art/owp_bj.png", title: "Blackjack" },
   { image: "/art/owp_poker.png", title: "Poker Face" },
 ];
 
@@ -167,22 +167,33 @@ export default async function Home() {
           </div>
         </Reveal>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {EPISODES.map((e, i) => (
-            <Reveal key={e.title} delay={i * 50}>
-              <div className="lot-card">
+          {EPISODES.map((e, i) => {
+            const card = (
+              <div className="lot-card h-full">
                 <div className="card-media !aspect-square">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={e.image} alt={e.title} loading="lazy" />
-                  <span className="badge badge-urgent absolute top-2 right-2">
-                    Soon
-                  </span>
+                  {e.href ? (
+                    <span className="badge badge-live absolute top-2 right-2">
+                      <span className="live-dot" /> Live
+                    </span>
+                  ) : (
+                    <span className="badge badge-urgent absolute top-2 right-2">
+                      Soon
+                    </span>
+                  )}
                 </div>
                 <div className="card-body !p-3">
                   <h3 className="!text-[0.8rem] !min-h-0">{e.title}</h3>
                 </div>
               </div>
-            </Reveal>
-          ))}
+            );
+            return (
+              <Reveal key={e.title} delay={i * 50}>
+                {e.href ? <Link href={e.href}>{card}</Link> : card}
+              </Reveal>
+            );
+          })}
         </div>
       </section>
 

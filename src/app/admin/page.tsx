@@ -218,8 +218,10 @@ export default function AdminPage() {
                 <select className="input" value={bountyForm.game}
                   onChange={(e) => setBountyForm({ ...bountyForm, game: e.target.value })}>
                   <option value="hopper">Hopper</option>
+                  <option value="frogris">Frogris</option>
                   <option value="flip">Frog Flip</option>
                   <option value="dice">Pond Dice</option>
+                  <option value="blackjack">Blackjack</option>
                 </select>
               </div>
               <div>

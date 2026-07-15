@@ -11,7 +11,7 @@ export const GET = handler(async (req: Request) => {
   const since = url.searchParams.get("since");
   const sinceDate = since ? new Date(since) : new Date(Date.now() - 7 * 24 * 3600 * 1000);
 
-  if (game === "hopper") {
+  if (game === "hopper" || game === "frogris") {
     // Best score per player within the window.
     const scores = await prisma.arcadeScore.groupBy({
       by: ["userId"],

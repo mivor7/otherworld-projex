@@ -3,8 +3,10 @@ import { prisma } from "@/lib/db";
 
 export const GET = handler(async () => {
   const session = await requireSession();
+  // Unsettled rounds are excluded — a live blackjack hand's outcome blob
+  // contains the dealer's hole card.
   const rounds = await prisma.gameRound.findMany({
-    where: { userId: session.userId },
+    where: { userId: session.userId, settled: true },
     orderBy: { createdAt: "desc" },
     take: 25,
     include: { seed: { select: { seedHash: true, seed: true, active: true } } },

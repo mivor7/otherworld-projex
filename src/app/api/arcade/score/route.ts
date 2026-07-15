@@ -26,8 +26,10 @@ export const POST = handler(async (req: Request) => {
 
   const elapsedSec = (Date.now() - Number(payload.startedAt)) / 1000;
   if (elapsedSec < 10) return err("Run too short to be real", 422);
-  // Hopper awards ~1 point per hop; cap at a generous per-second rate.
-  if (score > Math.ceil(elapsedSec * 30)) return err("Score rejected", 422);
+  // Generous per-second ceilings per game — Frogris line clears score in
+  // hundreds, Hopper in single hops.
+  const maxPerSec = payload.game === "frogris" ? 150 : 30;
+  if (score > Math.ceil(elapsedSec * maxPerSec)) return err("Score rejected", 422);
 
   try {
     await prisma.arcadeScore.create({
