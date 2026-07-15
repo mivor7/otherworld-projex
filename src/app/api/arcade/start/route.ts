@@ -6,7 +6,7 @@ import { SignJWT } from "jose";
 import { handler, ok, requireSession } from "@/lib/api";
 import { requireSessionSecret } from "@/lib/config";
 
-const body = z.object({ game: z.enum(["hopper", "frogris"]).default("hopper") });
+const body = z.object({ game: z.enum(["hopper", "frogris", "worm"]).default("hopper") });
 
 export const POST = handler(async (req: Request) => {
   const session = await requireSession();

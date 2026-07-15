@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
+import { usePractice } from "@/components/practice";
 
 type DiceResult = {
   outcome: { rolled: number; target: number; multiplier: number };
@@ -22,13 +23,38 @@ export default function DicePage() {
   const [rolling, setRolling] = useState(false);
   const [result, setResult] = useState<DiceResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sandbox, setSandbox] = useState(false);
+  const practice = usePractice();
 
   const multiplier = (100 / target) * 0.96;
+  const balance = sandbox ? practice.credits : (me.credits ?? 0);
+  const canPlay = sandbox || me.signedIn;
 
   const play = async () => {
-    const clientSeed = Math.random().toString(36).slice(2, 12);
     setRolling(true);
     setError(null);
+
+    if (sandbox) {
+      // Practice table: same odds, local roll, zero $RIBBIT.
+      const rolled = Math.floor(Math.random() * 100 * 100) / 100;
+      const win = rolled < target;
+      const payout = win ? Math.floor(wager * multiplier) : 0;
+      practice.adjust(-wager + payout);
+      await new Promise((r) => setTimeout(r, 700));
+      setResult({
+        outcome: { rolled, target, multiplier },
+        payout,
+        win,
+        credits: 0,
+        nonce: 0,
+        seedHash: "",
+      });
+      if (win) celebrate();
+      setRolling(false);
+      return;
+    }
+
+    const clientSeed = Math.random().toString(36).slice(2, 12);
     const res = await fetch("/api/games/dice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -55,6 +81,33 @@ export default function DicePage() {
       />
 
       <div className="panel panel-glow p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="chips">
+            <button className={`chip ${!sandbox ? "active" : ""}`} onClick={() => setSandbox(false)}>
+              Live table
+            </button>
+            <button className={`chip ${sandbox ? "active" : ""}`} onClick={() => setSandbox(true)}>
+              Sandbox
+            </button>
+          </div>
+          <div className="text-right">
+            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice credits" : "Credits"}</div>
+            <div className="stat-number text-neon">{canPlay ? balance : "—"}</div>
+          </div>
+        </div>
+        {sandbox && (
+          <div className="mb-5">
+            <Notice kind="info">
+              Sandbox — no wallet needed, no $RIBBIT involved. Same odds, practice
+              bankroll.{" "}
+              {practice.credits < 1 && (
+                <button className="text-neon hover:underline" onClick={practice.reset}>
+                  Refill practice credits →
+                </button>
+              )}
+            </Notice>
+          </div>
+        )}
         {/* Result track */}
         <div className="relative h-10 rounded-lg bg-abyss border border-edge mb-2 overflow-hidden">
           <div
@@ -123,15 +176,15 @@ export default function DicePage() {
           <button
             className="btn btn-primary text-lg px-12 py-3"
             onClick={play}
-            disabled={rolling || !me.signedIn || (me.credits ?? 0) < wager}
+            disabled={rolling || !canPlay || balance < wager}
           >
-            {rolling ? "Rolling…" : "Roll"}
+            {rolling ? "Rolling…" : sandbox ? "Roll (practice)" : "Roll"}
           </button>
         </div>
 
-        {!me.signedIn && (
+        {!sandbox && !me.signedIn && (
           <p className="text-fog text-sm mt-4 text-center">
-            Sign in with your wallet to play.{" "}
+            Sign in with your wallet to play — or try the sandbox above.{" "}
             <Link href="/games" className="text-neon hover:underline">
               Get credits →
             </Link>
@@ -142,12 +195,17 @@ export default function DicePage() {
             <Notice kind="err">{error}</Notice>
           </div>
         )}
-        {result && (
+        {result && !sandbox && result.seedHash && (
           <p className="text-xs text-fog/70 mt-6 text-center break-all">
             nonce {result.nonce} · seed hash {result.seedHash.slice(0, 16)}… ·{" "}
             <Link href="/fairness" className="text-neon hover:underline">
               verify
             </Link>
+          </p>
+        )}
+        {result && sandbox && (
+          <p className="text-xs mt-6 text-center" style={{ color: "var(--text-dim)" }}>
+            practice round — nothing wagered, nothing won
           </p>
         )}
       </div>

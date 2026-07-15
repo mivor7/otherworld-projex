@@ -44,6 +44,13 @@ const GAMES = [
     desc: "The falling-block episode. Clear lines, chase levels, top the weekly board.",
     badge: "Free · bounty",
   },
+  {
+    href: "/games/worm",
+    image: "/art/owp_worm.png",
+    name: "Worm Frog",
+    desc: "Slither, grow, and don't bite your own tail. Ten points a fly.",
+    badge: "Free · bounty",
+  },
 ];
 
 type HistoryRow = {

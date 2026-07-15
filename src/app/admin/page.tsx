@@ -40,6 +40,7 @@ export default function AdminPage() {
   const [bountyForm, setBountyForm] = useState({
     title: "",
     description: "",
+    target: "",
     game: "hopper",
     prizeRibbit: 5000,
     durationDays: 7,
@@ -212,6 +213,8 @@ export default function AdminPage() {
               onChange={(e) => setBountyForm({ ...bountyForm, title: e.target.value })} />
             <textarea className="input" placeholder="Description" value={bountyForm.description}
               onChange={(e) => setBountyForm({ ...bountyForm, description: e.target.value })} />
+            <input className="input" placeholder="Target (e.g. The Highway Bandit)" value={bountyForm.target}
+              onChange={(e) => setBountyForm({ ...bountyForm, target: e.target.value })} />
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="text-xs text-fog">Game</label>
@@ -219,6 +222,7 @@ export default function AdminPage() {
                   onChange={(e) => setBountyForm({ ...bountyForm, game: e.target.value })}>
                   <option value="hopper">Hopper</option>
                   <option value="frogris">Frogris</option>
+                  <option value="worm">Worm Frog</option>
                   <option value="flip">Frog Flip</option>
                   <option value="dice">Pond Dice</option>
                   <option value="blackjack">Blackjack</option>

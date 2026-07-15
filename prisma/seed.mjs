@@ -58,19 +58,53 @@ async function main() {
     ],
   });
 
+  // The episode contracts — targets and rewards from the original site.
   await prisma.bounty.createMany({
     data: [
       {
-        title: "Hopper Weekly — Episode 1",
+        title: "EP 02 — Frogris",
+        target: "The Stack-Smuggler",
         description:
-          "Top 3 Hopper scores this week split the pool 60/25/15. Every signed-in run counts; only your best score matters.",
+          "Stack the falling frogs. Clear the lines. Don't top out. Top 3 scores this week split the pool 60/25/15.",
+        game: "frogris",
+        kind: "leaderboard",
+        prizeRibbit: raw(7_500),
+        endsAt: hours(7 * 24),
+      },
+      {
+        title: "EP 04 — Worm Frog",
+        target: "The Tail-Bite Serpent",
+        description:
+          "Slither, grow, and don't bite your own tail. Top 3 scores this week split the pool 60/25/15.",
+        game: "worm",
+        kind: "leaderboard",
+        prizeRibbit: raw(12_500),
+        endsAt: hours(7 * 24),
+      },
+      {
+        title: "EP 05 — Hopper",
+        target: "The Highway Bandit",
+        description:
+          "Hop the lanes. Dodge the traffic. Ride the logs home. Top 3 scores this week split the pool 60/25/15.",
         game: "hopper",
         kind: "leaderboard",
         prizeRibbit: raw(15_000),
         endsAt: hours(7 * 24),
       },
       {
+        title: "EP 06 — Blackjack",
+        target: "The House Toad",
+        description:
+          "Beat the dealer. Hold the line. Bank the RIBBIT. Biggest net winner this week takes the contract — minimum 100 credits wagered to qualify.",
+        game: "blackjack",
+        kind: "leaderboard",
+        prizeRibbit: raw(1_200),
+        prizeText: "1,200 $RIBBIT + Card Shark badge",
+        endsAt: hours(7 * 24),
+      },
+      {
         title: "High Roller — Pond Dice",
+        target: "The Deep End",
         description:
           "Biggest net winner on Pond Dice this week takes the bounty. Volume must exceed 200 credits wagered to qualify.",
         game: "dice",
@@ -80,6 +114,7 @@ async function main() {
       },
       {
         title: "First 47× hit",
+        target: "The Long Shot",
         description:
           "First hunter to win a Pond Dice roll at target 2 (47× payout) claims this one-off challenge bounty. Post your round id in the community channel.",
         game: "dice",
@@ -87,28 +122,10 @@ async function main() {
         prizeRibbit: raw(5_000),
         endsAt: hours(30 * 24),
       },
-      {
-        title: "Frogris Weekly — Episode 1",
-        description:
-          "Top 3 Frogris scores this week split the pool 60/25/15. Every signed-in run counts; only your best score matters.",
-        game: "frogris",
-        kind: "leaderboard",
-        prizeRibbit: raw(15_000),
-        endsAt: hours(7 * 24),
-      },
-      {
-        title: "Card Shark — Blackjack",
-        description:
-          "Biggest net winner at the blackjack table this week earns the Card Shark badge and the pool. Minimum 100 credits wagered to qualify.",
-        game: "blackjack",
-        kind: "leaderboard",
-        prizeRibbit: raw(10_000),
-        endsAt: hours(7 * 24),
-      },
     ],
   });
 
-  console.log("Seeded 4 auctions and 5 bounties. Welcome to the Other World. 🐸");
+  console.log("Seeded 4 auctions and 6 bounties. Welcome to the Other World. 🐸");
 }
 
 main()

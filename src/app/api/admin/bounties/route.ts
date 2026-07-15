@@ -6,7 +6,8 @@ import { toRaw } from "@/lib/config";
 const body = z.object({
   title: z.string().min(3).max(80),
   description: z.string().min(10).max(2000),
-  game: z.enum(["hopper", "frogris", "flip", "dice", "blackjack"]).optional(),
+  target: z.string().max(80).optional(),
+  game: z.enum(["hopper", "frogris", "worm", "flip", "dice", "blackjack"]).optional(),
   kind: z.enum(["leaderboard", "challenge"]).default("leaderboard"),
   prizeRibbit: z.number().positive(),
   prizeText: z.string().max(120).optional(),
@@ -20,6 +21,7 @@ export const POST = handler(async (req: Request) => {
     data: {
       title: data.title,
       description: data.description,
+      target: data.target,
       game: data.game,
       kind: data.kind,
       prizeRibbit: toRaw(data.prizeRibbit),

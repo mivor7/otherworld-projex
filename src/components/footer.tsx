@@ -28,8 +28,10 @@ export function Footer() {
             <li><Link className="hover:text-frost transition-colors" href="/games">Arcade</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/auctions">Auction House</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/bounties">Bounties</Link></li>
+            <li><Link className="hover:text-frost transition-colors" href="/leaderboard">Leaderboard</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/treasury">Treasury</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/fairness">Provable fairness</Link></li>
+            <li><Link className="hover:text-frost transition-colors" href="/about">About OWP</Link></li>
           </ul>
         </div>
         <div>

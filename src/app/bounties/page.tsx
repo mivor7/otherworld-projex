@@ -11,6 +11,7 @@ type Bounty = {
   id: string;
   title: string;
   description: string;
+  target: string | null;
   game: string | null;
   kind: string;
   prizeRibbit: string;
@@ -24,6 +25,7 @@ type BoardRow = { rank: number; player: string; score: number };
 const GAME_LABELS: Record<string, string> = {
   hopper: "Hopper",
   frogris: "Frogris",
+  worm: "Worm Frog",
   flip: "Frog Flip",
   dice: "Pond Dice",
   blackjack: "Blackjack",
@@ -97,12 +99,20 @@ export default function BountiesPage() {
                     )}
                   </div>
                   <h3 className="!text-[1.05rem]">{b.title}</h3>
+                  {b.target && (
+                    <div className="mono text-xs text-gold mt-1 uppercase tracking-wider">
+                      Target · {b.target}
+                    </div>
+                  )}
                   <p className="text-fog text-[0.875rem] mt-1.5 leading-relaxed max-w-xl">
                     {b.description}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="kicker !text-[0.6rem] mb-1">Closes in</div>
+                  <span className="badge badge-live mb-2">
+                    <span className="live-dot" /> hunting
+                  </span>
+                  <div className="kicker !text-[0.6rem] mb-1 mt-2">Closes in</div>
                   <Countdown to={b.endsAt} />
                 </div>
               </div>

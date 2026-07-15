@@ -28,6 +28,13 @@ type Round = {
   payout: number;
   createdAt: string;
 };
+type Badge = {
+  id: string;
+  icon: string;
+  name: string;
+  desc: string;
+  earned: boolean;
+};
 
 const BID_BADGE: Record<string, string> = {
   active: "badge-live",
@@ -41,6 +48,7 @@ export default function AccountPage() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
+  const [badges, setBadges] = useState<Badge[]>([]);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -55,6 +63,7 @@ export default function AccountPage() {
     grab<Withdrawal>("/api/withdrawals", setWithdrawals);
     grab<Application>("/api/listings/apply", setApplications);
     grab<Round>("/api/games/history", setRounds);
+    grab<Badge>("/api/me/badges", setBadges);
   }, [me.signedIn]);
 
   const withdrawAll = async () => {
@@ -132,6 +141,36 @@ export default function AccountPage() {
       {msg && (
         <div className="mb-6">
           <Notice kind={msg.kind}>{msg.text}</Notice>
+        </div>
+      )}
+
+      {badges.length > 0 && (
+        <div className="panel p-5 mb-4">
+          <div className="kicker mb-4">
+            Badges · {badges.filter((b) => b.earned).length}/{badges.length} earned
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            {badges.map((b) => (
+              <div
+                key={b.id}
+                title={b.desc}
+                className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"
+                style={
+                  b.earned
+                    ? { borderColor: "oklch(0.78 0.11 150 / 0.4)", background: "oklch(0.78 0.11 150 / 0.06)" }
+                    : { borderColor: "var(--hairline)", opacity: 0.45 }
+                }
+              >
+                <span>{b.icon}</span>
+                <span className="font-medium tracking-tight">{b.name}</span>
+                {!b.earned && (
+                  <span className="text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
+                    {b.desc}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

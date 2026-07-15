@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/games", label: "Arcade" },
   { href: "/auctions", label: "Auction House" },
   { href: "/bounties", label: "Bounties" },
+  { href: "/leaderboard", label: "Leaderboard" },
   { href: "/treasury", label: "Treasury" },
   { href: "/fairness", label: "Fairness" },
 ];

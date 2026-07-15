@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
+import { usePractice } from "@/components/practice";
 
 type FlipResult = {
   outcome: { landed: "frog" | "fly" };
@@ -25,14 +26,45 @@ export default function FlipPage() {
   const turnsRef = useRef(0);
   const [result, setResult] = useState<FlipResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sandbox, setSandbox] = useState(false);
+  const practice = usePractice();
+
+  const land = (data: FlipResult) => {
+    // Hand off from the fast spin to a decelerating landing on the result
+    // face — 4 extra revolutions, then reveal.
+    setSpinning(false);
+    setLanding(true);
+    turnsRef.current += 4;
+    setRotation(turnsRef.current * 360 + (data.outcome.landed === "fly" ? 180 : 0));
+    setTimeout(async () => {
+      setResult(data);
+      setLanding(false);
+      if (data.win) celebrate();
+      if (!sandbox) await refresh();
+    }, 1150);
+  };
 
   const play = async () => {
-    // Fresh player entropy per round; it's echoed back in round history for
-    // independent verification.
-    const clientSeed = Math.random().toString(36).slice(2, 12);
     setSpinning(true);
     setError(null);
     setResult(null);
+
+    if (sandbox) {
+      // Practice table: same odds, local coin, zero $RIBBIT.
+      const landed = Math.random() < 0.5 ? "frog" : "fly";
+      const win = landed === side;
+      const payout = win ? Math.floor(wager * 1.92) : 0;
+      practice.adjust(-wager + payout);
+      setTimeout(
+        () => land({ outcome: { landed }, payout, win, credits: 0, nonce: 0, seedHash: "" }),
+        700
+      );
+      return;
+    }
+
+    // Fresh player entropy per round; it's echoed back in round history for
+    // independent verification.
+    const clientSeed = Math.random().toString(36).slice(2, 12);
     const res = await fetch("/api/games/flip", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -44,20 +76,11 @@ export default function FlipPage() {
       setError(data.error ?? "Something went wrong");
       return;
     }
-    // Hand off from the fast spin to a decelerating landing on the result
-    // face — 4 extra revolutions, then reveal.
-    setSpinning(false);
-    setLanding(true);
-    turnsRef.current += 4;
-    setRotation(turnsRef.current * 360 + (data.outcome.landed === "fly" ? 180 : 0));
-    setTimeout(async () => {
-      setResult(data);
-      setLanding(false);
-      if (data.win) celebrate();
-      await refresh();
-    }, 1150);
+    land(data);
   };
   const busy = spinning || landing;
+  const balance = sandbox ? practice.credits : (me.credits ?? 0);
+  const canPlay = sandbox || me.signedIn;
 
   return (
     <div className="pt-10 max-w-2xl mx-auto">
@@ -68,6 +91,33 @@ export default function FlipPage() {
       />
 
       <div className="panel panel-glow p-8 text-center">
+        <div className="flex items-center justify-between mb-6">
+          <div className="chips">
+            <button className={`chip ${!sandbox ? "active" : ""}`} onClick={() => setSandbox(false)}>
+              Live table
+            </button>
+            <button className={`chip ${sandbox ? "active" : ""}`} onClick={() => setSandbox(true)}>
+              Sandbox
+            </button>
+          </div>
+          <div className="text-right">
+            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice credits" : "Credits"}</div>
+            <div className="stat-number text-neon">{canPlay ? balance : "—"}</div>
+          </div>
+        </div>
+        {sandbox && (
+          <div className="mb-5 text-left">
+            <Notice kind="info">
+              Sandbox — no wallet needed, no $RIBBIT involved. Same odds, practice
+              bankroll.{" "}
+              {practice.credits < 1 && (
+                <button className="text-neon hover:underline" onClick={practice.reset}>
+                  Refill practice credits →
+                </button>
+              )}
+            </Notice>
+          </div>
+        )}
         <div className="coin-scene mb-6">
           <div
             className={`coin ${spinning ? "coin--spin" : ""}`}
@@ -120,20 +170,20 @@ export default function FlipPage() {
         <button
           className="btn btn-primary text-lg px-12 py-3"
           onClick={play}
-          disabled={busy || !me.signedIn || (me.credits ?? 0) < wager}
+          disabled={busy || !canPlay || balance < wager}
         >
-          {busy ? "Flipping…" : "Flip it"}
+          {busy ? "Flipping…" : sandbox ? "Flip (practice)" : "Flip it"}
         </button>
 
-        {!me.signedIn && (
+        {!sandbox && !me.signedIn && (
           <p className="text-fog text-sm mt-4">
-            Sign in with your wallet to play.{" "}
+            Sign in with your wallet to play — or try the sandbox above.{" "}
             <Link href="/games" className="text-neon hover:underline">
               Get credits →
             </Link>
           </p>
         )}
-        {me.signedIn && (me.credits ?? 0) < wager && (
+        {!sandbox && me.signedIn && (me.credits ?? 0) < wager && (
           <p className="text-fog text-sm mt-4">
             Not enough credits.{" "}
             <Link href="/games" className="text-neon hover:underline">
@@ -147,12 +197,17 @@ export default function FlipPage() {
           </div>
         )}
 
-        {result && (
+        {result && !sandbox && result.seedHash && (
           <p className="text-xs text-fog/70 mt-6 break-all">
             round nonce {result.nonce} · seed hash {result.seedHash.slice(0, 16)}… ·{" "}
             <Link href="/fairness" className="text-neon hover:underline">
               verify
             </Link>
+          </p>
+        )}
+        {result && sandbox && (
+          <p className="text-xs mt-6" style={{ color: "var(--text-dim)" }}>
+            practice round — nothing wagered, nothing won
           </p>
         )}
       </div>

@@ -41,8 +41,8 @@ const EPISODES: { image: string; title: string; href?: string }[] = [
   { image: "/art/owp_frogris.png", title: "Frogris", href: "/games/frogris" },
   { image: "/art/owp_bj.png", title: "Blackjack", href: "/games/blackjack" },
   { image: "/art/owp_frogger.png", title: "Hopper", href: "/games/hopper" },
+  { image: "/art/owp_worm.png", title: "Worm Frog", href: "/games/worm" },
   { image: "/art/owp_ff.jpg", title: "Fraud Frog Exterminator" },
-  { image: "/art/owp_worm.png", title: "Worm Frog" },
   { image: "/art/owp_poker.png", title: "Poker Face" },
 ];
 

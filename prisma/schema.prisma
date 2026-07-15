@@ -189,6 +189,8 @@ model Bounty {
   id          String   @id @default(cuid())
   title       String
   description String
+  // Narrative target of the contract, e.g. "The Highway Bandit"
+  target      String?
   game        String? // linked game for leaderboard bounties ("hopper", "flip", "dice")
   kind        String   @default("leaderboard") // "leaderboard" | "challenge"
   prizeRibbit BigInt // prize pool in raw $RIBBIT units
