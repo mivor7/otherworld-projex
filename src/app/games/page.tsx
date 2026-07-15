@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { useChain } from "@/components/use-chain";
 import { PageHero } from "@/components/hero";
+import { MatteMedia } from "@/components/matte-media";
 import { Notice } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 
@@ -127,8 +128,7 @@ export default function GamesPage() {
           {GAMES.map((g) => (
             <Link key={g.href} href={g.href} className="lot-card group">
               <div className="card-media">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={g.image} alt="" loading="lazy" />
+                <MatteMedia src={g.image} />
                 <span className="badge absolute top-2 right-2">{g.badge}</span>
               </div>
               <div className="card-body">

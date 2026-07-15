@@ -4,6 +4,7 @@ import { Reveal } from "@/components/reveal";
 import { VaultIntro } from "@/components/vault-intro";
 import { ActivityTicker } from "@/components/activity-ticker";
 import { CopyChip } from "@/components/copy-chip";
+import { MatteMedia } from "@/components/matte-media";
 import { prisma } from "@/lib/db";
 import { getTreasuryStats } from "@/lib/solana";
 import { fromRaw } from "@/lib/config";
@@ -179,8 +180,7 @@ export default async function Home() {
             const card = (
               <div className="lot-card h-full">
                 <div className="card-media !aspect-square">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={e.image} alt={e.title} loading="lazy" />
+                  <MatteMedia src={e.image} alt={e.title} />
                   {e.href ? (
                     <span className="badge badge-live absolute top-2 right-2">
                       <span className="live-dot" /> Live

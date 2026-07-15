@@ -8,6 +8,7 @@ import { PageHero } from "@/components/hero";
 import { Countdown, Notice } from "@/components/ui";
 import { LotCardSkeleton } from "@/components/skeletons";
 import { EmptyState } from "@/components/empty-state";
+import { MatteMedia } from "@/components/matte-media";
 import { fmtRibbit } from "@/lib/client-config";
 
 type AuctionRow = {
@@ -31,13 +32,9 @@ function LotCard({ a, now }: { a: AuctionRow; now: number }) {
     <Link href={`/auctions/${a.id}`} className="lot-card group">
       <div className="card-media">
         {a.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={a.imageUrl} alt={a.title} loading="lazy" />
+          <MatteMedia src={a.imageUrl} alt={a.title} />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/art/art-empty-chest.jpg" alt="" className="opacity-60" loading="lazy" />
-          </div>
+          <MatteMedia src="/art/art-empty-chest.jpg" />
         )}
         {urgent && (
           <span className="badge badge-urgent absolute top-2 right-2">

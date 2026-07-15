@@ -98,21 +98,22 @@ export default function AuctionDetailPage({
       <div className="grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-6 items-start">
         {/* Media theater */}
         <div className="panel panel-glow overflow-hidden">
-          <div className="relative" style={{ background: "oklch(0.09 0.006 270)" }}>
-            {auction.imageUrl ? (
-              <LightboxImage
-                src={auction.imageUrl}
-                alt={auction.title}
-                className="w-full aspect-[4/3] object-cover"
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src="/art/art-empty-chest.jpg"
-                alt=""
-                className="w-full aspect-[4/3] object-cover opacity-80"
-              />
-            )}
+          <div
+            className="relative aspect-[4/3] overflow-hidden"
+            style={{ background: "oklch(0.09 0.006 270)" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={auction.imageUrl ?? "/art/art-empty-chest.jpg"}
+              alt=""
+              aria-hidden
+              className="media-matte-bg"
+            />
+            <LightboxImage
+              src={auction.imageUrl ?? "/art/art-empty-chest.jpg"}
+              alt={auction.title}
+              className="media-matte-fg"
+            />
             <div
               className="absolute inset-2.5 pointer-events-none rounded-md"
               style={{ border: "1px solid oklch(1 0 0 / 0.08)" }}

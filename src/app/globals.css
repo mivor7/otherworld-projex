@@ -910,6 +910,26 @@ h1, h2, h3, h4 {
   z-index: 2;
 }
 
+/* Museum matte: blurred self-backdrop + fully contained artwork. Fits any
+   aspect ratio into any box without cropping the subject. */
+.media-matte-bg {
+  position: absolute !important;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover !important;
+  filter: blur(22px) saturate(0.85) brightness(0.45);
+  transform: scale(1.18);
+}
+.card-media .media-matte-fg,
+.media-matte-fg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain !important;
+  z-index: 1;
+}
+
 /* Etched double-border for the most important panels. */
 .panel-etched {
   position: relative;

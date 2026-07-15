@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { PageHero } from "@/components/hero";
+import { MatteMedia } from "@/components/matte-media";
 import { Notice } from "@/components/ui";
 import { fmtRibbit } from "@/lib/client-config";
 
@@ -187,17 +188,7 @@ export default function ApplyPage() {
             <div className="kicker mb-2.5">Live preview — how bidders see it</div>
             <div className="lot-card">
               <div className="card-media">
-                {form.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={form.imageUrl}
-                    alt=""
-                    onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src="/art/art-empty-chest.jpg" alt="" className="opacity-60" />
-                )}
+                <MatteMedia src={form.imageUrl || "/art/art-empty-chest.jpg"} />
                 <span className="badge badge-portal absolute top-2 right-2">preview</span>
               </div>
               <div className="card-body">
