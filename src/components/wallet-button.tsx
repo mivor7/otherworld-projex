@@ -1,14 +1,32 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useSession } from "./session";
-import { shortWallet } from "@/lib/client-config";
+import { fmtRibbit, shortWallet } from "@/lib/client-config";
 
 export function WalletButton() {
   const { publicKey, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
   const { me, signIn, signOut, signingIn } = useSession();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   if (!publicKey) {
     return (
@@ -27,7 +45,7 @@ export function WalletButton() {
         <button
           className="btn btn-ghost mono !text-xs"
           onClick={() => disconnect()}
-          title={publicKey.toBase58()}
+          title={`${publicKey.toBase58()} — click to disconnect`}
         >
           {shortWallet(publicKey.toBase58())}
         </button>
@@ -36,25 +54,66 @@ export function WalletButton() {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span
-        className="hidden sm:inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs mono"
-        style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
-        title="Play credits"
-      >
-        {me.credits ?? 0}
-        <span className="kicker !text-[0.55rem]">cr</span>
-      </span>
+    <div className="relative" ref={menuRef}>
       <button
-        className="btn btn-ghost mono !text-xs"
-        onClick={async () => {
-          await signOut();
-          await disconnect();
-        }}
-        title={`Signed in as ${me.wallet} — click to sign out`}
+        className="btn btn-ghost !text-xs gap-2.5"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
-        {shortWallet(me.wallet ?? "")}
+        <span className="mono text-neon">{me.credits ?? 0} cr</span>
+        <span className="mono">{shortWallet(me.wallet ?? "")}</span>
+        <span
+          className="text-fog transition-transform"
+          style={{ transform: open ? "rotate(180deg)" : undefined }}
+        >
+          ▾
+        </span>
       </button>
+
+      {open && (
+        <div className="wallet-menu" role="menu">
+          <div className="kicker !text-[0.6rem] mb-1">Signed in as</div>
+          <div className="mono text-xs break-all mb-4" title={me.wallet}>
+            {me.wallet}
+          </div>
+
+          <div className="space-y-2 text-sm mb-4">
+            <div className="flex justify-between">
+              <span className="text-fog">Play credits</span>
+              <span className="stat-number text-neon">{me.credits ?? 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-fog">$RIBBIT available</span>
+              <span className="stat-number">{fmtRibbit(me.ribbitAvailable ?? 0)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-fog">Locked in bids</span>
+              <span className="stat-number">{fmtRibbit(me.ribbitLocked ?? 0)}</span>
+            </div>
+          </div>
+
+          <div className="grid gap-1.5 mb-4">
+            <Link href="/account" className="btn btn-ghost w-full !justify-start" onClick={() => setOpen(false)}>
+              My account
+            </Link>
+            <Link href="/fairness" className="btn btn-ghost w-full !justify-start" onClick={() => setOpen(false)}>
+              Fairness &amp; seeds
+            </Link>
+          </div>
+
+          <button
+            className="btn btn-ghost w-full !text-danger"
+            onClick={async () => {
+              setOpen(false);
+              await signOut();
+              await disconnect();
+            }}
+          >
+            Sign out &amp; disconnect
+          </button>
+        </div>
+      )}
     </div>
   );
 }

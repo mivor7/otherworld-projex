@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WalletButton } from "./wallet-button";
 import { useSession } from "./session";
+import { SealMark } from "./seal";
 
 const LINKS = [
   { href: "/games", label: "Arcade" },
@@ -26,14 +27,8 @@ export function Navbar() {
       }}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-5">
-        <Link href="/" className="flex items-center gap-3 shrink-0 group">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/art/logo-seal.jpg"
-            alt=""
-            className="w-9 h-9 rounded-md border object-cover"
-            style={{ borderColor: "var(--hairline-strong)" }}
-          />
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+          <SealMark size={38} />
           <span className="leading-none">
             <span
               className="block font-semibold tracking-tight text-[0.95rem]"

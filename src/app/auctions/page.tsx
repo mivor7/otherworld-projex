@@ -6,6 +6,7 @@ import { useSession } from "@/components/session";
 import { useChain } from "@/components/use-chain";
 import { PageHero } from "@/components/hero";
 import { Countdown, Notice } from "@/components/ui";
+import { LotCardSkeleton } from "@/components/skeletons";
 import { fmtRibbit } from "@/lib/client-config";
 
 type AuctionRow = {
@@ -88,6 +89,7 @@ export default function AuctionsPage() {
   const { depositForBidding } = useChain();
   const [live, setLive] = useState<AuctionRow[]>([]);
   const [past, setPast] = useState<AuctionRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<"live" | "ending" | "past">("live");
   const [amount, setAmount] = useState(1000);
   const [busy, setBusy] = useState(false);
@@ -105,6 +107,7 @@ export default function AuctionsPage() {
       .then((d) => {
         setLive(d.live ?? []);
         setPast(d.past ?? []);
+        setLoaded(true);
       })
       .catch(() => {});
   }, []);
@@ -189,7 +192,14 @@ export default function AuctionsPage() {
             ))}
           </div>
 
-          {shown.length === 0 ? (
+          {!loaded ? (
+            <div className="grid sm:grid-cols-2 gap-4">
+              <LotCardSkeleton />
+              <LotCardSkeleton />
+              <LotCardSkeleton />
+              <LotCardSkeleton />
+            </div>
+          ) : shown.length === 0 ? (
             <div className="panel p-12 text-center text-fog">
               Nothing here right now.{" "}
               <Link href="/auctions/apply" className="text-neon hover:underline">

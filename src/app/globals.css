@@ -713,13 +713,9 @@ h1, h2, h3, h4 {
   width: 92px;
   height: 92px;
   transform: translate(-50%, -50%);
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid oklch(0.78 0.11 150 / 0.35);
-  box-shadow: 0 0 48px oklch(0.78 0.11 150 / 0.25);
+  filter: drop-shadow(0 0 28px oklch(0.78 0.11 150 / 0.4));
   transition: transform 0.7s cubic-bezier(0.7, 0, 0.2, 1), opacity 0.5s;
 }
-.vault-seal img { width: 100%; height: 100%; object-fit: cover; }
 .vault-intro--open .vault-seal {
   transform: translate(-50%, -50%) scale(1.5);
   opacity: 0;
@@ -843,6 +839,66 @@ h1, h2, h3, h4 {
 @keyframes lightbox-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* ── Accessibility: visible keyboard focus ── */
+a:focus-visible,
+button:focus-visible,
+.input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid oklch(0.78 0.11 150 / 0.55);
+  outline-offset: 2px;
+}
+
+/* ── Wallet dropdown ── */
+.wallet-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 17rem;
+  z-index: 60;
+  background: var(--color-surface-2);
+  border: 1px solid var(--border-solid);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px oklch(0 0 0 / 0.5);
+  padding: 1rem;
+  animation: menu-in 0.14s ease;
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Loading shimmer ── */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background: oklch(0.14 0.008 270);
+  border-radius: var(--radius);
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.05), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer::after {
+    animation: none;
+  }
 }
 
 /* ── Wallet adapter modal, restyled to the house ── */

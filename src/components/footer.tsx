@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CLIENT_CONFIG } from "@/lib/client-config";
+import { SealMark } from "./seal";
 
 export function Footer() {
   return (
@@ -7,13 +8,7 @@ export function Footer() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 grid gap-10 md:grid-cols-4 text-sm">
         <div className="md:col-span-2">
           <div className="flex items-center gap-3 mb-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/art/logo-seal.jpg"
-              alt=""
-              className="w-8 h-8 rounded-md border object-cover"
-              style={{ borderColor: "var(--hairline-strong)" }}
-            />
+            <SealMark size={32} />
             <span
               className="font-semibold tracking-tight"
               style={{ fontFamily: "var(--font-display)" }}

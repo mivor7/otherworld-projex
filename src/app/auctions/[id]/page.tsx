@@ -186,6 +186,23 @@ export default function AuctionDetailPage({
                     {busy ? "…" : "Place bid"}
                   </button>
                 </div>
+                <div className="flex gap-1.5 mt-2.5">
+                  {(
+                    [
+                      ["Min", 1],
+                      ["+10%", 1.1],
+                      ["+25%", 1.25],
+                    ] as const
+                  ).map(([label, mult]) => (
+                    <button
+                      key={label}
+                      className="btn btn-ghost !text-xs !min-h-[1.8rem] !px-2.5"
+                      onClick={() => setBid(Math.ceil(fromRawClient(minNext) * mult))}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <div
                   className="text-xs mt-3 space-y-1 leading-relaxed"
                   style={{ color: "var(--text-dim)" }}

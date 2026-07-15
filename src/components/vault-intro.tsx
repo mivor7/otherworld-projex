@@ -3,6 +3,7 @@
 // One-time-per-session entrance: the vault doors part to reveal the house.
 // Skipped for returning visitors (sessionStorage) and reduced-motion users.
 import { useEffect, useState } from "react";
+import { SealMark } from "./seal";
 
 export function VaultIntro() {
   const [phase, setPhase] = useState<"idle" | "hold" | "open">("idle");
@@ -37,8 +38,7 @@ export function VaultIntro() {
       <div className="vault-door vault-door--right" />
       <div className="vault-seam" />
       <div className="vault-seal">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/art/logo-seal.jpg" alt="" />
+        <SealMark size={92} />
       </div>
     </div>
   );

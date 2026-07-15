@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHero } from "@/components/hero";
 import { Countdown } from "@/components/ui";
+import { RowSkeleton } from "@/components/skeletons";
 import { fmtRibbit } from "@/lib/client-config";
 
 type Bounty = {
@@ -31,6 +32,7 @@ const GAME_LABELS: Record<string, string> = {
 export default function BountiesPage() {
   const [open, setOpen] = useState<Bounty[]>([]);
   const [closed, setClosed] = useState<Bounty[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [boardGame, setBoardGame] = useState("hopper");
   const [board, setBoard] = useState<BoardRow[]>([]);
 
@@ -40,6 +42,7 @@ export default function BountiesPage() {
       .then((d) => {
         setOpen(d.open ?? []);
         setClosed(d.closed ?? []);
+        setLoaded(true);
       })
       .catch(() => {});
   }, []);
@@ -66,7 +69,14 @@ export default function BountiesPage() {
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
         <div className="space-y-4">
-          {open.length === 0 && (
+          {!loaded && (
+            <>
+              <RowSkeleton />
+              <RowSkeleton />
+              <RowSkeleton />
+            </>
+          )}
+          {loaded && open.length === 0 && (
             <div className="panel p-12 text-center text-fog">
               No open bounties at this moment — new hunts are posted regularly.
             </div>
