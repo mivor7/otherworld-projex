@@ -2,7 +2,7 @@ import { z } from "zod";
 import { jwtVerify } from "jose";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { requireSessionSecret } from "@/lib/config";
+import { CONFIG, requireSessionSecret, toRaw } from "@/lib/config";
 
 const body = z.object({
   runToken: z.string().min(10),
@@ -44,5 +44,13 @@ export const POST = handler(async (req: Request) => {
   } catch {
     return err("This run was already submitted", 409);
   }
-  return ok({ accepted: true, score });
+
+  // Prize boards only rank burners — tell the player where they stand.
+  const burned = await prisma.burnEvent.aggregate({
+    where: { userId: session.userId },
+    _sum: { amountRaw: true },
+  });
+  const ranked =
+    (burned._sum.amountRaw ?? 0n) >= toRaw(CONFIG.rankedMinBurnedRibbit);
+  return ok({ accepted: true, score, ranked });
 });

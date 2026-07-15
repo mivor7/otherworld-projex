@@ -6,7 +6,7 @@ import { PageHero } from "@/components/hero";
 import { Countdown } from "@/components/ui";
 import { RowSkeleton } from "@/components/skeletons";
 import { EmptyState } from "@/components/empty-state";
-import { fmtRibbit } from "@/lib/client-config";
+import { CLIENT_CONFIG, fmtRibbit } from "@/lib/client-config";
 
 type Bounty = {
   id: string;
@@ -189,8 +189,11 @@ export default function BountiesPage() {
             </table>
           )}
           <p className="text-xs mt-4 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-            Hopper ranks best arcade score; the tables rank net credits won.
-            Pools pay in $RIBBIT when the bounty closes.
+            Arcade boards rank best score; the tables rank net credits won.
+            Pools pay in $RIBBIT when the bounty closes.{" "}
+            <span className="text-neon">Prize boards rank burners only</span> —{" "}
+            {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT
+            burned lifetime.
           </p>
         </aside>
       </div>

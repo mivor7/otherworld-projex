@@ -10,6 +10,7 @@ export const CLIENT_CONFIG = {
     "https://api.mainnet-beta.solana.com",
   treasuryWallet: process.env.NEXT_PUBLIC_TREASURY_WALLET ?? "",
   ribbitPerCredit: Number(process.env.NEXT_PUBLIC_RIBBIT_PER_CREDIT ?? 100),
+  rankedMinBurnedRibbit: Number(process.env.NEXT_PUBLIC_RANKED_MIN_BURNED_RIBBIT ?? 1_000),
   devFaucet: process.env.NEXT_PUBLIC_DEV_FAUCET === "true",
   pumpFunUrl:
     "https://pump.fun/coin/EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump",

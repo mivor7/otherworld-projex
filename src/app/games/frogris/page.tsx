@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
+import { CLIENT_CONFIG } from "@/lib/client-config";
 
 const COLS = 10;
 const ROWS = 20;
@@ -97,7 +98,12 @@ export default function FrogrisPage() {
       });
       runTokenRef.current = null;
       if (res.ok) {
-        setSubmitMsg(`Score ${score} posted to the bounty board.`);
+        const data = await res.json();
+        setSubmitMsg(
+          data.ranked
+            ? `Score ${score} posted to the bounty board.`
+            : `Score ${score} saved — unranked. Burn ${CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT (lifetime) to compete for prizes.`
+        );
         loadBoard();
       }
     },

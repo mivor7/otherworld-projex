@@ -6,6 +6,12 @@ const num = (v: string | undefined, fallback: number) => {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 };
 
+// Like num(), but 0 is a valid value (e.g. to disable a threshold).
+const nonneg = (v: string | undefined, fallback: number) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
+
 export const CONFIG = {
   appName: "Other World Projex",
   ticker: "$RIBBIT",
@@ -35,6 +41,12 @@ export const CONFIG = {
   // Wager limits, in credits.
   minWager: num(process.env.MIN_WAGER, 1),
   maxWager: num(process.env.MAX_WAGER, 1_000),
+
+  // Sybil economics: prize leaderboards only rank wallets with skin in the
+  // game. Eligibility = lifetime verified burns ≥ this many whole $RIBBIT;
+  // table boards additionally require this many credits wagered in-window.
+  rankedMinBurnedRibbit: nonneg(process.env.RANKED_MIN_BURNED_RIBBIT, 1_000),
+  rankedMinTableVolume: nonneg(process.env.RANKED_MIN_TABLE_VOLUME, 100),
 
   adminWallets: (process.env.ADMIN_WALLETS ?? "")
     .split(",")

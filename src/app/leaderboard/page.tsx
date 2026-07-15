@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHero } from "@/components/hero";
 import { EmptyState } from "@/components/empty-state";
+import { CLIENT_CONFIG } from "@/lib/client-config";
 
 type Row = { rank: number; player: string; score: number; volume?: number };
 
@@ -144,9 +145,13 @@ export default function LeaderboardPage() {
       </div>
 
       <p className="text-xs mt-4 leading-relaxed max-w-lg" style={{ color: "var(--text-dim)" }}>
-        Arcade runs are tokenized and sanity-checked server-side. Weekly windows
-        roll over continuously — bounty pools settle on each hunt’s closing
-        date, listed on the{" "}
+        <span className="text-neon">Skin in the game:</span> prize boards rank
+        wallets with {""}
+        {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT burned
+        lifetime (table boards also need in-window wagering volume). Anyone can
+        play; burning mid-week ranks your best score retroactively. Arcade runs
+        are tokenized and sanity-checked server-side — pools settle on each
+        hunt’s closing date, listed on the{" "}
         <Link href="/bounties" className="text-neon hover:underline">
           bounty board
         </Link>

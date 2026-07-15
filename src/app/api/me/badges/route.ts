@@ -1,7 +1,7 @@
 // Earned badges, computed live from the ledger — no extra state to maintain.
 import { handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { toRaw } from "@/lib/config";
+import { CONFIG, toRaw } from "@/lib/config";
 
 export const GET = handler(async () => {
   const session = await requireSession();
@@ -49,6 +49,13 @@ export const GET = handler(async () => {
       name: "High Roller",
       desc: "Bank a single payout of 100+ credits",
       earned: (maxPayout._max.payout ?? 0) >= 100,
+    },
+    {
+      id: "skin-in-the-game",
+      icon: "🎖️",
+      name: "Ranked Hunter",
+      desc: `Burn ${CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT lifetime — unlocks prize boards`,
+      earned: (burns._sum.amountRaw ?? 0n) >= toRaw(CONFIG.rankedMinBurnedRibbit),
     },
     {
       id: "torch-bearer",
