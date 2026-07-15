@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Ticker } from "./ticker";
 
 export function LivePulse({ label = "Live" }: { label?: string }) {
   return (
@@ -74,7 +75,9 @@ export function PageHero({
             <div className="page-hero-stats">
               {stats.map((s) => (
                 <div key={s.label}>
-                  <strong>{s.value}</strong>
+                  <strong>
+                    <Ticker text={s.value} />
+                  </strong>
                   <span>{s.label}</span>
                 </div>
               ))}

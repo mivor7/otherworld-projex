@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
+import { celebrate } from "@/components/confetti";
 
 type DiceResult = {
   outcome: { rolled: number; target: number; multiplier: number };
@@ -39,6 +40,7 @@ export default function DicePage() {
       setError(data.error ?? "Something went wrong");
     } else {
       setResult(data);
+      if (data.win) celebrate();
       await refresh();
     }
     setRolling(false);
@@ -59,9 +61,10 @@ export default function DicePage() {
             className="absolute inset-y-0 left-0 bg-neon/15 border-r-2 border-neon"
             style={{ width: `${target}%` }}
           />
-          {result && (
+          {rolling && <div className="dice-scan" aria-hidden />}
+          {result && !rolling && (
             <div
-              className={`absolute top-0 bottom-0 w-1 ${result.win ? "bg-neon" : "bg-danger"}`}
+              className={`dice-marker absolute top-0 bottom-0 w-1 ${result.win ? "bg-neon" : "bg-danger"}`}
               style={{ left: `${result.outcome.rolled}%` }}
               title={`rolled ${result.outcome.rolled}`}
             />

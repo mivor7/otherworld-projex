@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
+import { celebrate } from "@/components/confetti";
 
 type FlipResult = {
   outcome: { landed: "frog" | "fly" };
@@ -19,6 +20,9 @@ export default function FlipPage() {
   const [side, setSide] = useState<"frog" | "fly">("frog");
   const [wager, setWager] = useState(5);
   const [spinning, setSpinning] = useState(false);
+  const [landing, setLanding] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const turnsRef = useRef(0);
   const [result, setResult] = useState<FlipResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,16 +39,25 @@ export default function FlipPage() {
       body: JSON.stringify({ side, wager, clientSeed }),
     });
     const data = await res.json();
-    // Let the coin spin a beat before revealing.
-    await new Promise((r) => setTimeout(r, 900));
     if (!res.ok) {
+      setSpinning(false);
       setError(data.error ?? "Something went wrong");
-    } else {
-      setResult(data);
-      await refresh();
+      return;
     }
+    // Hand off from the fast spin to a decelerating landing on the result
+    // face — 4 extra revolutions, then reveal.
     setSpinning(false);
+    setLanding(true);
+    turnsRef.current += 4;
+    setRotation(turnsRef.current * 360 + (data.outcome.landed === "fly" ? 180 : 0));
+    setTimeout(async () => {
+      setResult(data);
+      setLanding(false);
+      if (data.win) celebrate();
+      await refresh();
+    }, 1150);
   };
+  const busy = spinning || landing;
 
   return (
     <div className="pt-10 max-w-2xl mx-auto">
@@ -55,15 +68,23 @@ export default function FlipPage() {
       />
 
       <div className="panel panel-glow p-8 text-center">
-        <div
-          className={`text-8xl mb-6 inline-block transition-transform duration-700 ${
-            spinning ? "animate-spin" : ""
-          }`}
-        >
-          {spinning ? "🪙" : result ? (result.outcome.landed === "frog" ? "🐸" : "🪰") : "🪙"}
+        <div className="coin-scene mb-6">
+          <div
+            className={`coin ${spinning ? "coin--spin" : ""}`}
+            style={spinning ? undefined : { transform: `rotateY(${rotation}deg)` }}
+          >
+            <div className="coin-face coin-face--front">
+              🐸
+              <span className="coin-face-ring" aria-hidden />
+            </div>
+            <div className="coin-face coin-face--back">
+              🪰
+              <span className="coin-face-ring" aria-hidden />
+            </div>
+          </div>
         </div>
 
-        {result && !spinning && (
+        {result && !busy && (
           <div className={`stat-number text-2xl mb-4 ${result.win ? "neon-text" : "text-danger"}`}>
             {result.win ? `+${result.payout} credits!` : "The pond takes it."}
           </div>
@@ -99,9 +120,9 @@ export default function FlipPage() {
         <button
           className="btn btn-primary text-lg px-12 py-3"
           onClick={play}
-          disabled={spinning || !me.signedIn || (me.credits ?? 0) < wager}
+          disabled={busy || !me.signedIn || (me.credits ?? 0) < wager}
         >
-          {spinning ? "Flipping…" : "Flip it"}
+          {busy ? "Flipping…" : "Flip it"}
         </button>
 
         {!me.signedIn && (

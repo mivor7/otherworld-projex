@@ -578,6 +578,273 @@ h1, h2, h3, h4 {
   }
 }
 
+/* ═══ Interaction layer ═══ */
+
+/* Cursor spotlight — --mx/--my set by the delegated listener in fx.tsx. */
+.lot-card,
+.panel-hover {
+  position: relative;
+}
+.lot-card::after,
+.panel-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    320px circle at var(--mx, 50%) var(--my, 50%),
+    oklch(0.78 0.11 150 / 0.07),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+  z-index: 1;
+}
+.lot-card:hover::after,
+.panel-hover:hover::after {
+  opacity: 1;
+}
+.lot-card {
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.18s ease;
+  transform-style: preserve-3d;
+}
+[data-magnetic] {
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.18s ease;
+}
+
+/* Live ticker strip */
+.ticker-strip {
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+.ticker-track {
+  display: flex;
+  gap: 2.75rem;
+  width: max-content;
+  padding: 0.6rem 1rem;
+  animation: ticker-scroll 45s linear infinite;
+}
+.ticker-strip:hover .ticker-track {
+  animation-play-state: paused;
+}
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--color-fog);
+  white-space: nowrap;
+}
+.ticker-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+}
+
+/* Vault-door intro */
+.vault-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  cursor: pointer;
+  transition: opacity 0.45s ease 0.85s, visibility 0s 1.4s;
+}
+.vault-intro--open {
+  opacity: 0;
+  visibility: hidden;
+}
+.vault-door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50.5%;
+  background:
+    radial-gradient(140% 100% at 100% 50%, oklch(0.16 0.012 270), oklch(0.1 0.008 270) 70%),
+    repeating-linear-gradient(0deg, oklch(1 0 0 / 0.02) 0 1px, transparent 1px 56px),
+    repeating-linear-gradient(90deg, oklch(1 0 0 / 0.02) 0 1px, transparent 1px 56px);
+  background-color: oklch(0.11 0.008 270);
+  border-right: 1px solid oklch(0.78 0.11 150 / 0.25);
+  box-shadow: inset -30px 0 60px oklch(0 0 0 / 0.5);
+  transition: transform 1.05s cubic-bezier(0.7, 0, 0.2, 1);
+}
+.vault-door--left { left: 0; }
+.vault-door--right {
+  right: 0;
+  border-right: none;
+  border-left: 1px solid oklch(0.78 0.11 150 / 0.25);
+  box-shadow: inset 30px 0 60px oklch(0 0 0 / 0.5);
+  background:
+    radial-gradient(140% 100% at 0% 50%, oklch(0.16 0.012 270), oklch(0.1 0.008 270) 70%),
+    repeating-linear-gradient(0deg, oklch(1 0 0 / 0.02) 0 1px, transparent 1px 56px),
+    repeating-linear-gradient(90deg, oklch(1 0 0 / 0.02) 0 1px, transparent 1px 56px);
+}
+.vault-intro--open .vault-door--left { transform: translateX(-102%); }
+.vault-intro--open .vault-door--right { transform: translateX(102%); }
+.vault-seam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: oklch(0.78 0.11 150 / 0.7);
+  box-shadow: 0 0 24px 4px oklch(0.78 0.11 150 / 0.35);
+  transition: opacity 0.4s;
+}
+.vault-intro--open .vault-seam { opacity: 0; }
+.vault-seal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 92px;
+  height: 92px;
+  transform: translate(-50%, -50%);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid oklch(0.78 0.11 150 / 0.35);
+  box-shadow: 0 0 48px oklch(0.78 0.11 150 / 0.25);
+  transition: transform 0.7s cubic-bezier(0.7, 0, 0.2, 1), opacity 0.5s;
+}
+.vault-seal img { width: 100%; height: 100%; object-fit: cover; }
+.vault-intro--open .vault-seal {
+  transform: translate(-50%, -50%) scale(1.5);
+  opacity: 0;
+}
+
+/* 3D coin — Frog Flip */
+.coin-scene {
+  perspective: 900px;
+  width: 8.5rem;
+  height: 8.5rem;
+  margin-inline: auto;
+}
+.coin {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 1.15s cubic-bezier(0.22, 0.7, 0.25, 1);
+}
+.coin--spin {
+  animation: coin-spin 0.4s linear infinite;
+  transition: none;
+}
+@keyframes coin-spin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+.coin-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.4rem;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 2px solid oklch(1 0 0 / 0.18);
+}
+.coin-face--front {
+  background: radial-gradient(circle at 35% 30%, oklch(0.55 0.11 150), oklch(0.28 0.06 150));
+  box-shadow: 0 0 42px -10px oklch(0.78 0.11 150 / 0.45), inset 0 0 26px oklch(0 0 0 / 0.4);
+}
+.coin-face--back {
+  transform: rotateY(180deg);
+  background: radial-gradient(circle at 35% 30%, oklch(0.5 0.09 290), oklch(0.26 0.05 290));
+  box-shadow: 0 0 42px -10px oklch(0.74 0.07 290 / 0.45), inset 0 0 26px oklch(0 0 0 / 0.4);
+}
+.coin-face-ring {
+  position: absolute;
+  inset: 9px;
+  border-radius: 999px;
+  border: 1px dashed oklch(1 0 0 / 0.25);
+}
+@media (prefers-reduced-motion: reduce) {
+  .coin, .coin--spin { animation: none; transition: none; }
+}
+
+/* Dice scan line while rolling */
+.dice-scan {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-neon);
+  box-shadow: 0 0 12px oklch(0.78 0.11 150 / 0.8);
+  animation: dice-scan 0.7s ease-in-out infinite alternate;
+}
+@keyframes dice-scan {
+  from { left: 2%; }
+  to { left: 97%; }
+}
+.dice-marker {
+  transition: left 0.45s cubic-bezier(0.22, 0.7, 0.25, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dice-scan { animation: none; }
+  .dice-marker { transition: none; }
+}
+
+/* Blackjack card deal-in */
+.card-in {
+  animation: card-in 0.32s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-in { animation: none; }
+}
+
+/* Lightbox */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: oklch(0 0 0 / 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  cursor: zoom-out;
+  animation: lightbox-in 0.2s ease;
+}
+.lightbox img {
+  max-width: min(1100px, 94vw);
+  max-height: 90vh;
+  border-radius: 0.6rem;
+  border: 1px solid oklch(1 0 0 / 0.15);
+  box-shadow: 0 24px 80px oklch(0 0 0 / 0.6);
+}
+@keyframes lightbox-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* ── Wallet adapter modal, restyled to the house ── */
 .wallet-adapter-modal-wrapper {
   background: var(--color-surface-2) !important;

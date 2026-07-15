@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Ticker } from "./ticker";
 
 export function StatCard({
   label,
@@ -24,7 +25,9 @@ export function StatCard({
   return (
     <div className="panel panel-hover px-4 py-4">
       <div className="kicker mb-1.5">{label}</div>
-      <div className={`stat-number text-[1.35rem] ${toneClass}`}>{value}</div>
+      <div className={`stat-number text-[1.35rem] ${toneClass}`}>
+        <Ticker text={value} />
+      </div>
       {sub && (
         <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
           {sub}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
+import { celebrate } from "@/components/confetti";
 
 type View = {
   roundId: string;
@@ -25,11 +26,19 @@ type View = {
 const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
 const SUITS = ["♠", "♥", "♦", "♣"];
 
-function PlayingCard({ card, hidden = false }: { card?: number; hidden?: boolean }) {
+function PlayingCard({
+  card,
+  hidden = false,
+  delay = 0,
+}: {
+  card?: number;
+  hidden?: boolean;
+  delay?: number;
+}) {
   if (hidden || card === undefined) {
     return (
       <div
-        className="w-14 h-20 sm:w-16 sm:h-24 rounded-lg border flex items-center justify-center"
+        className="card-in w-14 h-20 sm:w-16 sm:h-24 rounded-lg border flex items-center justify-center"
         style={{
           borderColor: "var(--hairline-strong)",
           background:
@@ -45,12 +54,13 @@ function PlayingCard({ card, hidden = false }: { card?: number; hidden?: boolean
   const red = suit === "♥" || suit === "♦";
   return (
     <div
-      className="w-14 h-20 sm:w-16 sm:h-24 rounded-lg flex flex-col justify-between p-1.5 select-none"
+      className="card-in w-14 h-20 sm:w-16 sm:h-24 rounded-lg flex flex-col justify-between p-1.5 select-none"
       style={{
         background: "oklch(0.97 0.003 270)",
         color: red ? "oklch(0.5 0.19 25)" : "oklch(0.2 0.01 270)",
         border: "1px solid oklch(0 0 0 / 0.35)",
         boxShadow: "0 2px 8px oklch(0 0 0 / 0.4)",
+        animationDelay: `${delay}ms`,
       }}
     >
       <div className="text-sm font-semibold leading-none" style={{ fontFamily: "var(--font-display)" }}>
@@ -87,9 +97,9 @@ function Hand({
       </div>
       <div className="flex gap-2 flex-wrap">
         {cards.map((c, i) => (
-          <PlayingCard key={`${c}-${i}`} card={c} />
+          <PlayingCard key={`${c}-${i}`} card={c} delay={i * 70} />
         ))}
-        {hiddenHole && <PlayingCard hidden />}
+        {hiddenHole && <PlayingCard hidden delay={cards.length * 70} />}
       </div>
     </div>
   );
@@ -129,7 +139,10 @@ export default function BlackjackPage() {
     const data = await res.json();
     if (res.ok) {
       setRound(data);
-      if (data.phase === "done") await refresh();
+      if (data.phase === "done") {
+        if (data.result === "win" || data.result === "blackjack") celebrate();
+        await refresh();
+      }
       if (body.action === "deal" || body.action === "double") await refresh();
     } else {
       setError(data.error ?? "Something went wrong");

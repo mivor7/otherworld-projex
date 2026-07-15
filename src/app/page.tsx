@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { PageHero } from "@/components/hero";
 import { Reveal } from "@/components/reveal";
+import { VaultIntro } from "@/components/vault-intro";
+import { ActivityTicker } from "@/components/activity-ticker";
 import { prisma } from "@/lib/db";
 import { getTreasuryStats } from "@/lib/solana";
 import { fromRaw } from "@/lib/config";
@@ -57,6 +59,7 @@ export default async function Home() {
 
   return (
     <div className="pt-6">
+      <VaultIntro />
       <PageHero
         image="/art/hero-auction.jpg"
         kicker="Decentralized bounty arcade · Solana"
@@ -72,10 +75,10 @@ export default async function Home() {
         }
         actions={
           <>
-            <Link href="/games" className="btn btn-primary btn-lg">
+            <Link href="/games" className="btn btn-primary btn-lg" data-magnetic>
               Enter the arcade
             </Link>
-            <Link href="/auctions" className="btn btn-ghost btn-lg">
+            <Link href="/auctions" className="btn btn-ghost btn-lg" data-magnetic>
               View the lots
             </Link>
           </>
@@ -94,6 +97,8 @@ export default async function Home() {
         ]}
         brand
       />
+
+      <ActivityTicker />
 
       {/* The wings */}
       <section className="mt-16">

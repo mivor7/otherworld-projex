@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { Countdown, Notice } from "@/components/ui";
+import { LightboxImage } from "@/components/lightbox";
 import { fmtRibbit, fromRawClient, toRawClient } from "@/lib/client-config";
 
 type BidRow = {
@@ -99,8 +100,7 @@ export default function AuctionDetailPage({
         <div className="panel panel-glow overflow-hidden">
           <div className="relative" style={{ background: "oklch(0.09 0.006 270)" }}>
             {auction.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <LightboxImage
                 src={auction.imageUrl}
                 alt={auction.title}
                 className="w-full aspect-[4/3] object-cover"

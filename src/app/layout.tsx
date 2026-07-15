@@ -3,6 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import { InteractiveFX, ScrollProgress } from "@/components/fx";
 
 export const metadata: Metadata = {
   title: "Other World Projex — $RIBBIT Bounty Arcade",
@@ -19,6 +20,8 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <Providers>
+          <InteractiveFX />
+          <ScrollProgress />
           <Navbar />
           <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 pb-24">
             {children}
