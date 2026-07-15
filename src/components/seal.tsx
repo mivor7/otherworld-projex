@@ -1,8 +1,7 @@
-// The house mark v4 — angular OWP monogram in the $RIBBIT coin's glyph
-// language (coin = R, house = OWP). Geometry and gradients mirror
-// src/app/icon.svg and the brand/ exports exactly; keep all three in sync.
-// Static IDs keep it usable in server components; duplicate defs across
-// instances render fine.
+// The house mark v5 — circuit OWP monogram inside a technical dial ring.
+// Geometry mirrors src/app/icon.svg and the brand/ exports exactly; keep all
+// three in sync. Static IDs keep it usable in server components; duplicate
+// defs across instances render fine.
 export function SealMark({ size = 36 }: { size?: number }) {
   return (
     <svg
@@ -14,70 +13,85 @@ export function SealMark({ size = 36 }: { size?: number }) {
       aria-label="Other World Projex mark"
     >
       <defs>
-        <radialGradient id="owp4-disc" cx="0.5" cy="0.42" r="0.68">
-          <stop offset="0" stopColor="#15241c" />
-          <stop offset="0.55" stopColor="#0c1410" />
-          <stop offset="1" stopColor="#060908" />
+        <radialGradient id="owp5-disc" cx="0.5" cy="0.42" r="0.7">
+          <stop offset="0" stopColor="#101c16" />
+          <stop offset="0.6" stopColor="#080d0b" />
+          <stop offset="1" stopColor="#040606" />
         </radialGradient>
-        <linearGradient id="owp4-ring" x1="12" y1="10" x2="84" y2="86" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#c8fcd4" />
-          <stop offset="0.45" stopColor="#6ef09a" />
-          <stop offset="1" stopColor="#2d8f52" />
+        <linearGradient id="owp5-ring" x1="10" y1="8" x2="86" y2="88" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#d4ffe0" />
+          <stop offset="0.4" stopColor="#8ff5b0" />
+          <stop offset="1" stopColor="#3aa86a" />
         </linearGradient>
-        <linearGradient id="owp4-glyph" x1="20" y1="34" x2="78" y2="62" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#b8f7c4" />
-          <stop offset="0.55" stopColor="#9df7b5" />
-          <stop offset="1" stopColor="#6eea94" />
+        <linearGradient id="owp5-glyph" x1="16" y1="32" x2="80" y2="64" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#c8fdd6" />
+          <stop offset="0.5" stopColor="#9df7b5" />
+          <stop offset="1" stopColor="#6eeba0" />
         </linearGradient>
       </defs>
 
-      <circle cx="48" cy="48" r="45.5" fill="url(#owp4-disc)" />
-      <circle cx="48" cy="48" r="44.2" stroke="url(#owp4-ring)" strokeWidth="2.2" />
+      <circle cx="48" cy="48" r="45.5" fill="url(#owp5-disc)" />
+      <circle cx="48" cy="48" r="44" stroke="url(#owp5-ring)" strokeWidth="1.8" />
+      <circle cx="48" cy="48" r="40.2" stroke="#7aef9c" strokeOpacity="0.35" strokeWidth="0.9" />
       <circle
-        cx="48" cy="48" r="39.2"
-        stroke="#5fe98a" strokeOpacity="0.5" strokeWidth="1.35"
-        strokeDasharray="4.8 3.4" strokeLinecap="round"
+        cx="48" cy="48" r="37.5"
+        stroke="#7aef9c" strokeOpacity="0.55" strokeWidth="1.1"
+        strokeDasharray="2.2 2.8" strokeLinecap="round"
       />
-      <circle cx="48" cy="48" r="35.4" stroke="#5fe98a" strokeOpacity="0.18" strokeWidth="0.8" />
+      <circle
+        cx="48" cy="48" r="42.2"
+        stroke="#9df7b5" strokeOpacity="0.22" strokeWidth="0.6" strokeDasharray="18 40"
+      />
 
-      <g stroke="#5fe98a" strokeOpacity="0.72" strokeWidth="1.25" strokeLinecap="round">
-        <path d="M18.2 18.2 L23.6 23.6" />
-        <path d="M77.8 18.2 L72.4 23.6" />
-        <path d="M18.2 77.8 L23.6 72.4" />
-        <path d="M77.8 77.8 L72.4 72.4" />
-      </g>
-      <g fill="#5fe98a">
-        <circle cx="16.8" cy="16.8" r="1.55" />
-        <circle cx="79.2" cy="16.8" r="1.55" />
-        <circle cx="16.8" cy="79.2" r="1.55" />
-        <circle cx="79.2" cy="79.2" r="1.55" />
+      {/* cardinal crosshair nodes */}
+      <g fill="#9df7b5" stroke="#9df7b5" strokeWidth="0.9">
+        <path d="M48 8.5 V13.5 M46 11 H50" strokeLinecap="square" />
+        <path d="M48 82.5 V87.5 M46 85 H50" strokeLinecap="square" />
+        <path d="M8.5 48 H13.5 M11 46 V50" strokeLinecap="square" />
+        <path d="M82.5 48 H87.5 M85 46 V50" strokeLinecap="square" />
       </g>
 
-      {/* O — octagonal / chamfered ring */}
+      {/* O: octagonal circuit ring */}
       <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        fill="url(#owp4-glyph)"
-        d="M23.2 36.2 L31.4 36.2 L36.2 41 L36.2 55 L31.4 59.8 L23.2 59.8 L18.4 55 L18.4 41 Z
-           M25.6 41.4 L29.4 41.4 L31.4 43.4 L31.4 52.6 L29.4 54.6 L25.6 54.6 L23.6 52.6 L23.6 43.4 Z"
+        fill="none" stroke="url(#owp5-glyph)" strokeWidth="3.6"
+        strokeLinejoin="miter" strokeLinecap="butt"
+        d="M20 42 L24.5 36.5 L31.5 36.5 L36 42 L36 54 L31.5 59.5 L24.5 59.5 L20 54 Z"
       />
-      {/* W — mitered zigzag, coin-weight stroke */}
       <path
-        d="M39.6 36.4 L43.5 59.6 L48 46.2 L52.5 59.6 L56.4 36.4"
-        stroke="url(#owp4-glyph)"
-        strokeWidth="5.2"
-        fill="none"
-        strokeLinejoin="miter"
-        strokeLinecap="butt"
+        fill="none" stroke="url(#owp5-glyph)" strokeWidth="1.2" strokeOpacity="0.7"
+        d="M23.2 43 L26.2 39.2 L30 39.2 L32.8 43 L32.8 53 L30 56.8 L26.2 56.8 L23.2 53 Z"
       />
-      {/* P — chamfered bowl + stem */}
+      <g fill="#9df7b5">
+        <rect x="26.5" y="35.3" width="3.2" height="1.8" rx="0.4" />
+        <rect x="26.5" y="58.9" width="3.2" height="1.8" rx="0.4" />
+      </g>
+
+      {/* W: double-stroke angular */}
       <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        fill="url(#owp4-glyph)"
-        d="M60.2 36.2 L72.2 36.2 L76.8 40.8 L76.8 47 L72.2 51.6 L65.8 51.6 L65.8 59.8 L62.4 59.8 L60.2 57.6 Z
-           M65.8 40.8 L70.4 40.8 L71.8 42.2 L71.8 45.4 L70.4 46.8 L65.8 46.8 Z"
+        fill="none" stroke="url(#owp5-glyph)" strokeWidth="3.4"
+        strokeLinejoin="miter" strokeLinecap="butt"
+        d="M39.5 37 L43.2 59 L48 45.5 L52.8 59 L56.5 37"
       />
+      <path
+        fill="none" stroke="url(#owp5-glyph)" strokeWidth="1.15" strokeOpacity="0.65"
+        d="M41.3 39.2 L44 55.5 L48 44.2 L52 55.5 L54.7 39.2"
+      />
+
+      {/* P: circuit bowl with traces */}
+      <path
+        fill="none" stroke="url(#owp5-glyph)" strokeWidth="3.6" strokeLinejoin="miter"
+        d="M61 37 L72.5 37 L77 41.5 L77 48 L72.5 52.5 L64.5 52.5 L64.5 59"
+      />
+      <path
+        fill="none" stroke="url(#owp5-glyph)" strokeWidth="1.2" strokeOpacity="0.7"
+        d="M64.2 40.2 L71 40.2 L73.5 42.5 L73.5 46.8 L71 49.2 L64.2 49.2"
+      />
+      <g stroke="#9df7b5" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.85">
+        <path d="M74.5 44.5 H79.5" />
+        <path d="M74.5 47 H78" />
+        <circle cx="80.2" cy="44.5" r="1.1" fill="#9df7b5" stroke="none" />
+        <circle cx="78.8" cy="47" r="0.9" fill="#9df7b5" stroke="none" />
+      </g>
     </svg>
   );
 }

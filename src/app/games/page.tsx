@@ -12,7 +12,7 @@ import { CLIENT_CONFIG } from "@/lib/client-config";
 const GAMES = [
   {
     href: "/games/flip",
-    image: "/art/art-brand-frog.jpg",
+    image: "/art/owp_pump.png",
     name: "Frog Flip",
     desc: "Frog or fly — call the flip. 1.92× on a win.",
     badge: "Even odds",
