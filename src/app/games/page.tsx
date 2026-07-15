@@ -11,14 +11,14 @@ import { CLIENT_CONFIG } from "@/lib/client-config";
 const GAMES = [
   {
     href: "/games/flip",
-    image: "/art/art-brand-frog.jpg",
+    image: "/art/art-flip.jpg",
     name: "Frog Flip",
     desc: "Frog or fly — call the flip. 1.92× on a win.",
     badge: "Even odds",
   },
   {
     href: "/games/dice",
-    image: "/art/hero-flagship.jpg",
+    image: "/art/art-dice.jpg",
     name: "Pond Dice",
     desc: "Set your own line, roll under it. Up to 47× payouts.",
     badge: "Choose your risk",
