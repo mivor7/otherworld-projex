@@ -73,8 +73,8 @@ export default function AboutPage() {
     <div className="pt-6">
       <PageHero
         compact
-        image="/art/hero-flagship.jpg"
-        imagePosition="72% 45%"
+        image="/art/hero-dossier.jpg"
+        imagePosition="center 45%"
         kicker="The dossier"
         title="Beyond the"
         titleAccent="arcade"
