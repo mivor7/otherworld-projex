@@ -512,6 +512,17 @@ h1, h2, h3, h4 {
   .page-hero-frame {
     inset: 8px;
   }
+  /* On phones the copy fills the width over the art, so the desktop
+     dark-left gradient won't protect it. Use a uniform vertical veil —
+     darkest where the heading and the stats row sit. */
+  .page-hero-overlay {
+    background: linear-gradient(
+      180deg,
+      oklch(0.12 0.008 270 / 0.86) 0%,
+      oklch(0.12 0.008 270 / 0.66) 42%,
+      oklch(0.12 0.008 270 / 0.82) 100%
+    );
+  }
 }
 
 /* Mobile nav strip: fade the clipped edge so the scroll is discoverable. */
