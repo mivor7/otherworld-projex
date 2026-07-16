@@ -357,12 +357,12 @@ h1, h2, h3, h4 {
   background:
     linear-gradient(
       105deg,
-      oklch(0.12 0.008 270 / 0.96) 0%,
-      oklch(0.12 0.008 270 / 0.88) 30%,
-      oklch(0.12 0.008 270 / 0.5) 60%,
-      oklch(0.12 0.008 270 / 0.15) 100%
+      oklch(0.12 0.008 270 / 0.95) 0%,
+      oklch(0.12 0.008 270 / 0.82) 28%,
+      oklch(0.12 0.008 270 / 0.38) 55%,
+      oklch(0.12 0.008 270 / 0.08) 100%
     ),
-    linear-gradient(0deg, oklch(0.12 0.008 270 / 0.4) 0%, transparent 46%);
+    linear-gradient(0deg, oklch(0.12 0.008 270 / 0.38) 0%, transparent 46%);
 }
 .page-hero-frame {
   position: absolute;
