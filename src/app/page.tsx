@@ -205,46 +205,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Beyond the arcade */}
-      <section className="mt-16">
-        <Reveal>
-          <div
-            className="panel overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_240px]"
-            style={{ borderColor: "oklch(0.74 0.07 290 / 0.25)" }}
-          >
-            <div className="p-7">
-              <div className="kicker mb-1.5">Beyond the arcade</div>
-              <h2 className="text-[1.25rem] mb-1">Want to know what OWP actually is?</h2>
-              <p className="text-fog text-[0.9rem] leading-relaxed max-w-lg mb-5">
-                Seven bounty episodes. Each cabinet is a contract — pick a
-                target, clear the arcade, claim the reward. The full dossier
-                covers the story, the house rules and the treasury.
-              </p>
-              <Link href="/about" className="btn btn-portal">
-                Read the dossier →
-              </Link>
-            </div>
-            <div className="hidden md:block relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/art/art-brand-frog.jpg"
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{ filter: "brightness(0.85)" }}
-                loading="lazy"
-              />
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(90deg, var(--color-surface) 0%, transparent 45%)",
-                }}
-              />
-            </div>
-          </div>
-        </Reveal>
-      </section>
-
       {/* Token */}
       <section className="mt-16">
         <Reveal>
