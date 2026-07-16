@@ -52,7 +52,7 @@ export default function LeaderboardPage() {
       <PageHero
         compact
         image="/art/art-leaderboard.jpg"
-        imagePosition="center 42%"
+        imagePosition="right 42%"
         kicker="The standings"
         badge="Updated live"
         title="Top"
@@ -108,7 +108,7 @@ export default function LeaderboardPage() {
         ) : rows.length === 0 ? (
           <div className="p-4">
             <EmptyState
-              image="/art/art-leaderboard.jpg"
+              image="/art/owp_pump.png"
               title={`No ${meta.label} entries yet`}
               hint="The podium is open — the first score takes it."
               action={

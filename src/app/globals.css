@@ -349,16 +349,17 @@ h1, h2, h3, h4 {
   position: absolute;
   inset: 0;
   z-index: 1;
-  /* Text legibility without wiping out the key art on the right */
+  /* Keep the left (where copy sits) firmly legible on any art, while still
+     revealing the key art on the right. */
   background:
     linear-gradient(
       105deg,
-      oklch(0.12 0.008 270 / 0.88) 0%,
-      oklch(0.12 0.008 270 / 0.72) 32%,
-      oklch(0.12 0.008 270 / 0.35) 58%,
-      oklch(0.12 0.008 270 / 0.12) 100%
+      oklch(0.12 0.008 270 / 0.96) 0%,
+      oklch(0.12 0.008 270 / 0.88) 30%,
+      oklch(0.12 0.008 270 / 0.5) 60%,
+      oklch(0.12 0.008 270 / 0.15) 100%
     ),
-    linear-gradient(0deg, oklch(0.12 0.008 270 / 0.35) 0%, transparent 48%);
+    linear-gradient(0deg, oklch(0.12 0.008 270 / 0.4) 0%, transparent 46%);
 }
 .page-hero-frame {
   position: absolute;
