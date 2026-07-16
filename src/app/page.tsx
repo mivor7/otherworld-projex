@@ -99,6 +99,7 @@ export default async function Home() {
           { value: roundCount.toLocaleString(), label: "Rounds settled" },
           { value: `${liveAuctions} · ${openBounties}`, label: "Lots · bounties" },
         ]}
+        brand
       />
 
       <ActivityTicker />
