@@ -107,7 +107,11 @@ export default function AuctionsPage() {
         setPast(d.past ?? []);
         setLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => {
+        setLive([]);
+        setPast([]);
+        setLoaded(true);
+      });
   }, []);
   useEffect(() => {
     load();
@@ -156,8 +160,8 @@ export default function AuctionsPage() {
     <div className="pt-6">
       <PageHero
         compact
-        image="/art/art-gavel.jpg"
-        imagePosition="75% 25%"
+        image="/art/hero-auction.jpg"
+        imagePosition="70% 48%"
         kicker="Wing II — under the gavel"
         badge={`${live.length} lots live`}
         title="The"

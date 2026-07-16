@@ -4,10 +4,12 @@ Live stack: **Vercel** (Next.js) + **Neon** (Postgres) + **Solana** mainnet.
 
 ## Environment variables (Vercel → Settings → Environment Variables)
 
-Injected automatically by the Neon integration:
+Injected automatically by integrations:
 
-- `DATABASE_URL` — pooled connection (runtime)
-- `DATABASE_URL_UNPOOLED` — direct connection (migrations)
+- `DATABASE_URL` — pooled connection (Neon, runtime)
+- `DATABASE_URL_UNPOOLED` — direct connection (Neon, migrations)
+- `BLOB_READ_WRITE_TOKEN` — lot photo uploads (add a Blob store under
+  Storage → Blob; without it the consign form falls back to paste-a-URL)
 
 Set these yourself (Production + Preview):
 

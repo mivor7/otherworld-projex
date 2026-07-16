@@ -115,7 +115,7 @@ export default function GamesPage() {
       <PageHero
         compact
         image="/art/owp_hero.jpg"
-        imagePosition="center 60%"
+        imagePosition="center 42%"
         kicker="Wing I — the arcade"
         badge="Tables open"
         title="Step into the"

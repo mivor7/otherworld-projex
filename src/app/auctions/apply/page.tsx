@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { PageHero } from "@/components/hero";
 import { MatteMedia } from "@/components/matte-media";
+import { ImageUploadField } from "@/components/image-upload";
 import { Notice } from "@/components/ui";
 import { fmtRibbit } from "@/lib/client-config";
 
@@ -78,8 +79,8 @@ export default function ApplyPage() {
     <div className="pt-6">
       <PageHero
         compact
-        image="/art/art-empty-chest.jpg"
-        imagePosition="72% 45%"
+        image="/art/hero-auction.jpg"
+        imagePosition="70% 48%"
         kicker="Wing II — consignments"
         badge="Community sellers welcome"
         title="Consign a"
@@ -156,13 +157,13 @@ export default function ApplyPage() {
               </div>
             </div>
             <div>
-              <label className="kicker !text-[0.6rem]">Image URL</label>
-              <input
-                className="input mt-1.5"
-                type="url"
+              <label className="kicker !text-[0.6rem]">Photo</label>
+              <p className="text-xs mb-1.5 mt-0.5" style={{ color: "var(--text-dim)" }}>
+                A clear photo sells the lot — watch the preview update.
+              </p>
+              <ImageUploadField
                 value={form.imageUrl}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                placeholder="https://… (a clear photo sells the lot — see the preview)"
+                onChange={(url) => setForm({ ...form, imageUrl: url })}
               />
             </div>
             <div>

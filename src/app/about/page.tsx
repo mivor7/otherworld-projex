@@ -74,6 +74,7 @@ export default function AboutPage() {
       <PageHero
         compact
         image="/art/hero-flagship.jpg"
+        imagePosition="72% 45%"
         kicker="The dossier"
         title="Beyond the"
         titleAccent="arcade"
@@ -128,14 +129,11 @@ export default function AboutPage() {
           <div className="kicker pt-1.5">03 — The episodes</div>
           <div className="panel overflow-hidden">
             {EPISODES.map((e) => (
-              <div
-                key={e.ep}
-                className="table-row px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-1.5"
-              >
-                <span className="mono text-xs w-12" style={{ color: "var(--text-dim)" }}>
+              <div key={e.ep} className="table-row ep-row">
+                <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
                   {e.ep}
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     {e.href ? (
                       <Link href={e.href} className="font-medium tracking-tight hover:text-neon transition-colors">
@@ -154,7 +152,7 @@ export default function AboutPage() {
                   </div>
                   <p className="text-fog text-[0.82rem] mt-0.5">{e.brief}</p>
                 </div>
-                <div className="text-right">
+                <div className="ep-row-meta">
                   <div className="text-[0.7rem] uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
                     Target · {e.target}
                   </div>

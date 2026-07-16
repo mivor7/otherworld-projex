@@ -47,22 +47,26 @@ export default function BountiesPage() {
         setClosed(d.closed ?? []);
         setLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => {
+        setOpen([]);
+        setClosed([]);
+        setLoaded(true);
+      });
   }, []);
 
   useEffect(() => {
     fetch(`/api/leaderboard?game=${boardGame}`)
       .then((r) => r.json())
       .then((rows) => setBoard(Array.isArray(rows) ? rows : []))
-      .catch(() => {});
+      .catch(() => setBoard([]));
   }, [boardGame]);
 
   return (
     <div className="pt-6">
       <PageHero
         compact
-        image="/art/art-empty-chest.jpg"
-        imagePosition="center 55%"
+        image="/art/art-bounty.jpg"
+        imagePosition="center 48%"
         kicker="Wing III — the board"
         badge="The hunt is always open"
         title="Bounties &"
@@ -81,7 +85,7 @@ export default function BountiesPage() {
           )}
           {loaded && open.length === 0 && (
             <EmptyState
-              image="/art/art-empty-chest.jpg"
+              image="/art/art-bounty.jpg"
               title="The board is quiet"
               hint="No open contracts at this moment — new hunts are posted regularly."
               action={

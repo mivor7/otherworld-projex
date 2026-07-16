@@ -39,6 +39,7 @@ export default function AuctionDetailPage({
   const { id } = use(params);
   const { me, refresh } = useSession();
   const [auction, setAuction] = useState<AuctionDetail | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [bid, setBid] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -46,14 +47,32 @@ export default function AuctionDetailPage({
   const load = useCallback(() => {
     fetch(`/api/auctions/${id}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then(setAuction)
-      .catch(() => {});
+      .then((data) => {
+        if (data) {
+          setAuction(data);
+          setLoadError(false);
+        } else {
+          setLoadError(true);
+        }
+      })
+      .catch(() => setLoadError(true));
   }, [id]);
   useEffect(() => {
     load();
     const t = setInterval(load, 5_000);
     return () => clearInterval(t);
   }, [load]);
+
+  if (!auction && loadError) {
+    return (
+      <div className="pt-24 text-center">
+        <p className="text-fog mb-4">This lot could not be found.</p>
+        <Link href="/auctions" className="btn btn-ghost">
+          ← Back to the house
+        </Link>
+      </div>
+    );
+  }
 
   if (!auction) {
     return <div className="pt-24 text-center text-fog">Retrieving the lot…</div>;

@@ -23,7 +23,7 @@ const WINGS = [
   },
   {
     href: "/auctions",
-    image: "/art/art-gavel.jpg",
+    image: "/art/hero-auction.jpg",
     kicker: "Wing II",
     title: "The Auction House",
     desc: "Collectibles, 1/1s and services under the gavel. Escrowed $RIBBIT bids, anti-snipe closings, community consignments.",
@@ -31,7 +31,7 @@ const WINGS = [
   },
   {
     href: "/bounties",
-    image: "/art/lot-card-shark.jpg",
+    image: "/art/art-bounty.jpg",
     kicker: "Wing III",
     title: "The Bounty Board",
     desc: "Weekly competitions and one-off challenges, funded by the house take. Top hunters split the pool.",
@@ -64,7 +64,7 @@ export default async function Home() {
       <VaultIntro />
       <PageHero
         image="/art/hero-flagship.jpg"
-        imagePosition="center 30%"
+        imagePosition="72% 45%"
         interactive
         kicker="Decentralized bounty arcade · Solana"
         badge="The hunt is always open"

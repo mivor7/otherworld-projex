@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
+import { ImageUploadField } from "@/components/image-upload";
 import { fmtRibbit, shortWallet } from "@/lib/client-config";
 
 type Overview = {
@@ -181,8 +182,10 @@ export default function AdminPage() {
               onChange={(e) => setAuctionForm({ ...auctionForm, title: e.target.value })} />
             <textarea className="input" placeholder="Description" value={auctionForm.description}
               onChange={(e) => setAuctionForm({ ...auctionForm, description: e.target.value })} />
-            <input className="input" placeholder="Image URL (optional)" value={auctionForm.imageUrl}
-              onChange={(e) => setAuctionForm({ ...auctionForm, imageUrl: e.target.value })} />
+            <ImageUploadField
+              value={auctionForm.imageUrl}
+              onChange={(url) => setAuctionForm({ ...auctionForm, imageUrl: url })}
+            />
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="text-xs text-fog">Start bid</label>
