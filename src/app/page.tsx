@@ -180,7 +180,7 @@ export default async function Home() {
             const card = (
               <div className="lot-card h-full">
                 <div className="card-media !aspect-square">
-                  <MatteMedia src={e.image} alt={e.title} />
+                  <MatteMedia src={e.image} alt={e.title} fit="cover" />
                   {e.href ? (
                     <span className="badge badge-live absolute top-2 right-2">
                       <span className="live-dot" /> Live

@@ -128,7 +128,7 @@ export default function GamesPage() {
           {GAMES.map((g) => (
             <Link key={g.href} href={g.href} className="lot-card group">
               <div className="card-media">
-                <MatteMedia src={g.image} />
+                <MatteMedia src={g.image} fit="cover" />
                 <span className="badge absolute top-2 right-2">{g.badge}</span>
               </div>
               <div className="card-body">
