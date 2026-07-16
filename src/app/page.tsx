@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 const WINGS = [
   {
     href: "/games",
-    image: "/art/wing-arcade.jpg",
+    image: "/art/owp_hero.jpg",
     kicker: "Wing I",
     title: "The Arcade",
     desc: "Provably-fair games at a published house edge. Burn $RIBBIT for credits, call your shots, verify every roll.",
