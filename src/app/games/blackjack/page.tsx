@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
+import { useClientSeed } from "@/components/use-client-seed";
+import { FairCommit } from "@/components/fair-commit";
 
 type View = {
   roundId: string;
@@ -118,6 +120,7 @@ export default function BlackjackPage() {
   const [wager, setWager] = useState(10);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { seed: clientSeed } = useClientSeed();
 
   // Restore an open hand on mount (e.g. after refresh).
   useEffect(() => {
@@ -150,12 +153,7 @@ export default function BlackjackPage() {
     setBusy(false);
   };
 
-  const dealNew = () =>
-    post({
-      action: "deal",
-      wager,
-      clientSeed: Math.random().toString(36).slice(2, 12),
-    });
+  const dealNew = () => post({ action: "deal", wager, clientSeed });
 
   const inHand = round?.phase === "player";
   const done = round?.phase === "done";
@@ -287,6 +285,7 @@ export default function BlackjackPage() {
             </Link>
           </p>
         )}
+        <FairCommit clientSeed={clientSeed} />
       </div>
     </div>
   );

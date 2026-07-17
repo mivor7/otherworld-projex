@@ -1,25 +1,38 @@
 "use client";
 
 // Worm Frog — EP 04. "Slither, grow, and don't bite your own tail."
-// Classic snake on the tokenized arcade flow; scores feed the bounty board.
+// Replay-verified snake: the run token seeds the PRNG, every keypress is
+// recorded, and the server re-simulates the whole run (src/lib/worm-sim.ts)
+// to compute the score itself. Fabricated scores can't rank.
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
+import {
+  DIRS,
+  GRID,
+  type Point,
+  type Turn,
+  initialSnake,
+  mulberry32,
+  seedFromToken,
+  spawnFly,
+} from "@/lib/worm-sim";
 
-const GRID = 21;
 const CELL = 22;
 const W = GRID * CELL;
 const H = GRID * CELL;
 const BASE_MS = 140;
 
-type Point = { x: number; y: number };
 type Game = {
   snake: Point[];
   dir: Point;
   nextDir: Point;
   fly: Point;
+  rand: () => number;
+  steps: number;
+  trace: Turn[];
   score: number;
   flies: number;
   over: boolean;
@@ -29,13 +42,6 @@ type Game = {
   acc: number;
   last: number;
 };
-
-function spawnFly(snake: Point[]): Point {
-  while (true) {
-    const p = { x: Math.floor(Math.random() * GRID), y: Math.floor(Math.random() * GRID) };
-    if (!snake.some((s) => s.x === p.x && s.y === p.y)) return p;
-  }
-}
 
 export default function WormPage() {
   const { me } = useSession();
@@ -55,12 +61,12 @@ export default function WormPage() {
   useEffect(loadBoard, [loadBoard]);
 
   const submitScore = useCallback(
-    async (score: number) => {
+    async (score: number, trace: Turn[]) => {
       if (!runTokenRef.current || score <= 0) return;
       const res = await fetch("/api/arcade/score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ runToken: runTokenRef.current, score }),
+        body: JSON.stringify({ runToken: runTokenRef.current, score, trace }),
       });
       runTokenRef.current = null;
       if (res.ok) {
@@ -91,17 +97,21 @@ export default function WormPage() {
         runTokenRef.current = null;
       }
     }
-    const mid = Math.floor(GRID / 2);
-    const snake = [
-      { x: mid - 1, y: mid },
-      { x: mid - 2, y: mid },
-      { x: mid - 3, y: mid },
-    ];
+    // Ranked runs derive the fly-spawn PRNG from the run token so the server
+    // can replay them; guest runs get throwaway local entropy.
+    const seed = runTokenRef.current
+      ? seedFromToken(runTokenRef.current)
+      : (Math.random() * 2 ** 31) | 0;
+    const rand = mulberry32(seed);
+    const snake = initialSnake();
     gameRef.current = {
       snake,
-      dir: { x: 1, y: 0 },
-      nextDir: { x: 1, y: 0 },
-      fly: spawnFly(snake),
+      dir: DIRS[0],
+      nextDir: DIRS[0],
+      fly: spawnFly(rand, snake),
+      rand,
+      steps: 0,
+      trace: [],
       score: 0,
       flies: 0,
       over: false,
@@ -116,6 +126,10 @@ export default function WormPage() {
   const turn = useCallback((dx: number, dy: number) => {
     const g = gameRef.current;
     if (!g || g.over || g.paused) return;
+    // Record the raw press for the server replay — acceptance below runs
+    // identically on both sides (see worm-sim.replay).
+    const d = DIRS.findIndex((v) => v.x === dx && v.y === dy);
+    if (d >= 0 && g.trace.length < 20_000) g.trace.push({ s: g.steps, d });
     // No 180° reversals.
     if (dx === -g.dir.x && dy === -g.dir.y) return;
     g.nextDir = { x: dx, y: dy };
@@ -159,18 +173,19 @@ export default function WormPage() {
         g.snake.some((s) => s.x === head.x && s.y === head.y)
       ) {
         g.over = true;
-        submitScore(g.score);
+        submitScore(g.score, g.trace);
         return;
       }
       g.snake.unshift(head);
       if (head.x === g.fly.x && head.y === g.fly.y) {
         g.score += 10;
         g.flies += 1;
-        g.fly = spawnFly(g.snake);
+        g.fly = spawnFly(g.rand, g.snake);
         if (g.flies % 5 === 0) g.stepMs = Math.max(70, g.stepMs - 9);
       } else {
         g.snake.pop();
       }
+      g.steps += 1;
     };
 
     const tick = (now: number) => {

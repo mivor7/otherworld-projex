@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { PageHero } from "@/components/hero";
 import { Notice } from "@/components/ui";
+import { useClientSeed } from "@/components/use-client-seed";
+
+const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+const SUITS = ["\u2660", "\u2665", "\u2666", "\u2663"];
 
 async function hmacSha256Hex(key: string, message: string): Promise<string> {
   const enc = new TextEncoder();
@@ -36,6 +40,8 @@ export default function FairnessPage() {
   const [vClient, setVClient] = useState("");
   const [vNonce, setVNonce] = useState(0);
   const [vResult, setVResult] = useState<{ roll: number; digest: string } | null>(null);
+  const [deck, setDeck] = useState<string[] | null>(null);
+  const { seed: myClientSeed, setSeed: setMyClientSeed, randomize } = useClientSeed();
 
   const load = () => {
     fetch("/api/fairness")
@@ -71,6 +77,22 @@ export default function FairnessPage() {
       );
       load();
     }
+  };
+
+  // Blackjack: re-derive the full committed deck order in the browser —
+  // the same Fisher\u2013Yates walk the server ran at deal time.
+  const deriveDeck = async () => {
+    const d = Array.from({ length: 52 }, (_, i) => i);
+    for (let i = 51; i > 0; i--) {
+      const digest = await hmacSha256Hex(
+        vSeed.trim(),
+        `${vClient.trim()}:${vNonce}:${51 - i}`
+      );
+      const r = parseInt(digest.slice(0, 8), 16) / 0x100000000;
+      const j = Math.floor(r * (i + 1));
+      [d[i], d[j]] = [d[j], d[i]];
+    }
+    setDeck(d.map((c) => `${RANKS[c % 13]}${SUITS[Math.floor(c / 13)]}`));
   };
 
   const verify = async () => {
@@ -110,6 +132,32 @@ export default function FairnessPage() {
             rotation so a reveal can never expose a live deck.
           </li>
         </ol>
+      </div>
+
+      <div className="panel p-6 mb-6">
+        <h3 className="font-bold mb-1">Your client seed</h3>
+        <p className="text-sm text-fog mb-4 leading-relaxed">
+          Half of every roll is yours. This seed is mixed into each outcome —
+          set it to anything <em>after</em> the house has committed and the
+          server seed can&apos;t have been picked around it. Stored only in your
+          browser.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <input
+            className="input flex-1 min-w-48"
+            maxLength={64}
+            value={myClientSeed}
+            onChange={(e) => setMyClientSeed(e.target.value)}
+            aria-label="Your client seed"
+          />
+          <button className="btn btn-ghost" onClick={randomize}>
+            Randomize
+          </button>
+        </div>
+        <p className="text-xs mt-3" style={{ color: "var(--text-dim)" }}>
+          Used by Frog Flip, Pond Dice and Blackjack from your next round. It
+          appears in each round&apos;s record so anyone can recompute the result.
+        </p>
       </div>
 
       {me.signedIn && data && (
@@ -185,9 +233,45 @@ export default function FairnessPage() {
               onChange={(e) => setVNonce(Number(e.target.value))}
             />
           </div>
-          <button className="btn btn-primary" onClick={verify} disabled={!vSeed || !vClient}>
-            Recompute roll
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button className="btn btn-primary" onClick={verify} disabled={!vSeed || !vClient}>
+              Recompute roll
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={deriveDeck}
+              disabled={!vSeed || !vClient}
+              title="Re-derive the committed blackjack deck for this seed/nonce"
+            >
+              Derive blackjack deck
+            </button>
+          </div>
+          {deck && (
+            <Notice kind="info">
+              <div className="text-xs">
+                <div className="mb-2">
+                  Committed deck order — deal goes <strong>you, dealer,
+                  you, dealer&nbsp;(hole)</strong>, then hits continue from the
+                  5th card:
+                </div>
+                <div className="mono leading-relaxed break-words">
+                  {deck.map((c, i) => (
+                    <span
+                      key={i}
+                      className={
+                        c.includes("♥") || c.includes("♦")
+                          ? "text-danger"
+                          : undefined
+                      }
+                    >
+                      {i > 0 && " "}
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Notice>
+          )}
           {vResult && (
             <Notice kind="info">
               <div className="break-all text-xs">
@@ -204,6 +288,20 @@ export default function FairnessPage() {
             </Notice>
           )}
         </div>
+      </div>
+
+      <div className="panel p-6 mt-6">
+        <h3 className="font-bold mb-3">What about the arcade episodes?</h3>
+        <p className="text-sm text-fog leading-relaxed">
+          Worm Frog, Frogris and Lily Hopper are games of skill — there is no
+          house randomness to commit to. Instead, each run gets a signed run
+          token, and for Worm Frog your inputs are recorded and{" "}
+          <strong className="text-frost">replayed move-by-move on the
+          server</strong>, which recomputes the score itself and rejects
+          anything that doesn&apos;t reproduce — including runs faster than
+          real time. Leaderboard and bounty placements only count for wallets
+          with real burned $RIBBIT behind them.
+        </p>
       </div>
     </div>
   );

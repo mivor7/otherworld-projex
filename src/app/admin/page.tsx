@@ -26,6 +26,22 @@ type Overview = {
   openBounties: number;
 };
 
+type ReviewEntry = {
+  rank: number;
+  wallet: string;
+  value: number;
+  entries: number;
+  volume?: number;
+  burnedRibbit: number;
+  walletAgeDays: number;
+};
+type Review = {
+  bounty: { id: string; title: string; target: string | null; game: string; prize: string; endsAt: string };
+  unit: string;
+  verified: boolean;
+  entries: ReviewEntry[];
+};
+
 export default function AdminPage() {
   const { me } = useSession();
   const [data, setData] = useState<Overview | null>(null);
@@ -47,10 +63,16 @@ export default function AdminPage() {
     durationDays: 7,
   });
 
+  const [review, setReview] = useState<Review[]>([]);
+
   const load = useCallback(() => {
     fetch("/api/admin/overview")
       .then((r) => (r.ok ? r.json() : null))
       .then(setData)
+      .catch(() => {});
+    fetch("/api/admin/bounty-review")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows) => Array.isArray(rows) && setReview(rows))
       .catch(() => {});
   }, []);
   useEffect(() => {
@@ -248,6 +270,60 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
+
+      {/* Payout review — who's actually winning each open pool */}
+      {review.length > 0 && (
+        <div className="mt-6 space-y-4">
+          <div className="kicker">Payout review — open leaderboard bounties</div>
+          {review.map((r) => (
+            <div key={r.bounty.id} className="panel p-5">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
+                <span className="font-medium tracking-tight">{r.bounty.title}</span>
+                {r.bounty.target && (
+                  <span className="mono text-xs text-gold uppercase tracking-wider">
+                    {r.bounty.target}
+                  </span>
+                )}
+                <span className="badge badge-gold">{r.bounty.prize}</span>
+                {r.verified ? (
+                  <span className="badge badge-live">replay-verified</span>
+                ) : (
+                  <span className="badge">heuristic checks</span>
+                )}
+                <span className="kicker !text-[0.6rem] ml-auto">{r.unit}</span>
+              </div>
+              {r.entries.length === 0 ? (
+                <p className="text-fog text-sm">No ranked entries yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {r.entries.map((e) => (
+                        <tr key={e.rank} className="table-row">
+                          <td className="py-1.5 pr-2 mono text-xs" style={{ color: "var(--text-dim)" }}>
+                            {String(e.rank).padStart(2, "0")}
+                          </td>
+                          <td className="py-1.5 pr-3 mono text-xs">{shortWallet(e.wallet)}</td>
+                          <td className="py-1.5 pr-3 stat-number">{e.value.toLocaleString()}</td>
+                          <td className="py-1.5 pr-3 text-xs text-fog">
+                            {e.entries} {e.volume !== undefined ? `rounds · ${e.volume} wagered` : "runs"}
+                          </td>
+                          <td className="py-1.5 pr-3 text-xs text-fog">
+                            {e.burnedRibbit.toLocaleString()} burned
+                          </td>
+                          <td className="py-1.5 text-xs text-right" style={{ color: "var(--text-dim)" }}>
+                            wallet {e.walletAgeDays}d old
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

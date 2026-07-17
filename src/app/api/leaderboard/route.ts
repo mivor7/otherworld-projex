@@ -1,34 +1,17 @@
 import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { CONFIG, toRaw } from "@/lib/config";
+import { CONFIG } from "@/lib/config";
+import { eligibleBurners } from "@/lib/ranked";
 
 function short(wallet: string) {
   return `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
 }
 
-/**
- * Sybil deterrence: prize boards only rank wallets with skin in the game —
- * lifetime verified burns ≥ RANKED_MIN_BURNED_RIBBIT. Everyone can play;
- * only burners compete for the pools. Eligibility is evaluated at read time,
- * so burning mid-week retroactively ranks the week's best score.
- */
-async function eligibleBurners(userIds: string[]): Promise<Set<string>> {
-  if (userIds.length === 0) return new Set();
-  // Threshold 0 disables the gate — everyone ranks (wallets without any
-  // burn rows included).
-  if (CONFIG.rankedMinBurnedRibbit <= 0) return new Set(userIds);
-  const threshold = toRaw(CONFIG.rankedMinBurnedRibbit);
-  const burns = await prisma.burnEvent.groupBy({
-    by: ["userId"],
-    where: { userId: { in: userIds } },
-    _sum: { amountRaw: true },
-  });
-  return new Set(
-    burns
-      .filter((b) => (b._sum.amountRaw ?? 0n) >= threshold)
-      .map((b) => b.userId)
-  );
-}
+// Sybil deterrence: prize boards only rank wallets with skin in the game —
+// lifetime verified burns ≥ RANKED_MIN_BURNED_RIBBIT (see lib/ranked).
+// Everyone can play; only burners compete for the pools. Eligibility is
+// evaluated at read time, so burning mid-week retroactively ranks the
+// week's best score.
 
 export const GET = handler(async (req: Request) => {
   const url = new URL(req.url);

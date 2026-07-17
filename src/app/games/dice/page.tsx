@@ -6,6 +6,8 @@ import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
+import { useClientSeed } from "@/components/use-client-seed";
+import { FairCommit } from "@/components/fair-commit";
 
 type DiceResult = {
   outcome: { rolled: number; target: number; multiplier: number };
@@ -25,6 +27,7 @@ export default function DicePage() {
   const [error, setError] = useState<string | null>(null);
   const [sandbox, setSandbox] = useState(false);
   const practice = usePractice();
+  const { seed: clientSeed } = useClientSeed();
 
   const multiplier = (100 / target) * 0.96;
   const balance = sandbox ? practice.credits : (me.credits ?? 0);
@@ -54,7 +57,6 @@ export default function DicePage() {
       return;
     }
 
-    const clientSeed = Math.random().toString(36).slice(2, 12);
     const res = await fetch("/api/games/dice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -211,6 +213,7 @@ export default function DicePage() {
             practice round — nothing wagered, nothing won
           </p>
         )}
+        {!sandbox && <FairCommit clientSeed={clientSeed} />}
       </div>
     </div>
   );

@@ -47,6 +47,8 @@ export const CONFIG = {
   // table boards additionally require this many credits wagered in-window.
   rankedMinBurnedRibbit: nonneg(process.env.RANKED_MIN_BURNED_RIBBIT, 1_000),
   rankedMinTableVolume: nonneg(process.env.RANKED_MIN_TABLE_VOLUME, 100),
+  // Max arcade score submissions per wallet per game per UTC day.
+  arcadeDailySubmissions: num(process.env.ARCADE_DAILY_SUBMISSIONS, 40),
 
   adminWallets: (process.env.ADMIN_WALLETS ?? "")
     .split(",")
