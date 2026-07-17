@@ -64,7 +64,7 @@ export default async function Home() {
       <VaultIntro />
       <PageHero
         image="/art/hero-flagship.jpg"
-        imagePosition="72% 45%"
+        imagePosition="center 42%"
         interactive
         kicker="Decentralized bounty arcade · Solana"
         badge="The hunt is always open"
