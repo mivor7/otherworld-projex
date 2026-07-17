@@ -38,7 +38,9 @@ export default function DicePage() {
     setError(null);
 
     if (sandbox) {
-      // Practice table: same odds, local roll, zero $RIBBIT.
+      // Practice table: same odds, local roll, zero $RIBBIT. Bottomless
+      // bankroll — top up first so the roll can never be blocked.
+      practice.ensure(wager);
       const rolled = Math.floor(Math.random() * 100 * 100) / 100;
       const win = rolled < target;
       const payout = win ? Math.floor(wager * multiplier) : 0;
@@ -103,13 +105,8 @@ export default function DicePage() {
         {sandbox && (
           <div className="mb-5">
             <Notice kind="info">
-              Sandbox — no wallet needed, no $RIBBIT involved. Same odds, practice
-              bankroll.{" "}
-              {practice.credits < 1 && (
-                <button className="text-neon hover:underline" onClick={practice.reset}>
-                  Refill practice credits →
-                </button>
-              )}
+              Sandbox — no wallet needed, no $RIBBIT involved. Same odds,
+              bottomless practice bankroll: play as long as you like.
             </Notice>
           </div>
         )}
@@ -181,7 +178,7 @@ export default function DicePage() {
           <button
             className="btn btn-primary text-lg px-12 py-3"
             onClick={play}
-            disabled={rolling || !canPlay || balance < wager}
+            disabled={rolling || !canPlay || (!sandbox && balance < wager)}
           >
             {rolling ? "Rolling…" : sandbox ? "Roll (practice)" : "Roll"}
           </button>

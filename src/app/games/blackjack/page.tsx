@@ -176,8 +176,9 @@ export default function BlackjackPage() {
   };
 
   const dealPractice = useCallback(() => {
-    if (practice.credits < wager) return;
     setError(null);
+    // Bottomless bankroll — top up first so the deal can never be blocked.
+    practice.ensure(wager);
     practice.adjust(-wager);
     const deck = shuffledDeck();
     const r: PracticeRound = {
@@ -219,7 +220,8 @@ export default function BlackjackPage() {
       const r = practiceRef.current;
       if (!r || r.phase !== "player") return;
       if (action === "double") {
-        if (r.player.length !== 2 || r.doubled || practice.credits < r.wager) return;
+        if (r.player.length !== 2 || r.doubled) return;
+        practice.ensure(r.wager);
         practice.adjust(-r.wager);
         r.doubled = true;
         r.player.push(r.deck[r.pos++]);
@@ -256,9 +258,7 @@ export default function BlackjackPage() {
   const done = view?.phase === "done";
   const balance = sandbox ? practice.credits : (me.credits ?? 0);
   const canPlay = sandbox || me.signedIn;
-  const doubleFundsOk = sandbox
-    ? practice.credits >= (view?.wager ?? 0)
-    : (me.credits ?? 0) >= (view?.wager ?? 0);
+  const doubleFundsOk = sandbox || (me.credits ?? 0) >= (view?.wager ?? 0);
 
   return (
     <div className="pt-10 max-w-3xl mx-auto">
@@ -298,12 +298,7 @@ export default function BlackjackPage() {
           <div className="mb-5">
             <Notice kind="info">
               Sandbox — no wallet needed, no $RIBBIT involved. Same single-deck
-              rules, practice bankroll, nothing real won or lost.{" "}
-              {practice.credits < 1 && (
-                <button className="text-neon hover:underline" onClick={practice.reset}>
-                  Refill practice credits →
-                </button>
-              )}
+              rules, bottomless practice bankroll, nothing real won or lost.
             </Notice>
           </div>
         )}
@@ -385,7 +380,7 @@ export default function BlackjackPage() {
             <button
               className="btn btn-primary btn-lg px-10"
               onClick={dealNew}
-              disabled={busy || !canPlay || balance < wager}
+              disabled={busy || (!sandbox && (!me.signedIn || balance < wager))}
             >
               {busy ? "Dealing…" : done ? "Deal again" : sandbox ? "Deal (practice)" : "Deal"}
             </button>
@@ -398,14 +393,6 @@ export default function BlackjackPage() {
             <Link href="/games" className="text-neon hover:underline">
               Get credits →
             </Link>
-          </p>
-        )}
-        {sandbox && !inHand && practice.credits < wager && (
-          <p className="text-fog text-sm mt-5 text-center">
-            Not enough practice credits.{" "}
-            <button className="text-neon hover:underline" onClick={practice.reset}>
-              Refill →
-            </button>
           </p>
         )}
         {!sandbox && me.signedIn && !inHand && (me.credits ?? 0) < wager && (

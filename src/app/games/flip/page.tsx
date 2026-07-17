@@ -53,7 +53,9 @@ export default function FlipPage() {
     setResult(null);
 
     if (sandbox) {
-      // Practice table: same odds, local coin, zero $RIBBIT.
+      // Practice table: same odds, local coin, zero $RIBBIT. Bottomless
+      // bankroll — top up first so the flip can never be blocked.
+      practice.ensure(wager);
       const landed = Math.random() < 0.5 ? "frog" : "fly";
       const win = landed === side;
       const payout = win ? Math.floor(wager * 1.92) : 0;
@@ -111,13 +113,8 @@ export default function FlipPage() {
         {sandbox && (
           <div className="mb-5 text-left">
             <Notice kind="info">
-              Sandbox — no wallet needed, no $RIBBIT involved. Same odds, practice
-              bankroll.{" "}
-              {practice.credits < 1 && (
-                <button className="text-neon hover:underline" onClick={practice.reset}>
-                  Refill practice credits →
-                </button>
-              )}
+              Sandbox — no wallet needed, no $RIBBIT involved. Same odds,
+              bottomless practice bankroll: play as long as you like.
             </Notice>
           </div>
         )}
@@ -173,7 +170,7 @@ export default function FlipPage() {
         <button
           className="btn btn-primary text-lg px-12 py-3"
           onClick={play}
-          disabled={busy || !canPlay || balance < wager}
+          disabled={busy || !canPlay || (!sandbox && balance < wager)}
         >
           {busy ? "Flipping…" : sandbox ? "Flip (practice)" : "Flip it"}
         </button>
