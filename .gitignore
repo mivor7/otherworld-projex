@@ -48,3 +48,6 @@ prisma/dev.db-journal
 program/target/
 program/.anchor/
 program/node_modules/
+
+# local owner reports — never commit
+/OWP-STATUS-REPORT.pdf
