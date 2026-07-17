@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
+import { ARCADE } from "@/lib/arcade-palette";
 import {
   DIRS,
   GRID,
@@ -203,9 +204,9 @@ export default function WormPage() {
       }
 
       // draw
-      ctx.fillStyle = "#080d0b";
+      ctx.fillStyle = ARCADE.bg;
       ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = "rgba(255,255,255,0.03)";
+      ctx.strokeStyle = ARCADE.grid;
       for (let i = 1; i < GRID; i++) {
         ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, H); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(W, i * CELL); ctx.stroke();
@@ -220,9 +221,12 @@ export default function WormPage() {
         // worm
         g.snake.forEach((s, i) => {
           const t = i / Math.max(1, g.snake.length - 1);
-          ctx.shadowColor = "#36f581";
-          ctx.shadowBlur = i === 0 ? 12 : 5;
-          ctx.fillStyle = i === 0 ? "#a9f5b8" : `rgba(94, ${220 - t * 90}, 128, 1)`;
+          if (i === 0) {
+            ctx.shadowColor = ARCADE.lime;
+            ctx.shadowBlur = 10;
+          }
+          ctx.fillStyle =
+            i === 0 ? ARCADE.limeSoft : `oklch(${(0.74 - t * 0.24).toFixed(3)} 0.1 150)`;
           ctx.beginPath();
           ctx.roundRect(s.x * CELL + 2, s.y * CELL + 2, CELL - 4, CELL - 4, i === 0 ? 7 : 5);
           ctx.fill();
@@ -230,7 +234,7 @@ export default function WormPage() {
         });
         // eyes on head
         const h = g.snake[0];
-        ctx.fillStyle = "#0b100f";
+        ctx.fillStyle = ARCADE.ink;
         ctx.beginPath();
         ctx.arc(h.x * CELL + CELL / 2 - 4, h.y * CELL + CELL / 2 - 3, 2, 0, 7);
         ctx.arc(h.x * CELL + CELL / 2 + 4, h.y * CELL + CELL / 2 - 3, 2, 0, 7);
@@ -250,7 +254,7 @@ export default function WormPage() {
   }, [submitScore]);
 
   return (
-    <div className="pt-10">
+    <div className="pt-10 max-w-4xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
@@ -261,9 +265,13 @@ export default function WormPage() {
       />
       <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
         <div className="panel panel-glow p-5 flex flex-col items-center">
-          <div className="flex gap-6 mb-3 stat-number text-sm">
-            <span>SCORE <span className="text-neon">{hud.score}</span></span>
-            <span>FLIES <span className="text-gold">{hud.flies}</span></span>
+          <div className="flex gap-7 mb-3 items-baseline">
+            <span className="kicker !text-[0.6rem]">
+              Score <span className="stat-number text-neon text-sm ml-1.5">{hud.score}</span>
+            </span>
+            <span className="kicker !text-[0.6rem]">
+              Flies <span className="stat-number text-gold text-sm ml-1.5">{hud.flies}</span>
+            </span>
           </div>
           <div className="relative w-full max-w-[462px]">
             <canvas
@@ -342,6 +350,13 @@ export default function WormPage() {
               </tbody>
             </table>
           )}
+          <div className="mt-5 pt-4 border-t hidden sm:block" style={{ borderColor: "var(--hairline)" }}>
+            <div className="kicker !text-[0.6rem] mb-2">Keys</div>
+            <div className="text-xs space-y-1.5" style={{ color: "var(--text-dim)" }}>
+              <div><span className="mono text-frost">←↑↓→ / WASD</span> steer</div>
+              <div><span className="mono text-frost">P</span> pause · <span className="mono text-frost">Space</span> restart</div>
+            </div>
+          </div>
         </aside>
       </div>
     </div>

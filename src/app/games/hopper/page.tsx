@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
+import { ARCADE, CAR_COLORS } from "@/lib/arcade-palette";
 
 const COLS = 9;
 const ROWS = 11;
@@ -28,8 +29,6 @@ type GameState = {
   started: boolean;
   paused: boolean;
 };
-
-const CAR_COLORS = ["#a586ff", "#ff5470", "#ffce4f", "#4fc3ff"];
 
 function makeCars(level: number): Car[] {
   const cars: Car[] = [];
@@ -199,33 +198,34 @@ export default function HopperPage() {
       }
 
       // ——— draw ———
-      ctx.fillStyle = "#05090b";
+      ctx.fillStyle = ARCADE.bg;
       ctx.fillRect(0, 0, W, H);
       for (let r = 0; r < ROWS; r++) {
         const isSafe = r === 0 || r === ROWS - 1 || r === Math.floor(ROWS / 2);
-        ctx.fillStyle = isSafe ? "rgba(54,245,129,0.08)" : "rgba(255,255,255,0.02)";
+        ctx.fillStyle = isSafe ? "oklch(0.78 0.11 150 / 0.07)" : "rgba(255,255,255,0.02)";
         ctx.fillRect(0, r * CELL, W, CELL - 1);
       }
-      ctx.fillStyle = "rgba(54,245,129,0.25)";
-      ctx.font = "12px monospace";
-      ctx.fillText("⟰ GOAL +10", 8, CELL - 16);
+      ctx.fillStyle = ARCADE.limeFaint;
+      ctx.font = "11px 'Geist Mono', ui-monospace, monospace";
+      ctx.fillText("GOAL +10", 10, CELL - 17);
 
       for (const car of s.cars) {
-        ctx.shadowColor = car.hue;
-        ctx.shadowBlur = 12;
         ctx.fillStyle = car.hue;
         ctx.beginPath();
         ctx.roundRect(car.x, car.lane * CELL + 8, car.len, CELL - 17, 6);
         ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.fillStyle = "rgba(255,255,255,0.1)";
+        ctx.beginPath();
+        ctx.roundRect(car.x + 3, car.lane * CELL + 11, car.len - 6, 8, 4);
+        ctx.fill();
       }
 
       // Frog.
       ctx.font = `${CELL - 12}px serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.shadowColor = "#36f581";
-      ctx.shadowBlur = 16;
+      ctx.shadowColor = ARCADE.lime;
+      ctx.shadowBlur = 8;
       ctx.fillText("🐸", s.frog.col * CELL + CELL / 2, s.frog.row * CELL + CELL / 2 + 2);
       ctx.shadowBlur = 0;
       ctx.textAlign = "left";
@@ -244,7 +244,7 @@ export default function HopperPage() {
   }, [submitScore]);
 
   return (
-    <div className="pt-10">
+    <div className="pt-10 max-w-4xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
@@ -255,16 +255,27 @@ export default function HopperPage() {
       />
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
         <div className="panel panel-glow p-4 flex flex-col items-center">
-          <div className="flex gap-6 mb-3 stat-number text-sm">
-            <span>SCORE <span className="text-neon">{hud.score}</span></span>
-            <span>LIVES <span className="text-danger">{"♥".repeat(Math.max(0, hud.lives))}</span></span>
+          <div className="flex gap-7 mb-3 items-baseline">
+            <span className="kicker !text-[0.6rem]">
+              Score <span className="stat-number text-neon text-sm ml-1.5">{hud.score}</span>
+            </span>
+            <span className="kicker !text-[0.6rem]">
+              Lives{" "}
+              <span className="stat-number text-sm ml-1.5 tracking-widest">
+                <span className="text-neon">{"●".repeat(Math.max(0, hud.lives))}</span>
+                <span style={{ color: "var(--text-dim)" }}>
+                  {"○".repeat(Math.max(0, 3 - hud.lives))}
+                </span>
+              </span>
+            </span>
           </div>
           <div className="relative w-full max-w-[396px]">
             <canvas
               ref={canvasRef}
               width={W}
               height={H}
-              className="w-full rounded-lg border border-edge"
+              className="w-full rounded-lg border"
+              style={{ borderColor: "var(--hairline-strong)" }}
             />
             {hud.paused && !hud.over && (
               <div
@@ -309,8 +320,8 @@ export default function HopperPage() {
         </div>
 
         <aside className="panel p-5 h-fit">
-          <h3 className="font-bold mb-1">Weekly bounty board</h3>
-          <p className="text-xs text-fog mb-4">
+          <div className="kicker mb-1.5">Weekly bounty board</div>
+          <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
             Best score per hunter, last 7 days.{" "}
             <Link href="/bounties" className="text-neon hover:underline">
               Prizes →
@@ -323,14 +334,23 @@ export default function HopperPage() {
               <tbody>
                 {board.map((row) => (
                   <tr key={row.rank} className="table-row">
-                    <td className="py-1.5 pr-2 stat-number text-fog">#{row.rank}</td>
-                    <td className="py-1.5 pr-2">{row.player}</td>
+                    <td className="py-1.5 pr-2 mono text-xs" style={{ color: "var(--text-dim)" }}>
+                      {String(row.rank).padStart(2, "0")}
+                    </td>
+                    <td className="py-1.5 pr-2 mono text-xs">{row.player}</td>
                     <td className="py-1.5 stat-number text-neon text-right">{row.score}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+          <div className="mt-5 pt-4 border-t hidden sm:block" style={{ borderColor: "var(--hairline)" }}>
+            <div className="kicker !text-[0.6rem] mb-2">Keys</div>
+            <div className="text-xs space-y-1.5" style={{ color: "var(--text-dim)" }}>
+              <div><span className="mono text-frost">←↑↓→ / WASD</span> hop</div>
+              <div><span className="mono text-frost">P</span> pause · <span className="mono text-frost">Space</span> restart</div>
+            </div>
+          </div>
         </aside>
       </div>
     </div>

@@ -137,7 +137,7 @@ export default function DicePage() {
           max={98}
           value={target}
           onChange={(e) => setTarget(Number(e.target.value))}
-          className="w-full accent-[#36f581] mb-6"
+          className="w-full accent-neon mb-6"
         />
 
         <div className="grid grid-cols-3 gap-3 text-center mb-6">

@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
+import { ARCADE, PIECE_COLORS } from "@/lib/arcade-palette";
 
 const COLS = 10;
 const ROWS = 20;
@@ -17,13 +18,13 @@ const H = ROWS * CELL;
 
 // [rotation][block] = [x, y] offsets from the piece origin.
 const PIECES: { cells: number[][][]; color: string }[] = [
-  { color: "#7ef29a", cells: [ [[0,1],[1,1],[2,1],[3,1]], [[2,0],[2,1],[2,2],[2,3]] ] }, // I
-  { color: "#b9f27e", cells: [ [[1,0],[2,0],[1,1],[2,1]] ] }, // O
-  { color: "#a586ff", cells: [ [[1,0],[0,1],[1,1],[2,1]], [[1,0],[1,1],[2,1],[1,2]], [[0,1],[1,1],[2,1],[1,2]], [[1,0],[0,1],[1,1],[1,2]] ] }, // T
-  { color: "#5fd9a5", cells: [ [[1,0],[2,0],[0,1],[1,1]], [[1,0],[1,1],[2,1],[2,2]] ] }, // S
-  { color: "#ffce4f", cells: [ [[0,0],[1,0],[1,1],[2,1]], [[2,0],[1,1],[2,1],[1,2]] ] }, // Z
-  { color: "#4fc3ff", cells: [ [[0,0],[0,1],[1,1],[2,1]], [[1,0],[2,0],[1,1],[1,2]], [[0,1],[1,1],[2,1],[2,2]], [[1,0],[1,1],[0,2],[1,2]] ] }, // J
-  { color: "#ff8d5f", cells: [ [[2,0],[0,1],[1,1],[2,1]], [[1,0],[1,1],[1,2],[2,2]], [[0,1],[1,1],[2,1],[0,2]], [[0,0],[1,0],[1,1],[1,2]] ] }, // L
+  { color: PIECE_COLORS[0], cells: [ [[0,1],[1,1],[2,1],[3,1]], [[2,0],[2,1],[2,2],[2,3]] ] }, // I
+  { color: PIECE_COLORS[1], cells: [ [[1,0],[2,0],[1,1],[2,1]] ] }, // O
+  { color: PIECE_COLORS[2], cells: [ [[1,0],[0,1],[1,1],[2,1]], [[1,0],[1,1],[2,1],[1,2]], [[0,1],[1,1],[2,1],[1,2]], [[1,0],[0,1],[1,1],[1,2]] ] }, // T
+  { color: PIECE_COLORS[3], cells: [ [[1,0],[2,0],[0,1],[1,1]], [[1,0],[1,1],[2,1],[2,2]] ] }, // S
+  { color: PIECE_COLORS[4], cells: [ [[0,0],[1,0],[1,1],[2,1]], [[2,0],[1,1],[2,1],[1,2]] ] }, // Z
+  { color: PIECE_COLORS[5], cells: [ [[0,0],[0,1],[1,1],[2,1]], [[1,0],[2,0],[1,1],[1,2]], [[0,1],[1,1],[2,1],[2,2]], [[1,0],[1,1],[0,2],[1,2]] ] }, // J
+  { color: PIECE_COLORS[6], cells: [ [[2,0],[0,1],[1,1],[2,1]], [[1,0],[1,1],[1,2],[2,2]], [[0,1],[1,1],[2,1],[0,2]], [[0,0],[1,0],[1,1],[1,2]] ] }, // L
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
@@ -228,6 +229,10 @@ export default function FrogrisPage() {
         start();
         return;
       }
+      if (e.key === "p" && g && g.started && !g.over) {
+        g.paused = !g.paused;
+        return;
+      }
       if (!g || g.over || g.paused) return;
       switch (e.key) {
         case "ArrowLeft": case "a": e.preventDefault(); move(-1); break;
@@ -251,14 +256,11 @@ export default function FrogrisPage() {
     let raf = 0;
 
     const drawCell = (c: CanvasRenderingContext2D, x: number, y: number, color: string, size = CELL) => {
-      c.shadowColor = color;
-      c.shadowBlur = 6;
       c.fillStyle = color;
       c.beginPath();
       c.roundRect(x + 1.5, y + 1.5, size - 3, size - 3, 4);
       c.fill();
-      c.shadowBlur = 0;
-      c.fillStyle = "rgba(255,255,255,0.14)";
+      c.fillStyle = "rgba(255,255,255,0.12)";
       c.beginPath();
       c.roundRect(x + 3, y + 3, size - 6, (size - 6) / 2.6, 3);
       c.fill();
@@ -278,9 +280,9 @@ export default function FrogrisPage() {
         g.last = now;
       }
 
-      ctx.fillStyle = "#080d0b";
+      ctx.fillStyle = ARCADE.bg;
       ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = "rgba(255,255,255,0.035)";
+      ctx.strokeStyle = ARCADE.grid;
       for (let r = 1; r < ROWS; r++) {
         ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(W, r * CELL); ctx.stroke();
       }
@@ -310,7 +312,7 @@ export default function FrogrisPage() {
         }
 
         // Next preview.
-        nctx.fillStyle = "#080d0b";
+        nctx.fillStyle = ARCADE.bg;
         nctx.fillRect(0, 0, 104, 104);
         for (const [cx, cy] of cellsOf(g.next, 0)) {
           drawCell(nctx, cx * 24 + 4, cy * 24 + 16, PIECES[g.next].color, 24);
@@ -331,14 +333,14 @@ export default function FrogrisPage() {
   }, [lock]);
 
   return (
-    <div className="pt-10">
+    <div className="pt-10 max-w-4xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
       <SectionTitle
         kicker="Wing I — free arcade"
         title="Frogris"
-        desc="The falling-block episode. Arrows to move, ↑ to rotate, space to drop. Clear lines, chase levels — signed-in runs post to the weekly bounty board."
+        desc="The falling-block episode. Arrows to move, ↑ to rotate, space to drop, P to pause. Clear lines, chase levels — signed-in runs post to the weekly bounty board."
       />
       <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
         <div className="panel panel-glow p-5 flex flex-col sm:flex-row items-center sm:items-start justify-center gap-6">
@@ -448,6 +450,14 @@ export default function FrogrisPage() {
               <Notice kind="ok">{submitMsg}</Notice>
             </div>
           )}
+          <div className="mt-5 pt-4 border-t hidden sm:block" style={{ borderColor: "var(--hairline)" }}>
+            <div className="kicker !text-[0.6rem] mb-2">Keys</div>
+            <div className="text-xs space-y-1.5" style={{ color: "var(--text-dim)" }}>
+              <div><span className="mono text-frost">← →</span> move · <span className="mono text-frost">↑ / X · Z</span> rotate</div>
+              <div><span className="mono text-frost">↓</span> soft drop · <span className="mono text-frost">Space</span> hard drop</div>
+              <div><span className="mono text-frost">P</span> pause</div>
+            </div>
+          </div>
         </aside>
       </div>
     </div>
