@@ -5,7 +5,7 @@
 import { handler, ok, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { CONFIG, fromRaw } from "@/lib/config";
-import { burnTotals, eligibleBurners } from "@/lib/ranked";
+import { bountyPool, burnTotals, eligibleBurners } from "@/lib/ranked";
 
 const ARCADE = new Set(["hopper", "frogris", "worm"]);
 
@@ -55,9 +55,10 @@ export const GET = handler(async () => {
     }
 
     const ids = rows.map((r) => r.userId);
-    const [eligible, burns, users] = await Promise.all([
-      eligibleBurners(ids),
+    const [eligible, burns, windowBurns, users] = await Promise.all([
+      eligibleBurners(ids, b.startsAt),
       burnTotals(ids),
+      burnTotals(ids, b.startsAt),
       prisma.user.findMany({
         where: { id: { in: ids } },
         select: { id: true, wallet: true, createdAt: true },
@@ -80,6 +81,7 @@ export const GET = handler(async () => {
           entries: r.entries,
           volume: r.volume,
           burnedRibbit: Math.round(fromRaw(burns.get(r.userId) ?? 0n)),
+          windowBurnedRibbit: Math.round(fromRaw(windowBurns.get(r.userId) ?? 0n)),
           walletAgeDays: u
             ? Math.floor((Date.now() - u.createdAt.getTime()) / 86_400_000)
             : 0,
@@ -96,10 +98,11 @@ export const GET = handler(async () => {
         endsAt: b.endsAt,
       },
       unit: ARCADE.has(game) ? "best score" : "net credits",
-      verified: game === "worm",
+      verified: ARCADE.has(game),
       entries,
     });
   }
 
-  return ok(review);
+  const pool = await bountyPool(new Date(Date.now() - 7 * 24 * 3600 * 1000));
+  return ok({ review, pool });
 });

@@ -1,72 +1,45 @@
 "use client";
 
-// Hopper — free lane-crossing arcade game. Scores feed the weekly bounty
-// leaderboard. Runs are tokenized server-side (see /api/arcade/start) so the
-// board can pay real prizes without trivial spoofing.
+// Hopper — the lane-crossing episode. The page drives the SAME deterministic
+// 60 Hz simulation the server verifies (src/lib/hopper-sim.ts): the run token
+// seeds the traffic, hops are applied at frame boundaries (one per frame) and
+// recorded, and the trace is submitted with the score for server replay.
+// Scoring is progress-based — only a new deepest row on the current crossing
+// pays, so bouncing on safe rows earns nothing.
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 import { ARCADE, CAR_COLORS } from "@/lib/arcade-palette";
+import {
+  HROWS,
+  HCELL,
+  HW,
+  HFRAME_MS,
+  type HInput,
+  type HopperState,
+  createHopper,
+  hopperHop,
+  hopperFrame,
+} from "@/lib/hopper-sim";
+import { seedFromToken } from "@/lib/worm-sim";
 
-const COLS = 9;
-const ROWS = 11;
-const CELL = 44;
-const W = COLS * CELL;
-const H = ROWS * CELL;
-
-type Car = { x: number; lane: number; speed: number; len: number; hue: string };
-
-type GameState = {
-  frog: { col: number; row: number };
-  cars: Car[];
-  score: number;
-  lives: number;
-  best: number;
-  level: number;
-  over: boolean;
-  started: boolean;
-  paused: boolean;
-};
-
-function makeCars(level: number): Car[] {
-  const cars: Car[] = [];
-  // Lanes 1..9 are roads (0 = goal, 10 = start).
-  for (let lane = 1; lane < ROWS - 1; lane++) {
-    if (lane === Math.floor(ROWS / 2)) continue; // median — safe row
-    const dir = lane % 2 === 0 ? 1 : -1;
-    const speed = dir * (0.6 + Math.random() * 0.9 + level * 0.18);
-    const count = 2 + Math.floor(Math.random() * 2);
-    for (let i = 0; i < count; i++) {
-      cars.push({
-        x: (W / count) * i + Math.random() * 60,
-        lane,
-        speed,
-        len: CELL * (1.4 + Math.random()),
-        hue: CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)],
-      });
-    }
-  }
-  return cars;
-}
+const W = HW;
+const H = HROWS * HCELL;
 
 export default function HopperPage() {
   const { me } = useSession();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stateRef = useRef<GameState>({
-    frog: { col: 4, row: ROWS - 1 },
-    cars: makeCars(0),
-    score: 0,
-    lives: 3,
-    best: 0,
-    level: 0,
-    over: true,
-    started: false,
-    paused: false,
-  });
+  const gameRef = useRef<HopperState | null>(null);
+  const queueRef = useRef<number[]>([]);
+  const traceRef = useRef<HInput[]>([]);
   const runTokenRef = useRef<string | null>(null);
-  const [hud, setHud] = useState({ score: 0, lives: 3, over: true, started: false, paused: false });
+  const pendingSubmitRef = useRef<Promise<void> | null>(null);
+  const submittedRef = useRef(false);
+  const [hud, setHud] = useState({
+    score: 0, lives: 3, level: 0, over: true, started: false, seconds: 0,
+  });
   const [board, setBoard] = useState<{ rank: number; player: string; score: number }[]>([]);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
@@ -79,169 +52,200 @@ export default function HopperPage() {
   useEffect(loadBoard, [loadBoard]);
 
   const submitScore = useCallback(
-    async (score: number) => {
+    (score: number, trace: HInput[]) => {
       if (!runTokenRef.current || score <= 0) return;
-      const res = await fetch("/api/arcade/score", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ runToken: runTokenRef.current, score }),
-      });
+      const token = runTokenRef.current;
       runTokenRef.current = null;
-      if (res.ok) {
-        const data = await res.json();
-        setSubmitMsg(
-          data.ranked
-            ? `Score ${score} posted to the bounty board.`
-            : `Score ${score} saved — unranked. Burn ${CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT (lifetime) to compete for prizes.`
-        );
-        loadBoard();
-      }
+      pendingSubmitRef.current = (async () => {
+        const res = await fetch("/api/arcade/score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ runToken: token, score, trace }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSubmitMsg(
+            data.ranked
+              ? `Score ${score} posted to the bounty board — replay verified.`
+              : `Score ${score} verified & saved — unranked. Prize boards need ${CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT burned lifetime and ${CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside the board week.`
+          );
+          loadBoard();
+        }
+      })().catch(() => {});
     },
     [loadBoard]
   );
 
   const start = useCallback(async () => {
     setSubmitMsg(null);
+    if (pendingSubmitRef.current) {
+      await pendingSubmitRef.current.catch(() => {});
+      pendingSubmitRef.current = null;
+    }
+    runTokenRef.current = null;
     if (me.signedIn) {
       try {
-        const res = await fetch("/api/arcade/start", { method: "POST" });
+        const res = await fetch("/api/arcade/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ game: "hopper" }),
+        });
         const data = await res.json();
         runTokenRef.current = data.runToken ?? null;
       } catch {
         runTokenRef.current = null;
       }
     }
-    const s = stateRef.current;
-    s.frog = { col: 4, row: ROWS - 1 };
-    s.cars = makeCars(0);
-    s.score = 0;
-    s.lives = 3;
-    s.level = 0;
-    s.over = false;
-    s.started = true;
-    s.paused = false;
+    const seed = runTokenRef.current
+      ? seedFromToken(runTokenRef.current)
+      : (Math.random() * 2 ** 31) | 0;
+    gameRef.current = createHopper(seed);
+    queueRef.current = [];
+    traceRef.current = [];
+    submittedRef.current = false;
   }, [me.signedIn]);
 
-  const hop = useCallback(
-    (dc: number, dr: number) => {
-      const s = stateRef.current;
-      if (s.over || s.paused) return;
-      const col = Math.min(COLS - 1, Math.max(0, s.frog.col + dc));
-      const row = Math.min(ROWS - 1, Math.max(0, s.frog.row + dr));
-      if (dr < 0 && row < s.frog.row) s.score += 1;
-      s.frog = { col, row };
-      if (row === 0) {
-        // Made it across — bonus, next level is faster.
-        s.score += 10;
-        s.level += 1;
-        s.cars = makeCars(s.level);
-        s.frog = { col: 4, row: ROWS - 1 };
-      }
-    },
-    []
-  );
+  const enqueue = useCallback((d: number) => {
+    const g = gameRef.current;
+    if (!g || g.over) return;
+    if (queueRef.current.length < 4) queueRef.current.push(d);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const map: Record<string, [number, number]> = {
-        ArrowUp: [0, -1], w: [0, -1],
-        ArrowDown: [0, 1], s: [0, 1],
-        ArrowLeft: [-1, 0], a: [-1, 0],
-        ArrowRight: [1, 0], d: [1, 0],
+      const map: Record<string, number> = {
+        ArrowUp: 0, w: 0,
+        ArrowDown: 1, s: 1,
+        ArrowLeft: 2, a: 2,
+        ArrowRight: 3, d: 3,
       };
-      if (map[e.key]) {
+      if (map[e.key] !== undefined) {
         e.preventDefault();
-        hop(...map[e.key]);
+        enqueue(map[e.key]);
       }
-      if (e.key === " " && stateRef.current.over) {
+      if (e.key === " " && (!gameRef.current || gameRef.current.over)) {
         e.preventDefault();
         start();
-      }
-      if (e.key === "p" && stateRef.current.started && !stateRef.current.over) {
-        stateRef.current.paused = !stateRef.current.paused;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [hop, start]);
+  }, [enqueue, start]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
     let raf = 0;
+    let last = performance.now();
+    let acc = 0;
 
-    const tick = () => {
-      const s = stateRef.current;
-      if (!s.over && !s.paused) {
-        // Move cars & wrap.
-        for (const car of s.cars) {
-          car.x += car.speed;
-          if (car.speed > 0 && car.x > W + 20) car.x = -car.len - 20;
-          if (car.speed < 0 && car.x < -car.len - 20) car.x = W + 20;
-        }
-        // Collision.
-        const fx = s.frog.col * CELL + CELL / 2;
-        for (const car of s.cars) {
-          if (car.lane !== s.frog.row) continue;
-          if (fx > car.x - 6 && fx < car.x + car.len + 6) {
-            s.lives -= 1;
-            s.frog = { col: 4, row: ROWS - 1 };
-            if (s.lives <= 0) {
-              s.over = true;
-              s.best = Math.max(s.best, s.score);
-              submitScore(s.score);
-            }
-            break;
+    const tick = (now: number) => {
+      const g = gameRef.current;
+
+      // Fixed-step sim — identical on every display refresh rate.
+      if (g && !g.over) {
+        acc += now - last;
+        if (acc > 250) acc = 250;
+        while (acc >= HFRAME_MS && !g.over) {
+          acc -= HFRAME_MS;
+          if (queueRef.current.length > 0) {
+            const d = queueRef.current.shift()!;
+            traceRef.current.push({ f: g.frame, d });
+            hopperHop(g, d);
           }
+          hopperFrame(g);
+        }
+        if (g.over && !submittedRef.current) {
+          submittedRef.current = true;
+          submitScore(g.score, traceRef.current);
         }
       }
+      last = now;
 
-      // ——— draw ———
+      // ——— render ———
       ctx.fillStyle = ARCADE.bg;
       ctx.fillRect(0, 0, W, H);
-      for (let r = 0; r < ROWS; r++) {
-        const isSafe = r === 0 || r === ROWS - 1 || r === Math.floor(ROWS / 2);
+      for (let r = 0; r < HROWS; r++) {
+        const isSafe = r === 0 || r === HROWS - 1 || r === Math.floor(HROWS / 2);
         ctx.fillStyle = isSafe ? "oklch(0.78 0.11 150 / 0.07)" : "rgba(255,255,255,0.02)";
-        ctx.fillRect(0, r * CELL, W, CELL - 1);
+        ctx.fillRect(0, r * HCELL, W, HCELL - 1);
+        if (!isSafe) {
+          // Lane dashes.
+          ctx.strokeStyle = "rgba(255,255,255,0.05)";
+          ctx.setLineDash([10, 14]);
+          ctx.beginPath();
+          ctx.moveTo(0, r * HCELL + HCELL / 2);
+          ctx.lineTo(W, r * HCELL + HCELL / 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
       ctx.fillStyle = ARCADE.limeFaint;
       ctx.font = "11px 'Geist Mono', ui-monospace, monospace";
-      ctx.fillText("GOAL +10", 10, CELL - 17);
-
-      for (const car of s.cars) {
-        ctx.fillStyle = car.hue;
-        ctx.beginPath();
-        ctx.roundRect(car.x, car.lane * CELL + 8, car.len, CELL - 17, 6);
-        ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.1)";
-        ctx.beginPath();
-        ctx.roundRect(car.x + 3, car.lane * CELL + 11, car.len - 6, 8, 4);
-        ctx.fill();
+      ctx.fillText("GOAL +10", 10, HCELL - 17);
+      if (g && g.level > 0) {
+        ctx.textAlign = "right";
+        ctx.fillText(`WAVE ${g.level + 1}`, W - 10, HCELL - 17);
+        ctx.textAlign = "left";
       }
 
-      // Frog.
-      ctx.font = `${CELL - 12}px serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.shadowColor = ARCADE.lime;
-      ctx.shadowBlur = 8;
-      ctx.fillText("🐸", s.frog.col * CELL + CELL / 2, s.frog.row * CELL + CELL / 2 + 2);
-      ctx.shadowBlur = 0;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "alphabetic";
+      if (g) {
+        g.cars.forEach((car, i) => {
+          const color = CAR_COLORS[(car.lane + i) % CAR_COLORS.length];
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.roundRect(car.x, car.lane * HCELL + 8, car.len, HCELL - 17, 6);
+          ctx.fill();
+          // Cabin highlight + a light "front" hinting the direction.
+          ctx.fillStyle = "rgba(255,255,255,0.1)";
+          ctx.beginPath();
+          ctx.roundRect(car.x + 3, car.lane * HCELL + 11, car.len - 6, 8, 4);
+          ctx.fill();
+          ctx.fillStyle = "rgba(255,255,255,0.35)";
+          const frontX = car.speed > 0 ? car.x + car.len - 5 : car.x + 2;
+          ctx.fillRect(frontX, car.lane * HCELL + 12, 3, HCELL - 25);
+        });
 
-      setHud((h) =>
-        h.score !== s.score || h.lives !== s.lives || h.over !== s.over ||
-        h.started !== s.started || h.paused !== s.paused
-          ? { score: s.score, lives: s.lives, over: s.over, started: s.started, paused: s.paused }
-          : h
-      );
+        // Frog — small hop bounce right after a move.
+        const sinceHop = g.frame - g.lastHopFrame;
+        const bounce = sinceHop < 6 ? Math.sin((sinceHop / 6) * Math.PI) * 4 : 0;
+        ctx.font = `${HCELL - 12}px serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = ARCADE.lime;
+        ctx.shadowBlur = 8;
+        ctx.fillText(
+          "🐸",
+          g.frog.col * HCELL + HCELL / 2,
+          g.frog.row * HCELL + HCELL / 2 + 2 - bounce
+        );
+        ctx.shadowBlur = 0;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+
+        // Brief danger flash on a lost life.
+        if (g.frame - g.lastDeathFrame < 12 && !g.over) {
+          const t = 1 - (g.frame - g.lastDeathFrame) / 12;
+          ctx.fillStyle = `oklch(0.64 0.18 25 / ${(t * 0.22).toFixed(3)})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        setHud((h) => {
+          const seconds = Math.floor((g.frame * HFRAME_MS) / 1000);
+          return h.score !== g.score || h.lives !== g.lives || h.over !== g.over ||
+            h.level !== g.level || h.seconds !== seconds || !h.started
+            ? { score: g.score, lives: g.lives, level: g.level, over: g.over, started: true, seconds }
+            : h;
+        });
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [submitScore]);
+
+  const mmss = `${Math.floor(hud.seconds / 60)}:${String(hud.seconds % 60).padStart(2, "0")}`;
 
   return (
     <div className="pt-10 max-w-4xl mx-auto">
@@ -251,13 +255,16 @@ export default function HopperPage() {
       <SectionTitle
         kicker="Wing I — free arcade"
         title="Hopper"
-        desc="Arrows / WASD to hop. +1 per forward hop, +10 per crossing, three lives. Signed-in runs post to the weekly bounty board."
+        desc="Arrows / WASD to hop. +1 for every new row of progress, +10 per crossing, three lives — each crossing brings faster traffic. Runs are replayed and verified on the server."
       />
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
         <div className="panel panel-glow p-4 flex flex-col items-center">
           <div className="flex gap-7 mb-3 items-baseline">
             <span className="kicker !text-[0.6rem]">
               Score <span className="stat-number text-neon text-sm ml-1.5">{hud.score}</span>
+            </span>
+            <span className="kicker !text-[0.6rem]">
+              Wave <span className="stat-number text-portal text-sm ml-1.5">{hud.level + 1}</span>
             </span>
             <span className="kicker !text-[0.6rem]">
               Lives{" "}
@@ -277,27 +284,27 @@ export default function HopperPage() {
               className="w-full rounded-lg border"
               style={{ borderColor: "var(--hairline-strong)" }}
             />
-            {hud.paused && !hud.over && (
-              <div
-                className="absolute inset-0 flex items-center justify-center rounded-lg"
-                style={{ background: "oklch(0.12 0.008 270 / 0.7)" }}
-              >
-                <span className="badge badge-live">Paused — press P</span>
-              </div>
-            )}
+            <div
+              className="absolute inset-0 rounded-lg pointer-events-none"
+              style={{ boxShadow: "inset 0 0 42px oklch(0 0 0 / 0.5)" }}
+            />
             {hud.over && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-abyss/80 rounded-lg">
-                {hud.started && (
-                  <div className="stat-number text-2xl neon-text mb-3">
-                    Run over — {hud.score} pts
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-abyss/85 rounded-lg">
+                {hud.started && hud.score > 0 && (
+                  <div className="text-center mb-4">
+                    <div className="stat-number text-2xl text-neon mb-2">{hud.score} pts</div>
+                    <div className="text-xs space-x-3" style={{ color: "var(--text-dim)" }}>
+                      <span>wave {hud.level + 1}</span>
+                      <span>{mmss}</span>
+                    </div>
                   </div>
                 )}
                 <button className="btn btn-primary text-lg px-10 py-3" onClick={start}>
-                  {hud.started ? "Hop again" : "Start hopping"}
+                  {hud.started && hud.score > 0 ? "Hop again" : "Start hopping"}
                 </button>
                 {!me.signedIn && (
                   <p className="text-fog text-xs mt-3 px-6 text-center">
-                    Playing as guest — sign in to compete for bounties.
+                    Practice run — sign in and burn $RIBBIT to compete for prizes.
                   </p>
                 )}
               </div>
@@ -306,11 +313,11 @@ export default function HopperPage() {
           {/* Mobile controls */}
           <div className="grid grid-cols-3 gap-2 mt-4 sm:hidden">
             <div />
-            <button className="btn btn-ghost" onClick={() => hop(0, -1)}>↑</button>
+            <button className="btn btn-ghost" onClick={() => enqueue(0)}>↑</button>
             <div />
-            <button className="btn btn-ghost" onClick={() => hop(-1, 0)}>←</button>
-            <button className="btn btn-ghost" onClick={() => hop(0, 1)}>↓</button>
-            <button className="btn btn-ghost" onClick={() => hop(1, 0)}>→</button>
+            <button className="btn btn-ghost" onClick={() => enqueue(2)}>←</button>
+            <button className="btn btn-ghost" onClick={() => enqueue(1)}>↓</button>
+            <button className="btn btn-ghost" onClick={() => enqueue(3)}>→</button>
           </div>
           {submitMsg && (
             <div className="mt-3 w-full">
@@ -322,7 +329,7 @@ export default function HopperPage() {
         <aside className="panel p-5 h-fit">
           <div className="kicker mb-1.5">Weekly bounty board</div>
           <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
-            Best score per hunter, last 7 days.{" "}
+            Best replay-verified score per hunter, last 7 days.{" "}
             <Link href="/bounties" className="text-neon hover:underline">
               Prizes →
             </Link>
@@ -348,7 +355,7 @@ export default function HopperPage() {
             <div className="kicker !text-[0.6rem] mb-2">Keys</div>
             <div className="text-xs space-y-1.5" style={{ color: "var(--text-dim)" }}>
               <div><span className="mono text-frost">←↑↓→ / WASD</span> hop</div>
-              <div><span className="mono text-frost">P</span> pause · <span className="mono text-frost">Space</span> restart</div>
+              <div><span className="mono text-frost">Space</span> restart</div>
             </div>
           </div>
         </aside>

@@ -14,16 +14,15 @@ export const POST = handler(async (req: Request) => {
   if (amountRaw <= 0n) return err("Amount must be positive");
 
   const result = await prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUniqueOrThrow({ where: { id: session.userId } });
-    if (user.ribbitBalance - user.ribbitLocked < amountRaw) return null;
-    const debited = await tx.user.updateMany({
-      where: {
-        id: session.userId,
-        ribbitBalance: { gte: user.ribbitLocked + amountRaw },
-      },
-      data: { ribbitBalance: { decrement: amountRaw } },
-    });
-    if (debited.count === 0) return null;
+    // Atomic column-to-column guard: a concurrent bid can raise ribbitLocked
+    // between a read and a write, so the unlocked check must happen inside
+    // the UPDATE itself — never against a previously-read value.
+    const debited = await tx.$executeRaw`
+      UPDATE "User" SET "ribbitBalance" = "ribbitBalance" - ${amountRaw}
+      WHERE "id" = ${session.userId}
+        AND "ribbitBalance" - "ribbitLocked" >= ${amountRaw}
+    `;
+    if (debited === 0) return null;
     return tx.withdrawal.create({
       data: {
         userId: session.userId,

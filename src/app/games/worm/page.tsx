@@ -38,7 +38,6 @@ type Game = {
   flies: number;
   over: boolean;
   started: boolean;
-  paused: boolean;
   stepMs: number;
   acc: number;
   last: number;
@@ -49,7 +48,9 @@ export default function WormPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const runTokenRef = useRef<string | null>(null);
-  const [hud, setHud] = useState({ score: 0, flies: 0, over: true, started: false, paused: false });
+  const pendingSubmitRef = useRef<Promise<void> | null>(null);
+  const popRef = useRef<{ x: number; y: number; at: number } | null>(null);
+  const [hud, setHud] = useState({ score: 0, flies: 0, steps: 0, over: true, started: false });
   const [board, setBoard] = useState<{ rank: number; player: string; score: number }[]>([]);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
@@ -62,29 +63,40 @@ export default function WormPage() {
   useEffect(loadBoard, [loadBoard]);
 
   const submitScore = useCallback(
-    async (score: number, trace: Turn[]) => {
+    (score: number, trace: Turn[]) => {
       if (!runTokenRef.current || score <= 0) return;
-      const res = await fetch("/api/arcade/score", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ runToken: runTokenRef.current, score, trace }),
-      });
+      const token = runTokenRef.current;
       runTokenRef.current = null;
-      if (res.ok) {
-        const data = await res.json();
-        setSubmitMsg(
-          data.ranked
-            ? `Score ${score} posted to the bounty board.`
-            : `Score ${score} saved — unranked. Burn ${CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT (lifetime) to compete for prizes.`
-        );
-        loadBoard();
-      }
+      pendingSubmitRef.current = (async () => {
+        const res = await fetch("/api/arcade/score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ runToken: token, score, trace }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSubmitMsg(
+            data.ranked
+              ? `Score ${score} posted to the bounty board — replay verified.`
+              : `Score ${score} verified & saved — unranked. Prize boards need ${CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT burned lifetime and ${CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside the board week.`
+          );
+          loadBoard();
+        }
+      })().catch(() => {});
     },
     [loadBoard]
   );
 
   const start = useCallback(async () => {
     setSubmitMsg(null);
+    // Never race a restart past the previous run's submission — the server
+    // voids the old run the moment a new one starts.
+    if (pendingSubmitRef.current) {
+      await pendingSubmitRef.current.catch(() => {});
+      pendingSubmitRef.current = null;
+    }
+    runTokenRef.current = null;
+    popRef.current = null;
     if (me.signedIn) {
       try {
         const res = await fetch("/api/arcade/start", {
@@ -117,7 +129,6 @@ export default function WormPage() {
       flies: 0,
       over: false,
       started: true,
-      paused: false,
       stepMs: BASE_MS,
       acc: 0,
       last: performance.now(),
@@ -126,7 +137,7 @@ export default function WormPage() {
 
   const turn = useCallback((dx: number, dy: number) => {
     const g = gameRef.current;
-    if (!g || g.over || g.paused) return;
+    if (!g || g.over) return;
     // Record the raw press for the server replay — acceptance below runs
     // identically on both sides (see worm-sim.replay).
     const d = DIRS.findIndex((v) => v.x === dx && v.y === dy);
@@ -151,9 +162,6 @@ export default function WormPage() {
       if (e.key === " " && (!gameRef.current || gameRef.current.over)) {
         e.preventDefault();
         start();
-      }
-      if (e.key === "p" && gameRef.current?.started && !gameRef.current.over) {
-        gameRef.current.paused = !gameRef.current.paused;
       }
     };
     window.addEventListener("keydown", onKey);
@@ -181,6 +189,7 @@ export default function WormPage() {
       if (head.x === g.fly.x && head.y === g.fly.y) {
         g.score += 10;
         g.flies += 1;
+        popRef.current = { x: head.x, y: head.y, at: performance.now() };
         g.fly = spawnFly(g.rand, g.snake);
         if (g.flies % 5 === 0) g.stepMs = Math.max(70, g.stepMs - 9);
       } else {
@@ -191,9 +200,10 @@ export default function WormPage() {
 
     const tick = (now: number) => {
       const g = gameRef.current;
-      if (g && !g.over && !g.paused) {
+      if (g && !g.over) {
         g.acc += now - g.last;
         g.last = now;
+        if (g.acc > 400) g.acc = 400; // background-tab catch-up cap
         while (g.acc >= g.stepMs) {
           g.acc -= g.stepMs;
           step(g);
@@ -225,12 +235,22 @@ export default function WormPage() {
             ctx.shadowColor = ARCADE.lime;
             ctx.shadowBlur = 10;
           }
-          ctx.fillStyle =
+          const fill =
             i === 0 ? ARCADE.limeSoft : `oklch(${(0.74 - t * 0.24).toFixed(3)} 0.1 150)`;
+          ctx.fillStyle = fill;
           ctx.beginPath();
           ctx.roundRect(s.x * CELL + 2, s.y * CELL + 2, CELL - 4, CELL - 4, i === 0 ? 7 : 5);
           ctx.fill();
           ctx.shadowBlur = 0;
+          // Bridge to the previous segment so the worm reads as one body.
+          if (i > 0) {
+            const prev = g.snake[i - 1];
+            const bx = (Math.min(s.x, prev.x) + 0.5) * CELL;
+            const by = (Math.min(s.y, prev.y) + 0.5) * CELL;
+            ctx.fillStyle = fill;
+            if (s.x !== prev.x) ctx.fillRect(bx, s.y * CELL + 4, CELL, CELL - 8);
+            else ctx.fillRect(s.x * CELL + 4, by, CELL - 8, CELL);
+          }
         });
         // eyes on head
         const h = g.snake[0];
@@ -240,10 +260,30 @@ export default function WormPage() {
         ctx.arc(h.x * CELL + CELL / 2 + 4, h.y * CELL + CELL / 2 - 3, 2, 0, 7);
         ctx.fill();
 
+        // "+10" pop where the fly was eaten.
+        if (popRef.current) {
+          const age = (performance.now() - popRef.current.at) / 650;
+          if (age < 1) {
+            ctx.globalAlpha = 1 - age;
+            ctx.fillStyle = ARCADE.limeSoft;
+            ctx.font = "600 15px 'Space Grotesk', sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(
+              "+10",
+              popRef.current.x * CELL + CELL / 2,
+              popRef.current.y * CELL - 2 - age * 16
+            );
+            ctx.globalAlpha = 1;
+            ctx.textAlign = "left";
+          } else {
+            popRef.current = null;
+          }
+        }
+
         setHud((prev) =>
           prev.score !== g.score || prev.flies !== g.flies || prev.over !== g.over ||
-          prev.started !== g.started || prev.paused !== g.paused
-            ? { score: g.score, flies: g.flies, over: g.over, started: g.started, paused: g.paused }
+          prev.started !== g.started || prev.steps !== g.steps
+            ? { score: g.score, flies: g.flies, steps: g.steps, over: g.over, started: g.started }
             : prev
         );
       }
@@ -281,22 +321,24 @@ export default function WormPage() {
               className="w-full rounded-lg border"
               style={{ borderColor: "var(--hairline-strong)" }}
             />
-            {hud.paused && !hud.over && (
-              <div
-                className="absolute inset-0 flex items-center justify-center rounded-lg"
-                style={{ background: "oklch(0.12 0.008 270 / 0.7)" }}
-              >
-                <span className="badge badge-live">Paused — press P</span>
-              </div>
-            )}
+            <div
+              className="absolute inset-0 rounded-lg pointer-events-none"
+              style={{ boxShadow: "inset 0 0 42px oklch(0 0 0 / 0.5)" }}
+            />
             {hud.over && (
               <div
                 className="absolute inset-0 flex flex-col items-center justify-center rounded-lg"
-                style={{ background: "oklch(0.12 0.008 270 / 0.82)" }}
+                style={{ background: "oklch(0.12 0.008 270 / 0.85)" }}
               >
                 {hud.started && (
-                  <div className="stat-number text-xl text-neon mb-3">
-                    Tail bitten — {hud.score} pts
+                  <div className="text-center mb-4">
+                    <div className="stat-number text-2xl text-neon mb-2">
+                      {hud.score} pts
+                    </div>
+                    <div className="text-xs space-x-3" style={{ color: "var(--text-dim)" }}>
+                      <span>{hud.flies} flies</span>
+                      <span>{hud.steps} steps</span>
+                    </div>
                   </div>
                 )}
                 <button className="btn btn-primary btn-lg px-9" onClick={start}>
@@ -304,7 +346,7 @@ export default function WormPage() {
                 </button>
                 {!me.signedIn && (
                   <p className="text-fog text-xs mt-3 px-8 text-center">
-                    Playing as guest — sign in to compete for bounties.
+                    Practice run — sign in and burn $RIBBIT to compete for prizes.
                   </p>
                 )}
               </div>
@@ -328,7 +370,7 @@ export default function WormPage() {
         <aside className="panel p-5 h-fit">
           <div className="kicker mb-1.5">Weekly bounty board</div>
           <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
-            Best score per hunter, last 7 days.{" "}
+            Best replay-verified score per hunter, last 7 days.{" "}
             <Link href="/bounties" className="text-neon hover:underline">
               Prizes →
             </Link>
@@ -354,7 +396,7 @@ export default function WormPage() {
             <div className="kicker !text-[0.6rem] mb-2">Keys</div>
             <div className="text-xs space-y-1.5" style={{ color: "var(--text-dim)" }}>
               <div><span className="mono text-frost">←↑↓→ / WASD</span> steer</div>
-              <div><span className="mono text-frost">P</span> pause · <span className="mono text-frost">Space</span> restart</div>
+              <div><span className="mono text-frost">Space</span> restart</div>
             </div>
           </div>
         </aside>

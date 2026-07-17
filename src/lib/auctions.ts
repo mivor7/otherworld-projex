@@ -10,50 +10,79 @@ const ANTI_SNIPE_MS = 2 * 60 * 1000;
 export async function settleDueAuctions(): Promise<void> {
   const due = await prisma.auction.findMany({
     where: { status: "live", endsAt: { lte: new Date() } },
-    include: { bids: { where: { status: "active" }, take: 1 } },
+    include: {
+      bids: {
+        where: { status: "active" },
+        orderBy: { amountRaw: "desc" },
+        take: 1,
+      },
+    },
   });
   for (const auction of due) {
-    await prisma.$transaction(async (tx) => {
-      const winning = auction.bids[0];
-      if (winning) {
-        // Consume the winner's locked funds — they bought the item.
-        await tx.user.update({
-          where: { id: winning.userId },
+    // A failed settle rolls back and is retried on the next read; it must
+    // not take down the request that happened to trigger lazy settlement.
+    try {
+      await prisma.$transaction(async (tx) => {
+        const winning = auction.bids[0];
+        // Claim the auction first — settlement is lazy and can be triggered by
+        // any request, so without this guard two concurrent settles would
+        // charge the winner twice.
+        const claimed = await tx.auction.updateMany({
+          where: { id: auction.id, status: "live" },
           data: {
-            ribbitBalance: { decrement: winning.amountRaw },
-            ribbitLocked: { decrement: winning.amountRaw },
+            status: winning ? "settled" : "cancelled",
+            winnerUserId: winning?.userId ?? null,
           },
         });
-        await tx.bid.update({ where: { id: winning.id }, data: { status: "won" } });
-        await tx.treasuryEvent.create({
-          data: {
-            kind: "auction_settle",
-            amount: winning.amountRaw,
-            asset: "RIBBIT",
-            note: `Auction settled: ${auction.title}`,
-            ref: auction.id,
-          },
-        });
-      }
-      await tx.auction.update({
-        where: { id: auction.id },
-        data: {
-          status: winning ? "settled" : "cancelled",
-          winnerUserId: winning?.userId ?? null,
-        },
+        if (claimed.count === 0) return;
+
+        if (winning) {
+          // Consume the winner's locked funds — they bought the item. Guarded
+          // so a broken invariant fails loudly instead of going negative.
+          const charged = await tx.user.updateMany({
+            where: {
+              id: winning.userId,
+              ribbitBalance: { gte: winning.amountRaw },
+              ribbitLocked: { gte: winning.amountRaw },
+            },
+            data: {
+              ribbitBalance: { decrement: winning.amountRaw },
+              ribbitLocked: { decrement: winning.amountRaw },
+            },
+          });
+          if (charged.count === 0) {
+            throw new Error(`Escrow mismatch settling auction ${auction.id}`);
+          }
+          await tx.bid.update({
+            where: { id: winning.id },
+            data: { status: "won" },
+          });
+          await tx.treasuryEvent.create({
+            data: {
+              kind: "auction_settle",
+              amount: winning.amountRaw,
+              asset: "RIBBIT",
+              note: `Auction settled: ${auction.title}`,
+              ref: auction.id,
+            },
+          });
+        }
       });
-    });
+    } catch (e) {
+      console.error(`settle failed for auction ${auction.id}:`, e);
+    }
   }
 }
 
 export async function placeBid(
   userId: string,
   auctionId: string,
-  amountRaw: bigint
+  amountRaw: bigint,
 ): Promise<{ endsAt: Date; currentRaw: bigint }> {
   return prisma.$transaction(async (tx) => {
     const auction = await tx.auction.findUnique({ where: { id: auctionId } });
-    if (!auction || auction.status !== "live") throw new ApiError("Auction is not live", 404);
+    if (!auction || auction.status !== "live")
+      throw new ApiError("Auction is not live", 404);
     const now = new Date();
     if (auction.endsAt <= now) throw new ApiError("Auction has ended", 410);
 
@@ -72,18 +101,19 @@ export async function placeBid(
       throw new ApiError("You are already the highest bidder");
     }
 
-    // Lock funds, guarded against overdraw races: only succeeds if
-    // balance - locked >= amount at write time.
-    const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
-    const available = user.ribbitBalance - user.ribbitLocked;
-    if (available < amountRaw) {
-      throw new ApiError("Insufficient deposited $RIBBIT — deposit more to bid");
+    // Lock funds. The unlocked check must be column-to-column inside the
+    // UPDATE — comparing against a previously-read ribbitLocked lets two
+    // concurrent bids (on different auctions) lock the same deposit twice.
+    const locked = await tx.$executeRaw`
+      UPDATE "User" SET "ribbitLocked" = "ribbitLocked" + ${amountRaw}
+      WHERE "id" = ${userId}
+        AND "ribbitBalance" - "ribbitLocked" >= ${amountRaw}
+    `;
+    if (locked === 0) {
+      throw new ApiError(
+        "Insufficient deposited $RIBBIT — deposit more to bid",
+      );
     }
-    const locked = await tx.user.updateMany({
-      where: { id: userId, ribbitBalance: { gte: user.ribbitLocked + amountRaw } },
-      data: { ribbitLocked: { increment: amountRaw } },
-    });
-    if (locked.count === 0) throw new ApiError("Insufficient deposited $RIBBIT");
 
     // Optimistic-lock the auction on currentRaw so two simultaneous bids
     // can't both become the high bid.
@@ -95,10 +125,14 @@ export async function placeBid(
       where: { id: auctionId, currentRaw: auction.currentRaw, status: "live" },
       data: { currentRaw: amountRaw, endsAt: antiSnipe },
     });
-    if (updated.count === 0) throw new ApiError("Someone bid at the same moment — retry", 409);
+    if (updated.count === 0)
+      throw new ApiError("Someone bid at the same moment — retry", 409);
 
     if (prevHigh) {
-      await tx.bid.update({ where: { id: prevHigh.id }, data: { status: "outbid" } });
+      await tx.bid.update({
+        where: { id: prevHigh.id },
+        data: { status: "outbid" },
+      });
       await tx.user.update({
         where: { id: prevHigh.userId },
         data: { ribbitLocked: { decrement: prevHigh.amountRaw } },

@@ -47,6 +47,19 @@ export const CONFIG = {
   // table boards additionally require this many credits wagered in-window.
   rankedMinBurnedRibbit: nonneg(process.env.RANKED_MIN_BURNED_RIBBIT, 1_000),
   rankedMinTableVolume: nonneg(process.env.RANKED_MIN_TABLE_VOLUME, 100),
+  // Active-burner rule: prize eligibility additionally requires this many
+  // whole $RIBBIT burned INSIDE the board/bounty window. Splitting play
+  // across N sybil wallets therefore costs N× fresh burns every window.
+  rankedMinWindowBurnedRibbit: nonneg(
+    process.env.RANKED_MIN_WINDOW_BURNED_RIBBIT,
+    100
+  ),
+  // Share of realized house take that funds the weekly bounty pool. Prizes
+  // scale with real revenue and can never outrun it.
+  bountyPoolShare: Math.min(
+    1,
+    Math.max(0, nonneg(process.env.BOUNTY_POOL_SHARE, 0.3))
+  ),
   // Max arcade score submissions per wallet per game per UTC day.
   arcadeDailySubmissions: num(process.env.ARCADE_DAILY_SUBMISSIONS, 40),
 

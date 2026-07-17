@@ -132,9 +132,19 @@ function settleState(s: BJState, wager: number): { payout: number } {
   return { payout: 0 };
 }
 
+/**
+ * Draw the next committed card. Unreachable past 52 in single-deck heads-up
+ * (hands cap at 21) — but a corrupted state must fail loudly inside the
+ * transaction, never deal `undefined` into a paying round.
+ */
+function draw(s: BJState, deck: number[]): number {
+  if (s.deckPos >= deck.length) throw new ApiError("Deck exhausted", 500);
+  return deck[s.deckPos++];
+}
+
 function dealerPlay(s: BJState, deck: number[]) {
   while (handTotal(s.dealer).total < 17) {
-    s.dealer.push(deck[s.deckPos++]);
+    s.dealer.push(draw(s, deck));
   }
 }
 
@@ -245,11 +255,11 @@ export async function act(
       if (s.player.length !== 2 || s.doubled) throw new ApiError("Cannot double now");
       await adjustCredits(tx, userId, -round.wager, "wager", round.id);
       s.doubled = true;
-      s.player.push(deck[s.deckPos++]);
+      s.player.push(draw(s, deck));
       if (handTotal(s.player).total <= 21) dealerPlay(s, deck);
       s.phase = "done";
     } else if (action === "hit") {
-      s.player.push(deck[s.deckPos++]);
+      s.player.push(draw(s, deck));
       const t = handTotal(s.player).total;
       if (t > 21) {
         s.phase = "done";

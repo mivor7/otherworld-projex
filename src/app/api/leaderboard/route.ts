@@ -8,10 +8,10 @@ function short(wallet: string) {
 }
 
 // Sybil deterrence: prize boards only rank wallets with skin in the game —
-// lifetime verified burns ≥ RANKED_MIN_BURNED_RIBBIT (see lib/ranked).
-// Everyone can play; only burners compete for the pools. Eligibility is
-// evaluated at read time, so burning mid-week retroactively ranks the
-// week's best score.
+// lifetime burns ≥ RANKED_MIN_BURNED_RIBBIT plus fresh burns inside the
+// window ≥ RANKED_MIN_WINDOW_BURNED_RIBBIT (see lib/ranked). Everyone can
+// play; only active burners compete for the pools. Eligibility is evaluated
+// at read time, so burning mid-week retroactively ranks the week's best.
 
 export const GET = handler(async (req: Request) => {
   const url = new URL(req.url);
@@ -28,7 +28,7 @@ export const GET = handler(async (req: Request) => {
       orderBy: { _max: { score: "desc" } },
       take: 60,
     });
-    const eligible = await eligibleBurners(scores.map((s) => s.userId));
+    const eligible = await eligibleBurners(scores.map((s) => s.userId), sinceDate);
     const ranked = scores.filter((s) => eligible.has(s.userId)).slice(0, 20);
     const users = await prisma.user.findMany({
       where: { id: { in: ranked.map((s) => s.userId) } },
@@ -56,7 +56,7 @@ export const GET = handler(async (req: Request) => {
   const qualified = rounds.filter(
     (r) => (r._sum.wager ?? 0) >= CONFIG.rankedMinTableVolume
   );
-  const eligible = await eligibleBurners(qualified.map((r) => r.userId));
+  const eligible = await eligibleBurners(qualified.map((r) => r.userId), sinceDate);
   const ranked = qualified
     .filter((r) => eligible.has(r.userId))
     .map((r) => ({

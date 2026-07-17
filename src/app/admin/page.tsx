@@ -33,8 +33,10 @@ type ReviewEntry = {
   entries: number;
   volume?: number;
   burnedRibbit: number;
+  windowBurnedRibbit: number;
   walletAgeDays: number;
 };
+type Pool = { houseTakeCredits: number; poolCredits: number; share: number };
 type Review = {
   bounty: { id: string; title: string; target: string | null; game: string; prize: string; endsAt: string };
   unit: string;
@@ -64,6 +66,7 @@ export default function AdminPage() {
   });
 
   const [review, setReview] = useState<Review[]>([]);
+  const [pool, setPool] = useState<Pool | null>(null);
 
   const load = useCallback(() => {
     fetch("/api/admin/overview")
@@ -71,8 +74,13 @@ export default function AdminPage() {
       .then(setData)
       .catch(() => {});
     fetch("/api/admin/bounty-review")
-      .then((r) => (r.ok ? r.json() : []))
-      .then((rows) => Array.isArray(rows) && setReview(rows))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d && Array.isArray(d.review)) {
+          setReview(d.review);
+          setPool(d.pool ?? null);
+        }
+      })
       .catch(() => {});
   }, []);
   useEffect(() => {
@@ -275,6 +283,20 @@ export default function AdminPage() {
       {review.length > 0 && (
         <div className="mt-6 space-y-4">
           <div className="kicker">Payout review — open leaderboard bounties</div>
+          {pool && (
+            <div className="panel p-4 text-sm flex flex-wrap items-baseline gap-x-6 gap-y-1">
+              <span>
+                <span className="text-fog">This week&apos;s sustainable pool: </span>
+                <span className="stat-number text-neon">
+                  {pool.poolCredits.toLocaleString()} credits
+                </span>
+              </span>
+              <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+                {Math.round(pool.share * 100)}% of {pool.houseTakeCredits.toLocaleString()}{" "}
+                credits realized house take — keep total prizes at or under this.
+              </span>
+            </div>
+          )}
           {review.map((r) => (
             <div key={r.bounty.id} className="panel p-5">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
@@ -310,6 +332,9 @@ export default function AdminPage() {
                           </td>
                           <td className="py-1.5 pr-3 text-xs text-fog">
                             {e.burnedRibbit.toLocaleString()} burned
+                            <span style={{ color: "var(--text-dim)" }}>
+                              {" "}· {e.windowBurnedRibbit.toLocaleString()} in window
+                            </span>
                           </td>
                           <td className="py-1.5 text-xs text-right" style={{ color: "var(--text-dim)" }}>
                             wallet {e.walletAgeDays}d old

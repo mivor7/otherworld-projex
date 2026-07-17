@@ -35,6 +35,7 @@ const GAME_LABELS: Record<string, string> = {
 export default function BountiesPage() {
   const [open, setOpen] = useState<Bounty[]>([]);
   const [closed, setClosed] = useState<Bounty[]>([]);
+  const [pool, setPool] = useState<{ houseTakeCredits: number; poolCredits: number; share: number } | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [boardGame, setBoardGame] = useState("hopper");
   const [board, setBoard] = useState<BoardRow[]>([]);
@@ -45,6 +46,7 @@ export default function BountiesPage() {
       .then((d) => {
         setOpen(d.open ?? []);
         setClosed(d.closed ?? []);
+        setPool(d.pool ?? null);
         setLoaded(true);
       })
       .catch(() => {
@@ -73,6 +75,19 @@ export default function BountiesPage() {
         titleAccent="competitions"
         subtitle="Prize pools funded by the house take — 30% of every credit the house wins flows here. Top the boards, claim the pool."
       />
+
+      {pool && (
+        <div className="panel p-4 mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+          <span className="kicker !text-[0.6rem]">This week&apos;s pool</span>
+          <span className="stat-number text-neon">
+            {pool.poolCredits.toLocaleString()} credits
+          </span>
+          <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+            {Math.round(pool.share * 100)}% of the house take actually realized in the
+            last 7 days — prizes scale with real play, never promises.
+          </span>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
         <div className="space-y-4">
@@ -195,9 +210,10 @@ export default function BountiesPage() {
           <p className="text-xs mt-4 leading-relaxed" style={{ color: "var(--text-dim)" }}>
             Arcade boards rank best score; the tables rank net credits won.
             Pools pay in $RIBBIT when the bounty closes.{" "}
-            <span className="text-neon">Prize boards rank burners only</span> —{" "}
+            <span className="text-neon">Prize boards rank active burners only</span> —{" "}
             {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT
-            burned lifetime.
+            burned lifetime and {CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+
+            inside the board week.
           </p>
         </aside>
       </div>

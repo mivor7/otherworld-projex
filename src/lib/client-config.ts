@@ -11,6 +11,9 @@ export const CLIENT_CONFIG = {
   treasuryWallet: process.env.NEXT_PUBLIC_TREASURY_WALLET ?? "",
   ribbitPerCredit: Number(process.env.NEXT_PUBLIC_RIBBIT_PER_CREDIT ?? 100),
   rankedMinBurnedRibbit: Number(process.env.NEXT_PUBLIC_RANKED_MIN_BURNED_RIBBIT ?? 1_000),
+  rankedMinWindowBurnedRibbit: Number(
+    process.env.NEXT_PUBLIC_RANKED_MIN_WINDOW_BURNED_RIBBIT ?? 100
+  ),
   devFaucet: process.env.NEXT_PUBLIC_DEV_FAUCET === "true",
   pumpFunUrl:
     "https://pump.fun/coin/EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump",

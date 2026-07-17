@@ -151,10 +151,12 @@ export default function LeaderboardPage() {
         <span className="text-neon">Skin in the game:</span> prize boards rank
         wallets with {""}
         {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT burned
-        lifetime (table boards also need in-window wagering volume). Anyone can
-        play; burning mid-week ranks your best score retroactively. Arcade runs
-        are tokenized and sanity-checked server-side — pools settle on each
-        hunt’s closing date, listed on the{" "}
+        lifetime and {CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+
+        burned inside the board week (table boards also need in-window wagering
+        volume). Anyone can play; burning mid-week ranks your best score
+        retroactively. Every arcade run is replayed move-by-move and verified
+        on the server before it can rank — pools settle on each hunt’s closing
+        date, listed on the{" "}
         <Link href="/bounties" className="text-neon hover:underline">
           bounty board
         </Link>

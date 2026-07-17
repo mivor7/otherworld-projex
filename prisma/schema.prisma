@@ -34,6 +34,7 @@ model User {
   scores       ArcadeScore[]
   seeds        ServerSeed[]
   ledger       LedgerEntry[]
+  arcadeRuns   ArcadeRun[]
 }
 
 // Every credit movement is written to an append-only ledger for auditability.
@@ -201,6 +202,23 @@ model Bounty {
   createdAt   DateTime @default(now())
 
   @@index([status, endsAt])
+}
+
+// One row per issued arcade run token (id = the token's jti). Starting a new
+// run voids any previous unused run for the same (user, game) — a wallet can
+// only ever have one live seed per game, which kills seed-shopping: you
+// can't request many tokens, simulate each seed offline, and play the
+// luckiest one.
+model ArcadeRun {
+  id        String    @id // token jti
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  game      String
+  createdAt DateTime  @default(now())
+  usedAt    DateTime? // set when a score is accepted
+  voidedAt  DateTime? // set when a newer run supersedes this one
+
+  @@index([userId, game, createdAt])
 }
 
 model ArcadeScore {
