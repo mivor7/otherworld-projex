@@ -51,3 +51,4 @@ program/node_modules/
 
 # local owner reports — never commit
 /OWP-STATUS-REPORT.pdf
+/OWP-TEST-MANUAL.pdf
