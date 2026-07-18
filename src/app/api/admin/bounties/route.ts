@@ -12,6 +12,9 @@ const body = z.object({
   prizeRibbit: z.number().positive(),
   prizeText: z.string().max(120).optional(),
   durationDays: z.number().int().min(1).max(90),
+  autoPay: z.boolean().default(false),
+  // Credit-spend threshold that triggers auto-payout (credit games only).
+  triggerCreditVolume: z.number().int().positive().max(1_000_000_000).optional(),
 });
 
 export const POST = handler(async (req: Request) => {
@@ -26,6 +29,13 @@ export const POST = handler(async (req: Request) => {
       kind: data.kind,
       prizeRibbit: toRaw(data.prizeRibbit),
       prizeText: data.prizeText,
+      autoPay: data.autoPay,
+      // Threshold only applies to credit-game auto-bounties; free games are
+      // time-based (weekly) and ignore it.
+      triggerCreditVolume:
+        data.autoPay && data.game && !["hopper", "frogris", "worm"].includes(data.game)
+          ? (data.triggerCreditVolume ?? null)
+          : null,
       endsAt: new Date(Date.now() + data.durationDays * 24 * 3600 * 1000),
     },
   });

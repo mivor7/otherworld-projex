@@ -8,6 +8,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { CONFIG, fromRaw } from "./config";
 import { burnTotals, eligibleBurners } from "./ranked";
+import { getTreasuryStats } from "./solana";
 import { ApiError } from "./api";
 
 export const ARCADE_GAMES = new Set(["hopper", "frogris", "worm"]);
@@ -127,11 +128,169 @@ export function splitPrize(prizeRaw: bigint, splits: number[]): bigint[] {
   return shares;
 }
 
+/** Total credits wagered on a game since `since` — the auto-bounty trigger. */
+export async function creditSpendForGame(game: string, since: Date): Promise<number> {
+  const agg = await prisma.gameRound.aggregate({
+    where: { game, createdAt: { gte: since } },
+    _sum: { wager: true },
+  });
+  return agg._sum.wager ?? 0;
+}
+
+/**
+ * Progress of an auto-bounty toward its trigger, for the public "reward fills
+ * as you play" bar. Credit games measure credit-spend vs threshold; free
+ * games are time-based (weekly, endsAt).
+ */
+export async function bountyProgress(bounty: {
+  game: string | null;
+  autoPay: boolean;
+  triggerCreditVolume: number | null;
+  startsAt: Date;
+  endsAt: Date;
+}): Promise<
+  | { mode: "credit"; spent: number; threshold: number; pct: number }
+  | { mode: "time"; endsAt: Date }
+  | null
+> {
+  if (!bounty.autoPay || !bounty.game) return null;
+  if (!ARCADE_GAMES.has(bounty.game) && bounty.triggerCreditVolume) {
+    const spent = await creditSpendForGame(bounty.game, bounty.startsAt);
+    const threshold = bounty.triggerCreditVolume;
+    return {
+      mode: "credit",
+      spent,
+      threshold,
+      pct: threshold > 0 ? Math.min(100, Math.round((spent / threshold) * 100)) : 0,
+    };
+  }
+  return { mode: "time", endsAt: bounty.endsAt };
+}
+
 export type AwardResult = {
   bountyId: string;
   paid: { rank: number; wallet: string; amountRaw: string }[];
   totalRaw: string;
 };
+
+/**
+ * Pay a bounty's fixed prize pro-rata across ALL eligible winners, weighted by
+ * performance (score / net credits). Atomic + idempotent (bounty→paid guard),
+ * and hard-capped by the treasury's live balance when it's configured — never
+ * pays out more $RIBBIT than the house actually holds. Queues withdrawals for
+ * the off-server worker; never signs.
+ */
+export async function awardBountyProRata(bountyId: string): Promise<AwardResult | null> {
+  const bounty = await prisma.bounty.findUnique({ where: { id: bountyId } });
+  if (!bounty || bounty.status === "paid") return null;
+  if (!bounty.game) return null;
+
+  const ranked = await rankBountyEntries(bounty, 100);
+  if (ranked.length === 0) return null;
+
+  const totalValue = ranked.reduce((s, e) => s + Math.max(0, e.value), 0);
+  if (totalValue <= 0) return null;
+
+  // Cap the payout at the treasury's live balance (best-effort: only enforced
+  // when the treasury is configured and readable).
+  let prize = bounty.prizeRibbit;
+  const treasury = await getTreasuryStats();
+  if (treasury.configured && treasury.ribbitBalance !== null) {
+    const balRaw = BigInt(Math.floor(treasury.ribbitBalance * 1_000_000));
+    if (balRaw < prize) prize = balRaw;
+  }
+  if (prize <= 0n) return null;
+
+  // Pro-rata shares; rounding dust to rank 1 so the pot is exactly distributed.
+  const shares = ranked.map(
+    (e) => (prize * BigInt(Math.max(0, e.value))) / BigInt(totalValue)
+  );
+  const dust = prize - shares.reduce((a, b) => a + b, 0n);
+  if (shares.length > 0) shares[0] += dust;
+
+  const result = await prisma.$transaction(
+    async (tx) => {
+      const claimed = await tx.bounty.updateMany({
+        where: { id: bountyId, status: { in: ["open", "closed"] } },
+        data: { status: "paid", paidAt: new Date() },
+      });
+      if (claimed.count === 0) return null;
+
+      const paid: { rank: number; wallet: string; amountRaw: string }[] = [];
+      for (let i = 0; i < ranked.length; i++) {
+        const e = ranked[i];
+        const amountRaw = shares[i];
+        if (amountRaw <= 0n) continue;
+        const wd = await tx.withdrawal.create({
+          data: {
+            userId: e.userId,
+            amountRaw,
+            destination: e.wallet,
+            kind: "bounty",
+            ref: bountyId,
+          },
+        });
+        await tx.bountyAward.create({
+          data: {
+            bountyId,
+            userId: e.userId,
+            rank: e.rank,
+            amountRaw,
+            value: e.value,
+            withdrawalId: wd.id,
+          },
+        });
+        paid.push({ rank: e.rank, wallet: e.wallet, amountRaw: amountRaw.toString() });
+      }
+      await tx.treasuryEvent.create({
+        data: {
+          kind: "bounty_award",
+          amount: prize,
+          asset: "RIBBIT",
+          note: `Auto-bounty paid: ${bounty.title} (${paid.length} winner${paid.length === 1 ? "" : "s"})`,
+          ref: bountyId,
+        },
+      });
+      return {
+        bountyId,
+        paid,
+        totalRaw: shares.reduce((a, b) => a + b, 0n).toString(),
+      } satisfies AwardResult;
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+  );
+
+  return result;
+}
+
+/**
+ * Lazily settle any auto-bounty whose trigger has fired: credit-game bounties
+ * once credits wagered ≥ triggerCreditVolume; free-game bounties at endsAt.
+ * Called on reads like the bounties list, mirroring lazy auction settlement.
+ * Gated by BOUNTY_AUTO_PAY so nothing pays until the owner switches it on.
+ */
+export async function autoSettleBounties(): Promise<void> {
+  if (!CONFIG.bountyAutoPayEnabled) return;
+  const now = new Date();
+  const candidates = await prisma.bounty.findMany({
+    where: { status: { in: ["open", "closed"] }, autoPay: true, game: { not: null } },
+  });
+  for (const b of candidates) {
+    let triggered = false;
+    if (b.game && ARCADE_GAMES.has(b.game)) {
+      triggered = now >= b.endsAt; // free games: weekly / time-based
+    } else if (b.triggerCreditVolume) {
+      const spent = await creditSpendForGame(b.game!, b.startsAt);
+      triggered = spent >= b.triggerCreditVolume;
+    }
+    if (!triggered) continue;
+    try {
+      await awardBountyProRata(b.id);
+    } catch (e) {
+      console.error(`auto-settle failed for bounty ${b.id}:`, e);
+    }
+  }
+}
 
 /**
  * Award a bounty: recompute the authoritative ranking, split the prize across

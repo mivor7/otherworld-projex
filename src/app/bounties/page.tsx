@@ -19,6 +19,10 @@ type Bounty = {
   prizeText: string | null;
   status: string;
   endsAt: string;
+  progress?:
+    | { mode: "credit"; spent: number; threshold: number; pct: number }
+    | { mode: "time"; endsAt: string }
+    | null;
 };
 
 type BoardRow = { rank: number; player: string; score: number };
@@ -143,6 +147,41 @@ export default function BountiesPage() {
                   <Countdown to={b.endsAt} />
                 </div>
               </div>
+              {b.progress?.mode === "credit" && (
+                <div className="mt-4">
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <span className="kicker !text-[0.6rem]">
+                      Reward unlocks as the game is played
+                    </span>
+                    <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
+                      {b.progress.spent.toLocaleString()} /{" "}
+                      {b.progress.threshold.toLocaleString()} credits · {b.progress.pct}%
+                    </span>
+                  </div>
+                  <div
+                    className="h-2 rounded-full overflow-hidden"
+                    style={{ background: "oklch(0.22 0.01 165)" }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${b.progress.pct}%`,
+                        background:
+                          "linear-gradient(90deg, oklch(0.66 0.1 150), oklch(0.82 0.11 150))",
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs mt-1.5" style={{ color: "var(--text-dim)" }}>
+                    Pays out automatically the moment the bar fills — every eligible
+                    winner shares it, sized to how they did.
+                  </p>
+                </div>
+              )}
+              {b.progress?.mode === "time" && (
+                <p className="text-xs mt-3" style={{ color: "var(--text-dim)" }}>
+                  Free-game bounty — pays out weekly to every eligible winner.
+                </p>
+              )}
             </div>
           ))}
 

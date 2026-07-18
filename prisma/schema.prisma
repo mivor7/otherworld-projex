@@ -36,6 +36,23 @@ model User {
   ledger       LedgerEntry[]
   arcadeRuns   ArcadeRun[]
   bountyAwards BountyAward[]
+  purchases    CreditPurchase[]
+}
+
+// A "buy credits" event: the player pays $RIBBIT in one signed tx that is
+// split — part burned (deflation), part transferred to the treasury (real
+// house revenue). Unlike a pure burn, this is what funds the reward pools.
+// Unique signature prevents replay, same as BurnEvent.
+model CreditPurchase {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  signature   String   @unique
+  ribbitRaw   BigInt // total $RIBBIT paid (burned + house)
+  burnedRaw   BigInt // portion destroyed
+  houseRaw    BigInt // portion sent to treasury
+  credits     Int
+  createdAt   DateTime @default(now())
 }
 
 // Every credit movement is written to an append-only ledger for auditability.
@@ -207,6 +224,12 @@ model Bounty {
   prizeText   String? // display override e.g. "5,000 $RIBBIT + badge"
   status      String   @default("open") // "open" | "closed" | "paid"
   paidAt      DateTime?
+  // Auto-pay: when true, the bounty settles itself and pays every eligible
+  // winner pro-rata (no manual admin award). Credit-game bounties trigger
+  // when cumulative credits wagered on the game since startsAt reach
+  // triggerCreditVolume; free-game bounties trigger at endsAt (weekly).
+  autoPay            Boolean @default(false)
+  triggerCreditVolume Int?   // credit-spend threshold (credit games only)
   startsAt    DateTime @default(now())
   endsAt      DateTime
   createdAt   DateTime @default(now())

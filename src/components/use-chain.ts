@@ -59,6 +59,62 @@ export function useChain() {
     [publicKey, sendTransaction, connection]
   );
 
+  /**
+   * Buy credits: one signed tx that burns part of the $RIBBIT and transfers
+   * the rest to the treasury (real house revenue). Both legs are verified
+   * server-side. The burn/house split comes from CLIENT_CONFIG.buyBurnShare.
+   */
+  const buyCredits = useCallback(
+    async (ribbitAmount: number): Promise<ChainResult> => {
+      if (!publicKey) return { ok: false, error: "Connect your wallet first" };
+      if (!CLIENT_CONFIG.treasuryWallet)
+        return { ok: false, error: "Buying credits isn't available yet" };
+      try {
+        const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
+        const treasury = new PublicKey(CLIENT_CONFIG.treasuryWallet);
+        const ata = getAssociatedTokenAddressSync(mint, publicKey);
+        const treasuryAta = getAssociatedTokenAddressSync(mint, treasury, true);
+        // Split the payment; the burned side takes the rounding remainder so
+        // burn + house exactly equals what the player intends to pay.
+        const total = toRawClient(ribbitAmount);
+        const houseRaw =
+          (total * BigInt(Math.round((1 - CLIENT_CONFIG.buyBurnShare) * 1000))) / 1000n;
+        const burnRaw = total - houseRaw;
+        if (burnRaw <= 0n || houseRaw <= 0n)
+          return { ok: false, error: "Amount too small to split" };
+        const tx = new Transaction().add(
+          createAssociatedTokenAccountIdempotentInstruction(
+            publicKey,
+            treasuryAta,
+            treasury,
+            mint
+          ),
+          createBurnCheckedInstruction(
+            ata,
+            mint,
+            publicKey,
+            burnRaw,
+            CLIENT_CONFIG.ribbitDecimals
+          ),
+          createTransferCheckedInstruction(
+            ata,
+            mint,
+            treasuryAta,
+            publicKey,
+            houseRaw,
+            CLIENT_CONFIG.ribbitDecimals
+          )
+        );
+        const signature = await sendTransaction(tx, connection);
+        await connection.confirmTransaction(signature, "confirmed");
+        return postJson("/api/credits/buy", { signature });
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "Purchase failed" };
+      }
+    },
+    [publicKey, sendTransaction, connection]
+  );
+
   /** Transfer $RIBBIT to the treasury to fund the auction bidding balance. */
   const depositForBidding = useCallback(
     async (ribbitAmount: number): Promise<ChainResult> => {
@@ -96,5 +152,5 @@ export function useChain() {
     [publicKey, sendTransaction, connection]
   );
 
-  return { burnForCredits, depositForBidding };
+  return { burnForCredits, buyCredits, depositForBidding };
 }

@@ -124,7 +124,10 @@ export default function AdminPage() {
     game: "hopper",
     prizeRibbit: 5000,
     durationDays: 7,
+    autoPay: false,
+    triggerCreditVolume: 100000,
   });
+  const bountyIsFree = ["hopper", "frogris", "worm"].includes(bountyForm.game);
 
   const [review, setReview] = useState<Review[]>([]);
   const [paid, setPaid] = useState<PaidBounty[]>([]);
@@ -423,10 +426,46 @@ export default function AdminPage() {
                   onChange={(e) => setBountyForm({ ...bountyForm, durationDays: Number(e.target.value) })} />
               </div>
             </div>
+            <label className="flex items-center gap-2 text-sm text-fog cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bountyForm.autoPay}
+                onChange={(e) => setBountyForm({ ...bountyForm, autoPay: e.target.checked })}
+              />
+              Auto-pay every eligible winner pro-rata when triggered
+            </label>
+            {bountyForm.autoPay && !bountyIsFree && (
+              <div>
+                <label className="text-xs text-fog">
+                  Trigger: pay once this many credits are wagered on {bountyForm.game}
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  value={bountyForm.triggerCreditVolume}
+                  onChange={(e) =>
+                    setBountyForm({ ...bountyForm, triggerCreditVolume: Number(e.target.value) })
+                  }
+                />
+              </div>
+            )}
+            {bountyForm.autoPay && bountyIsFree && (
+              <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+                Free game — pays out weekly (at the duration you set) to every eligible winner.
+              </p>
+            )}
             <button
               className="btn btn-portal w-full"
               disabled={busy || bountyForm.title.length < 3}
-              onClick={() => act("/api/admin/bounties", bountyForm)}
+              onClick={() =>
+                act("/api/admin/bounties", {
+                  ...bountyForm,
+                  triggerCreditVolume:
+                    bountyForm.autoPay && !bountyIsFree
+                      ? bountyForm.triggerCreditVolume
+                      : undefined,
+                })
+              }
             >
               Create bounty
             </button>

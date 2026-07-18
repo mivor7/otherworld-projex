@@ -63,6 +63,19 @@ export const CONFIG = {
   // Max arcade score submissions per wallet per game per UTC day.
   arcadeDailySubmissions: num(process.env.ARCADE_DAILY_SUBMISSIONS, 40),
 
+  // Buy-credits: paying $RIBBIT for credits splits into a burned portion
+  // (deflation) and a house portion (real treasury revenue). This is the
+  // fraction burned; the rest goes to the treasury. Buying is only offered
+  // when TREASURY_WALLET is set (there must be somewhere to send the house
+  // cut). Pure burn-for-credits stays available regardless.
+  buyBurnShare: Math.min(1, Math.max(0, nonneg(process.env.BUY_BURN_SHARE, 0.5))),
+
+  // Auto-bounties: when enabled, credit-game bounties pay out on their own
+  // once cumulative credits wagered on the game reach the trigger, and
+  // free-game bounties pay weekly — every eligible winner pro-rata. Off by
+  // default so nothing pays until the owner sets prizes + thresholds.
+  bountyAutoPayEnabled: process.env.BOUNTY_AUTO_PAY === "true",
+
   adminWallets: (process.env.ADMIN_WALLETS ?? "")
     .split(",")
     .map((w) => w.trim())

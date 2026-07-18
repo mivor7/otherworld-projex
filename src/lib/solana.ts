@@ -106,6 +106,59 @@ export async function verifyDepositTx(
   return total > 0n ? total : null;
 }
 
+/**
+ * Verify a "buy credits" tx: one tx, signed by `wallet`, that BOTH burns
+ * $RIBBIT and transfers $RIBBIT to the treasury ATA. Returns the two raw
+ * amounts, or null if it doesn't check out. Both legs must be present — a tx
+ * that only burns (or only transfers) is not a valid buy.
+ */
+export async function verifyBuyTx(
+  signature: string,
+  wallet: string
+): Promise<{ burnedRaw: bigint; houseRaw: bigint } | null> {
+  if (!CONFIG.treasuryWallet) return null;
+  const treasuryAta = getAssociatedTokenAddressSync(
+    new PublicKey(CONFIG.ribbitMint),
+    new PublicKey(CONFIG.treasuryWallet),
+    true
+  ).toBase58();
+
+  const tx = await getVerifiedTx(signature);
+  if (!tx) return null;
+
+  let burnedRaw = 0n;
+  let houseRaw = 0n;
+  for (const ix of parsedInstructions(tx)) {
+    const { type, info } = ix.parsed as {
+      type: string;
+      info: Record<string, unknown>;
+    };
+    const authority = (info.authority ?? info.multisigAuthority) as string;
+    if (authority !== wallet) continue;
+
+    if (type === "burn" || type === "burnChecked") {
+      if (info.mint !== CONFIG.ribbitMint) continue;
+      const amount =
+        type === "burnChecked"
+          ? (info.tokenAmount as { amount: string }).amount
+          : (info.amount as string);
+      burnedRaw += BigInt(amount);
+    } else if (type === "transfer" || type === "transferChecked") {
+      if (type === "transferChecked" && info.mint !== CONFIG.ribbitMint) continue;
+      if (info.destination !== treasuryAta) continue;
+      const amount =
+        type === "transferChecked"
+          ? (info.tokenAmount as { amount: string }).amount
+          : (info.amount as string);
+      houseRaw += BigInt(amount);
+    }
+  }
+
+  // Both legs required, and each must be non-zero.
+  if (burnedRaw <= 0n || houseRaw <= 0n) return null;
+  return { burnedRaw, houseRaw };
+}
+
 export type TreasuryStats = {
   configured: boolean;
   solBalance: number | null;

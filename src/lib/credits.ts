@@ -16,7 +16,7 @@ export async function adjustCredits(
   tx: Tx,
   userId: string,
   delta: number,
-  kind: "burn" | "wager" | "payout" | "bounty" | "admin",
+  kind: "burn" | "buy" | "wager" | "payout" | "bounty" | "admin",
   ref?: string
 ): Promise<number> {
   if (!Number.isInteger(delta)) throw new Error("Credit delta must be an integer");

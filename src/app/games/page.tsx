@@ -68,7 +68,9 @@ type HistoryRow = {
 
 export default function GamesPage() {
   const { me, refresh } = useSession();
-  const { burnForCredits } = useChain();
+  const { burnForCredits, buyCredits } = useChain();
+  const canBuy = !!CLIENT_CONFIG.treasuryWallet;
+  const [mode, setMode] = useState<"buy" | "burn">(canBuy ? "buy" : "burn");
   const [burnAmount, setBurnAmount] = useState(CLIENT_CONFIG.ribbitPerCredit * 10);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -87,16 +89,17 @@ export default function GamesPage() {
   const burnRemainder = burnValid ? burnAmount % CLIENT_CONFIG.ribbitPerCredit : 0;
 
   const doBurn = async () => {
-    // Guard hard: a burn below the credit price would destroy tokens for
+    // Guard hard: a burn/buy below the credit price would spend tokens for
     // zero credits — the chain can't undo it.
     if (!burnValid) return;
     setBusy(true);
     setMsg(null);
-    const res = await burnForCredits(burnAmount);
+    const res =
+      mode === "buy" ? await buyCredits(burnAmount) : await burnForCredits(burnAmount);
     if (res.ok) {
       setMsg({
         kind: "ok",
-        text: `Burn verified — ${res.data.creditsGranted} credits added.`,
+        text: `${mode === "buy" ? "Purchase" : "Burn"} verified — ${res.data.creditsGranted} credits added.`,
       });
       await refresh();
     } else {
@@ -197,12 +200,32 @@ export default function GamesPage() {
 
           {!me.signedIn ? (
             <Notice kind="info">
-              Connect your wallet and sign in (top right) to burn $RIBBIT for
-              credits and take a seat.
+              Connect your wallet and sign in (top right) to get credits and
+              take a seat.
             </Notice>
           ) : (
             <>
-              <label className="kicker !text-[0.6rem]">Burn $RIBBIT → credits</label>
+              {canBuy && (
+                <div className="chips mb-3">
+                  <button
+                    className={`chip ${mode === "buy" ? "active" : ""}`}
+                    aria-pressed={mode === "buy"}
+                    onClick={() => setMode("buy")}
+                  >
+                    Buy
+                  </button>
+                  <button
+                    className={`chip ${mode === "burn" ? "active" : ""}`}
+                    aria-pressed={mode === "burn"}
+                    onClick={() => setMode("burn")}
+                  >
+                    Burn
+                  </button>
+                </div>
+              )}
+              <label className="kicker !text-[0.6rem]">
+                {mode === "buy" ? "Buy credits with $RIBBIT" : "Burn $RIBBIT → credits"}
+              </label>
               <div className="flex gap-2 mt-1.5 mb-2">
                 <input
                   type="number"
@@ -222,7 +245,7 @@ export default function GamesPage() {
                       : `Minimum ${CLIENT_CONFIG.ribbitPerCredit.toLocaleString()} $RIBBIT`
                   }
                 >
-                  {busy ? "…" : "Burn"}
+                  {busy ? "…" : mode === "buy" ? "Buy" : "Burn"}
                 </button>
               </div>
               <div className="flex gap-1.5 mb-2.5">
@@ -247,12 +270,20 @@ export default function GamesPage() {
                 .{" "}
                 {burnRemainder > 0 && (
                   <span className="text-gold">
-                    {burnRemainder.toLocaleString()} $RIBBIT of that burns without
+                    {burnRemainder.toLocaleString()} $RIBBIT of that {mode === "buy" ? "spends" : "burns"} without
                     granting a credit — use a multiple of{" "}
                     {CLIENT_CONFIG.ribbitPerCredit.toLocaleString()}.{" "}
                   </span>
                 )}
-                Burns are permanent and verified on-chain.
+                {mode === "buy" ? (
+                  <>
+                    {Math.round(CLIENT_CONFIG.buyBurnShare * 100)}% is burned,{" "}
+                    {Math.round((1 - CLIENT_CONFIG.buyBurnShare) * 100)}% funds the
+                    house — which pays the bounty rewards. Verified on-chain.
+                  </>
+                ) : (
+                  <>Burns are permanent, 100% destroyed, and verified on-chain.</>
+                )}
               </p>
               {CLIENT_CONFIG.devFaucet && (
                 <button className="btn btn-ghost w-full mb-3" onClick={doFaucet} disabled={busy}>
