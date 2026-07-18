@@ -34,10 +34,20 @@ schema changes apply on every deploy. No manual migration step.
 
 1. Open the `*.vercel.app` URL with a wallet installed and run the full loop:
    connect → sign in → (on a preview with the faucet on) play each game.
-2. Create a [Squads](https://squads.so) multisig, set `TREASURY_WALLET` to it
-   to switch on auction deposits and the live treasury dashboard.
-3. Point `otherworldprojex.com` at the Vercel project (Settings → Domains).
-4. Upload `brand/avatar-800.png` and `brand/banner-x-1500x500.png` to X, and
+2. **Treasury (public reserve).** Set `TREASURY_WALLET` /
+   `NEXT_PUBLIC_TREASURY_WALLET` to the founders' main wallet — ideally a
+   [Squads](https://squads.so) multisig. This is public: it holds the founders'
+   holdings plus all app revenue (auction deposits and the house share of
+   credit purchases land here) and the transparency dashboard reads its balance.
+   Its key never touches a server.
+3. **Payout hot wallet (separate).** Generate a *different* wallet for the
+   payout worker and fund it with a working float from the treasury. Run the
+   worker off-server with `PAYOUT_KEYPAIR_PATH` pointing at THIS hot wallet —
+   never the treasury. Top it up from the treasury as it drains; the worst the
+   worker can ever move is the hot-wallet balance, and payouts above
+   `MAX_PAYOUT_RIBBIT` wait for a human in `/admin`.
+4. Point `otherworldprojex.com` at the Vercel project (Settings → Domains).
+5. Upload `brand/avatar-800.png` and `brand/banner-x-1500x500.png` to X, and
    `brand/icon-512.png` to the token profile.
 
 See `README.md` for the full architecture and security model, and

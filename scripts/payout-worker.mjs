@@ -34,9 +34,18 @@ const MAX_PAYOUT = BigInt(
 );
 const INTERVAL_MS = Number(process.env.PAYOUT_INTERVAL_MS ?? 15_000);
 
-const keypairPath = process.env.TREASURY_KEYPAIR_PATH;
+// The worker signs with a dedicated PAYOUT HOT WALLET — NOT the treasury.
+// Keep only a working float in it, topped up from the treasury (ideally a
+// cold/multisig). That way the treasury key never lives on this box, and the
+// most this process could ever move is the hot-wallet balance.
+// (TREASURY_KEYPAIR_PATH still accepted for backwards compatibility.)
+const keypairPath =
+  process.env.PAYOUT_KEYPAIR_PATH ?? process.env.TREASURY_KEYPAIR_PATH;
 if (!keypairPath) {
-  console.error("Set TREASURY_KEYPAIR_PATH to the treasury keypair JSON file.");
+  console.error(
+    "Set PAYOUT_KEYPAIR_PATH to the payout HOT WALLET keypair JSON file " +
+      "(a separate wallet from the treasury — fund it from the treasury)."
+  );
   process.exit(1);
 }
 const signer = Keypair.fromSecretKey(
@@ -47,7 +56,14 @@ const prisma = new PrismaClient();
 const connection = new Connection(RPC, "confirmed");
 const fromAta = getAssociatedTokenAddressSync(MINT, signer.publicKey, true);
 
-console.log(`Payout worker up. Treasury: ${signer.publicKey.toBase58()}`);
+const payoutWallet = signer.publicKey.toBase58();
+console.log(`Payout worker up. Hot wallet: ${payoutWallet}`);
+if (process.env.TREASURY_WALLET && process.env.TREASURY_WALLET === payoutWallet) {
+  console.warn(
+    "⚠ Payout hot wallet == TREASURY_WALLET. For security, use a SEPARATE hot " +
+      "wallet and fund it from the treasury, so the treasury key never touches this box."
+  );
+}
 
 // Rows stuck in "processing" mean a previous run died between sending and
 // marking. NEVER auto-retry those — verify on-chain first, then resolve in

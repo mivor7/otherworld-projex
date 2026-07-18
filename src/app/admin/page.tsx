@@ -359,8 +359,8 @@ export default function AdminPage() {
           )}
           <p className="text-xs text-fog mt-4">
             Run <code className="text-neon">node scripts/payout-worker.mjs</code> with the
-            treasury keypair to pay the whole queue (withdrawals + prizes)
-            automatically.
+            payout hot-wallet keypair (separate from the treasury) to pay the
+            whole queue — withdrawals + prizes — automatically.
           </p>
         </div>
 

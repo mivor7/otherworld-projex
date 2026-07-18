@@ -28,8 +28,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // A real run token is either a UUID (current registry) or a signed JWT
 // (eyJ… — the pre-registry format). Test tokens are adm-run-/econ-r-/demo-run-.
 const isRealToken = (t) => UUID.test(t) || t.startsWith("eyJ");
-// Test auctions our admin-e2e creates.
-const TEST_AUCTION = /^(ADM|e2e)\b/i;
 
 const [users, scores, burns, deposits] = await Promise.all([
   prisma.user.findMany({ select: { id: true, wallet: true } }),
