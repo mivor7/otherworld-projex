@@ -18,6 +18,8 @@ export const CLIENT_CONFIG = {
     1,
     Math.max(0, Number(process.env.NEXT_PUBLIC_BUY_BURN_SHARE ?? 0.5))
   ),
+  houseEdge: Number(process.env.NEXT_PUBLIC_HOUSE_EDGE ?? 0.04),
+  bountyHouseMargin: Number(process.env.NEXT_PUBLIC_BOUNTY_HOUSE_MARGIN ?? 0.5),
   devFaucet: process.env.NEXT_PUBLIC_DEV_FAUCET === "true",
   pumpFunUrl:
     "https://pump.fun/coin/EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump",

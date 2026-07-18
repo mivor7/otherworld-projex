@@ -76,6 +76,13 @@ export const CONFIG = {
   // default so nothing pays until the owner sets prizes + thresholds.
   bountyAutoPayEnabled: process.env.BOUNTY_AUTO_PAY === "true",
 
+  // Auto-derived trigger: a credit-game bounty's spend threshold is set so
+  // the house edge-take on that much play covers the prize PLUS this margin.
+  // 0.5 = the required play earns the house ~1.5× the prize in edge value,
+  // leaving ~50% margin (before buy-split revenue on top). Higher = harder to
+  // trigger / more house margin; lower = faster payouts.
+  bountyHouseMargin: nonneg(process.env.BOUNTY_HOUSE_MARGIN, 0.5),
+
   adminWallets: (process.env.ADMIN_WALLETS ?? "")
     .split(",")
     .map((w) => w.trim())

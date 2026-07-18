@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle, StatCard } from "@/components/ui";
 import { ImageUploadField } from "@/components/image-upload";
-import { fmtRibbit, shortWallet } from "@/lib/client-config";
+import { CLIENT_CONFIG, fmtRibbit, shortWallet } from "@/lib/client-config";
 
 type Overview = {
   applications: {
@@ -125,9 +125,18 @@ export default function AdminPage() {
     prizeRibbit: 5000,
     durationDays: 7,
     autoPay: false,
-    triggerCreditVolume: 100000,
   });
   const bountyIsFree = ["hopper", "frogris", "worm"].includes(bountyForm.game);
+  // Mirror of the server's auto-derivation (lib/bounty.computeTriggerCreditVolume)
+  // so the admin sees the threshold this prize will produce before creating it.
+  const computedTrigger = Math.max(
+    1,
+    Math.ceil(
+      ((bountyForm.prizeRibbit / CLIENT_CONFIG.ribbitPerCredit) *
+        (1 + CLIENT_CONFIG.bountyHouseMargin)) /
+        CLIENT_CONFIG.houseEdge
+    )
+  );
 
   const [review, setReview] = useState<Review[]>([]);
   const [paid, setPaid] = useState<PaidBounty[]>([]);
@@ -435,18 +444,18 @@ export default function AdminPage() {
               Auto-pay every eligible winner pro-rata when triggered
             </label>
             {bountyForm.autoPay && !bountyIsFree && (
-              <div>
-                <label className="text-xs text-fog">
-                  Trigger: pay once this many credits are wagered on {bountyForm.game}
-                </label>
-                <input
-                  className="input"
-                  type="number"
-                  value={bountyForm.triggerCreditVolume}
-                  onChange={(e) =>
-                    setBountyForm({ ...bountyForm, triggerCreditVolume: Number(e.target.value) })
-                  }
-                />
+              <div
+                className="panel p-3 text-xs leading-relaxed"
+                style={{ color: "var(--text-dim)" }}
+              >
+                Auto-triggers after{" "}
+                <span className="stat-number text-neon">
+                  {computedTrigger.toLocaleString()}
+                </span>{" "}
+                credits are wagered on {bountyForm.game} — derived from the prize so
+                the house edge-take on that play covers it plus{" "}
+                {Math.round(CLIENT_CONFIG.bountyHouseMargin * 100)}% margin. Set the
+                prize; the threshold follows automatically.
               </div>
             )}
             {bountyForm.autoPay && bountyIsFree && (
@@ -457,15 +466,7 @@ export default function AdminPage() {
             <button
               className="btn btn-portal w-full"
               disabled={busy || bountyForm.title.length < 3}
-              onClick={() =>
-                act("/api/admin/bounties", {
-                  ...bountyForm,
-                  triggerCreditVolume:
-                    bountyForm.autoPay && !bountyIsFree
-                      ? bountyForm.triggerCreditVolume
-                      : undefined,
-                })
-              }
+              onClick={() => act("/api/admin/bounties", bountyForm)}
             >
               Create bounty
             </button>

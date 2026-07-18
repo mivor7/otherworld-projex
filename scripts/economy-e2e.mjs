@@ -161,11 +161,13 @@ try {
     `status ${b4r.status} awards ${b4awards}`);
 } finally {
   console.log("\ncleaning test data…");
-  await prisma.withdrawal.deleteMany({ where: { ref: { in: bountyIds } } });
-  await prisma.treasuryEvent.deleteMany({ where: { ref: { in: bountyIds } } });
-  await prisma.bountyAward.deleteMany({ where: { bountyId: { in: bountyIds } } });
-  await prisma.bounty.deleteMany({ where: { id: { in: bountyIds } } });
-  for (const id of userIds) {
+  const bIds = bountyIds.filter(Boolean);
+  const uIds = userIds.filter(Boolean);
+  await prisma.withdrawal.deleteMany({ where: { ref: { in: bIds } } });
+  await prisma.treasuryEvent.deleteMany({ where: { ref: { in: bIds } } });
+  await prisma.bountyAward.deleteMany({ where: { bountyId: { in: bIds } } });
+  await prisma.bounty.deleteMany({ where: { id: { in: bIds } } });
+  for (const id of uIds) {
     await prisma.arcadeScore.deleteMany({ where: { userId: id } });
     await prisma.gameRound.deleteMany({ where: { userId: id } });
     await prisma.serverSeed.deleteMany({ where: { userId: id } });

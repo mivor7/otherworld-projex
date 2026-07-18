@@ -128,6 +128,20 @@ export function splitPrize(prizeRaw: bigint, splits: number[]): bigint[] {
   return shares;
 }
 
+/**
+ * Auto-derive a credit-game bounty's spend threshold from its prize: require
+ * enough play that the house edge-take covers the prize plus the configured
+ * margin. trigger = (prizeCredits × (1 + margin)) / edge. This guarantees a
+ * bounty that pays out has already earned the house more than it costs.
+ */
+export function computeTriggerCreditVolume(prizeRaw: bigint): number {
+  const prizeCredits = fromRaw(prizeRaw) / CONFIG.ribbitPerCredit;
+  const vol = Math.ceil(
+    (prizeCredits * (1 + CONFIG.bountyHouseMargin)) / CONFIG.houseEdge
+  );
+  return Math.max(1, vol);
+}
+
 /** Total credits wagered on a game since `since` — the auto-bounty trigger. */
 export async function creditSpendForGame(game: string, since: Date): Promise<number> {
   const agg = await prisma.gameRound.aggregate({

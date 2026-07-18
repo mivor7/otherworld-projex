@@ -123,7 +123,7 @@ try {
   });
   check("bounty created", create.status === 200 && !!create.data.id);
   const bId = create.data.id;
-  bountyIds.push(bId);
+  if (bId) bountyIds.push(bId);
   const bRow = await prisma.bounty.findUnique({ where: { id: bId } });
 
   const winner = player();
@@ -182,7 +182,7 @@ try {
     }),
   });
   const b3 = create3.data.id;
-  bountyIds.push(b3);
+  if (b3) bountyIds.push(b3);
   const b3Row = await prisma.bounty.findUnique({ where: { id: b3 } });
   const players3 = [];
   for (const score of [900, 600, 300]) {
@@ -269,6 +269,36 @@ try {
   check("auction marked fulfilled with note",
     settled.fulfilled === true && settled.fulfillmentNote === "shipped e2e");
 
+  // ---------------- AUTO-DERIVED BOUNTY TRIGGER ----------------
+  console.log("— Auto-pay credit bounty derives its trigger from the prize");
+  const autoB = await admin.api("/api/admin/bounties", {
+    method: "POST",
+    body: JSON.stringify({
+      title: "ADM auto-trigger", description: "e2e derive test",
+      game: "dice", prizeRibbit: 5000, durationDays: 7, autoPay: true,
+    }),
+  });
+  if (autoB.data?.id) bountyIds.push(autoB.data.id);
+  // 5000 $RIBBIT / 100 per credit = 50 credits; ×1.5 margin / 0.04 edge = 1875
+  check("trigger auto-derived from prize (5000 → 1875 credits)",
+    autoB.status === 200 && autoB.data.triggerCreditVolume === 1875,
+    `got ${autoB.data?.triggerCreditVolume}`);
+  const autoRow = await prisma.bounty.findUnique({ where: { id: autoB.data.id } });
+  check("threshold persisted, autoPay set",
+    autoRow.autoPay === true && autoRow.triggerCreditVolume === 1875);
+  // free game: no credit threshold, weekly instead
+  const autoFree = await admin.api("/api/admin/bounties", {
+    method: "POST",
+    body: JSON.stringify({
+      title: "ADM auto free", description: "e2e free-game auto-bounty",
+      game: "worm", prizeRibbit: 3000, durationDays: 7, autoPay: true,
+    }),
+  });
+  if (autoFree.data?.id) bountyIds.push(autoFree.data.id);
+  check("free-game auto-bounty has no credit threshold",
+    autoFree.status === 200 && autoFree.data.triggerCreditVolume === null,
+    `status ${autoFree.status} data ${JSON.stringify(autoFree.data)}`);
+
   // overview stats present
   const ov = await admin.api("/api/admin/overview");
   check("overview exposes house stats", ov.status === 200 &&
@@ -276,12 +306,16 @@ try {
     typeof ov.data.stats?.creditsOutstanding === "number");
 } finally {
   console.log("\ncleaning test data…");
-  await prisma.withdrawal.deleteMany({ where: { ref: { in: bountyIds } } });
-  await prisma.treasuryEvent.deleteMany({ where: { ref: { in: [...bountyIds, ...auctionIds] } } });
-  await prisma.bountyAward.deleteMany({ where: { bountyId: { in: bountyIds } } });
-  await prisma.bounty.deleteMany({ where: { id: { in: bountyIds } } });
-  await prisma.bid.deleteMany({ where: { auctionId: { in: auctionIds } } });
-  await prisma.auction.deleteMany({ where: { id: { in: auctionIds } } });
+  // A transient failure can leave an undefined id in these arrays — filter it
+  // so cleanup itself never crashes and always runs to completion.
+  const bIds = bountyIds.filter(Boolean);
+  const aIds = auctionIds.filter(Boolean);
+  await prisma.withdrawal.deleteMany({ where: { ref: { in: bIds } } });
+  await prisma.treasuryEvent.deleteMany({ where: { ref: { in: [...bIds, ...aIds] } } });
+  await prisma.bountyAward.deleteMany({ where: { bountyId: { in: bIds } } });
+  await prisma.bounty.deleteMany({ where: { id: { in: bIds } } });
+  await prisma.bid.deleteMany({ where: { auctionId: { in: aIds } } });
+  await prisma.auction.deleteMany({ where: { id: { in: aIds } } });
   for (const w of wallets) {
     const u = await prisma.user.findUnique({ where: { wallet: w } });
     if (!u) continue;
