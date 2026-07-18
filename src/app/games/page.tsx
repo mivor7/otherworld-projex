@@ -69,8 +69,11 @@ type HistoryRow = {
 export default function GamesPage() {
   const { me, refresh } = useSession();
   const { burnForCredits, buyCredits } = useChain();
+  // Credits always route through the split-buy (part burned, part to the house)
+  // when a treasury exists — so every credit funds the reward economy. Pure
+  // burn is only the pre-treasury / dev fallback so credits are still
+  // obtainable before the treasury is configured.
   const canBuy = !!CLIENT_CONFIG.treasuryWallet;
-  const [mode, setMode] = useState<"buy" | "burn">(canBuy ? "buy" : "burn");
   const [burnAmount, setBurnAmount] = useState(CLIENT_CONFIG.ribbitPerCredit * 10);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -104,12 +107,11 @@ export default function GamesPage() {
     if (!burnValid) return;
     setBusy(true);
     setMsg(null);
-    const res =
-      mode === "buy" ? await buyCredits(burnAmount) : await burnForCredits(burnAmount);
+    const res = canBuy ? await buyCredits(burnAmount) : await burnForCredits(burnAmount);
     if (res.ok) {
       setMsg({
         kind: "ok",
-        text: `${mode === "buy" ? "Purchase" : "Burn"} verified — ${res.data.creditsGranted} credits added.`,
+        text: `${canBuy ? "Purchase" : "Burn"} verified — ${res.data.creditsGranted} credits added.`,
       });
       await refresh();
     } else {
@@ -228,26 +230,8 @@ export default function GamesPage() {
             </Notice>
           ) : (
             <>
-              {canBuy && (
-                <div className="chips mb-3">
-                  <button
-                    className={`chip ${mode === "buy" ? "active" : ""}`}
-                    aria-pressed={mode === "buy"}
-                    onClick={() => setMode("buy")}
-                  >
-                    Buy
-                  </button>
-                  <button
-                    className={`chip ${mode === "burn" ? "active" : ""}`}
-                    aria-pressed={mode === "burn"}
-                    onClick={() => setMode("burn")}
-                  >
-                    Burn
-                  </button>
-                </div>
-              )}
               <label className="kicker !text-[0.6rem]">
-                {mode === "buy" ? "Buy credits with $RIBBIT" : "Burn $RIBBIT → credits"}
+                {canBuy ? "Buy credits with $RIBBIT" : "Burn $RIBBIT → credits"}
               </label>
               <div className="flex gap-2 mt-1.5 mb-2">
                 <input
@@ -268,7 +252,7 @@ export default function GamesPage() {
                       : `Minimum ${CLIENT_CONFIG.ribbitPerCredit.toLocaleString()} $RIBBIT`
                   }
                 >
-                  {busy ? "…" : mode === "buy" ? "Buy" : "Burn"}
+                  {busy ? "…" : canBuy ? "Buy" : "Burn"}
                 </button>
               </div>
               <div className="flex gap-1.5 mb-2.5">
@@ -293,12 +277,12 @@ export default function GamesPage() {
                 .{" "}
                 {burnRemainder > 0 && (
                   <span className="text-gold">
-                    {burnRemainder.toLocaleString()} $RIBBIT of that {mode === "buy" ? "spends" : "burns"} without
+                    {burnRemainder.toLocaleString()} $RIBBIT of that {canBuy ? "spends" : "burns"} without
                     granting a credit — use a multiple of{" "}
                     {CLIENT_CONFIG.ribbitPerCredit.toLocaleString()}.{" "}
                   </span>
                 )}
-                {mode === "buy" ? (
+                {canBuy ? (
                   <>
                     {Math.round(CLIENT_CONFIG.buyBurnShare * 100)}% is burned,{" "}
                     {Math.round((1 - CLIENT_CONFIG.buyBurnShare) * 100)}% funds the

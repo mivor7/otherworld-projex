@@ -1,7 +1,9 @@
-// Burn-to-play: the user burns $RIBBIT from their own wallet (we never touch
-// their keys), then posts the tx signature here. We verify the burn on-chain
-// and credit play credits. The unique signature constraint makes replays
-// impossible.
+// Burn-to-play (pre-treasury fallback only): the user burns $RIBBIT and posts
+// the tx signature; we verify it on-chain and grant credits. Once a treasury
+// exists, credits must come through /api/credits/buy instead — the split (part
+// burned, part to the house) is what funds the reward economy, and a pure burn
+// would let a player get credits while giving the house nothing. So this route
+// only grants credits when no treasury is configured.
 import { z } from "zod";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
@@ -13,6 +15,12 @@ const body = z.object({ signature: z.string().min(64).max(120) });
 
 export const POST = handler(async (req: Request) => {
   const session = await requireSession();
+  // With a treasury live, credits are bought (split burn/house), not pure-
+  // burned — enforced here so the UI path can't be bypassed by calling the
+  // endpoint directly.
+  if (CONFIG.treasuryWallet) {
+    return err("Buy credits instead — burning-only is disabled", 400);
+  }
   const { signature } = body.parse(await req.json());
 
   const existing = await prisma.burnEvent.findUnique({ where: { signature } });
