@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
+import { BountyStandings } from "@/components/bounty-standings";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 import { ARCADE, CAR_COLORS } from "@/lib/arcade-palette";
 import {
@@ -453,6 +454,8 @@ export default function HopperPage() {
           )}
         </div>
 
+        <div className="space-y-6">
+        <BountyStandings game="hopper" />
         <aside className="panel p-5 h-fit">
           <div className="kicker mb-1.5">Weekly bounty board</div>
           <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
@@ -486,6 +489,7 @@ export default function HopperPage() {
             </div>
           </div>
         </aside>
+        </div>
       </div>
     </div>
   );

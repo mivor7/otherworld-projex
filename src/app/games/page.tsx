@@ -75,6 +75,9 @@ export default function GamesPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [liveBounties, setLiveBounties] = useState<
+    Record<string, { prizeRibbit: number; prizeText: string | null }>
+  >({});
 
   useEffect(() => {
     if (!me.signedIn) return;
@@ -83,6 +86,13 @@ export default function GamesPage() {
       .then((rows) => Array.isArray(rows) && setHistory(rows))
       .catch(() => {});
   }, [me.signedIn]);
+
+  useEffect(() => {
+    fetch("/api/bounties/live")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.games && setLiveBounties(d.games))
+      .catch(() => {});
+  }, []);
 
   const burnValid =
     Number.isFinite(burnAmount) && burnAmount >= CLIENT_CONFIG.ribbitPerCredit;
@@ -135,11 +145,21 @@ export default function GamesPage() {
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
         <div className="grid sm:grid-cols-2 gap-4 content-start">
-          {GAMES.map((g) => (
+          {GAMES.map((g) => {
+            const gameKey = g.href.split("/").pop()!;
+            const live = liveBounties[gameKey];
+            return (
             <Link key={g.href} href={g.href} className="lot-card group">
               <div className="card-media">
                 <MatteMedia src={g.image} fit="cover" />
                 <span className="badge absolute top-2 right-2">{g.badge}</span>
+                {live && (
+                  <span className="badge badge-gold absolute top-2 left-2">
+                    <span className="live-dot" /> bounty ·{" "}
+                    {live.prizeText ??
+                      `${live.prizeRibbit.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT`}
+                  </span>
+                )}
               </div>
               <div className="card-body">
                 <h3 className="!text-[1rem] group-hover:text-neon transition-colors">
@@ -147,12 +167,15 @@ export default function GamesPage() {
                 </h3>
                 <p className="text-fog text-[0.85rem] leading-relaxed">{g.desc}</p>
                 <div className="card-price-row">
-                  <span className="card-price-label">Play</span>
+                  <span className="card-price-label">
+                    {live ? "Live bounty" : "Play"}
+                  </span>
                   <span className="text-fog group-hover:text-neon transition-colors">→</span>
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
 
           {me.signedIn && history.length > 0 && (
             <div className="panel p-5 sm:col-span-2">

@@ -181,6 +181,42 @@ export async function bountyProgress(bounty: {
   return { mode: "time", endsAt: bounty.endsAt };
 }
 
+/**
+ * Distribute a raw prize across entries in proportion to their value, summing
+ * to exactly the prize (rounding dust to first place). Shared by the actual
+ * payout AND the live projection so a player's shown estimate matches what
+ * they'd be paid if the bounty triggered right now.
+ */
+export function proRataShares(prizeRaw: bigint, values: number[]): bigint[] {
+  const total = values.reduce((a, b) => a + Math.max(0, b), 0);
+  if (total <= 0) return values.map(() => 0n);
+  const shares = values.map(
+    (v) => (prizeRaw * BigInt(Math.max(0, v))) / BigInt(total)
+  );
+  const dust = prizeRaw - shares.reduce((a, b) => a + b, 0n);
+  if (shares.length > 0) shares[0] += dust;
+  return shares;
+}
+
+/**
+ * Current projected payout for a bounty at this instant — the ranked eligible
+ * entries, each with the raw $RIBBIT they'd receive if it triggered now. The
+ * estimate shifts as people play and only settles when the trigger fires. Uses
+ * the full prize (the treasury-balance cap only applies at actual payout, and
+ * the reserve normally covers it).
+ */
+export async function bountyStandings(bounty: {
+  id: string;
+  game: string | null;
+  startsAt: Date;
+  kind: string;
+  prizeRibbit: bigint;
+}): Promise<(RankedEntry & { projectedRaw: bigint })[]> {
+  const ranked = await rankBountyEntries(bounty, 50);
+  const shares = proRataShares(bounty.prizeRibbit, ranked.map((e) => e.value));
+  return ranked.map((e, i) => ({ ...e, projectedRaw: shares[i] }));
+}
+
 export type AwardResult = {
   bountyId: string;
   paid: { rank: number; wallet: string; amountRaw: string }[];
@@ -215,12 +251,8 @@ export async function awardBountyProRata(bountyId: string): Promise<AwardResult 
   }
   if (prize <= 0n) return null;
 
-  // Pro-rata shares; rounding dust to rank 1 so the pot is exactly distributed.
-  const shares = ranked.map(
-    (e) => (prize * BigInt(Math.max(0, e.value))) / BigInt(totalValue)
-  );
-  const dust = prize - shares.reduce((a, b) => a + b, 0n);
-  if (shares.length > 0) shares[0] += dust;
+  // Pro-rata shares — same math as the live projection players see.
+  const shares = proRataShares(prize, ranked.map((e) => e.value));
 
   const result = await prisma.$transaction(
     async (tx) => {

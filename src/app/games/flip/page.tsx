@@ -8,6 +8,7 @@ import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
 import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { FairCommit } from "@/components/fair-commit";
+import { BountyStandings } from "@/components/bounty-standings";
 
 type FlipResult = {
   outcome: { landed: "frog" | "fly" };
@@ -217,6 +218,9 @@ export default function FlipPage() {
           </p>
         )}
         {!sandbox && <FairCommit clientSeed={clientSeed} />}
+      </div>
+      <div className="mt-6">
+        <BountyStandings game="flip" />
       </div>
     </div>
   );

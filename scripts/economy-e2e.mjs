@@ -31,16 +31,16 @@ const api = (p) => fetch(BASE + p).then(async (r) => ({ status: r.status, data: 
 const bountyIds = [];
 const userIds = [];
 
-async function makeWinner(tag, net, vol, bountyStart) {
+async function makeWinner(tag, net, vol, bountyStart, game = "dice") {
   const u = await prisma.user.create({ data: { wallet: `econ-${tag}-${Math.round(performance.now())}` } });
   userIds.push(u.id);
   // eligibility: lifetime + in-window burns
   await prisma.burnEvent.create({ data: { userId: u.id, signature: `econ-life-${u.id}`, amountRaw: 2000n * RAW, credits: 20, createdAt: new Date(Date.now() - 40 * 864e5) } });
   await prisma.burnEvent.create({ data: { userId: u.id, signature: `econ-win-${u.id}`, amountRaw: 200n * RAW, credits: 2, createdAt: new Date(bountyStart.getTime() + 500) } });
-  // a settled dice round: net = payout - wager, volume = wager
+  // a settled round: net = payout - wager, volume = wager
   await prisma.gameRound.create({
     data: {
-      userId: u.id, seedId: await seedId(u.id), game: "dice", nonce: 0,
+      userId: u.id, seedId: await seedId(u.id), game, nonce: 0,
       clientSeed: "x", params: "{}", outcome: "{}",
       wager: vol, payout: vol + net, houseTake: 0, settled: true,
       createdAt: new Date(bountyStart.getTime() + 1000),
@@ -138,6 +138,31 @@ try {
     b3v?.progress?.mode === "credit" && b3v.progress.threshold === 1000 &&
     b3v.progress.spent >= 250 && b3v.progress.pct >= 25,
     JSON.stringify(b3v?.progress));
+
+  // ---------------- live standings + projected earnings ----------------
+  console.log("— Live standings project each player's pro-rata earning");
+  const b5 = await prisma.bounty.create({
+    data: {
+      title: "ECON standings", description: "e2e", game: "flip", kind: "leaderboard",
+      prizeRibbit: 10000n * RAW, autoPay: true, triggerCreditVolume: 100000,
+      endsAt: new Date(Date.now() + 7 * 864e5),
+    },
+  });
+  bountyIds.push(b5.id);
+  await makeWinner("b5a", 300, 100, b5.startsAt, "flip"); // net 300
+  await makeWinner("b5b", 100, 100, b5.startsAt, "flip"); // net 100 → 75/25 split of 10000
+  const live = await api("/api/bounties/live?game=flip");
+  const st = live.data;
+  check("live endpoint returns the open dice bounty + standings",
+    st.bounty && st.entries.length >= 2, JSON.stringify(st.bounty));
+  const top = st.entries[0];
+  check("projected split matches pro-rata (top ~7,500 of 10,000)",
+    top.projectedRibbit === 7500, `got ${top?.projectedRibbit}`);
+  const projSum = st.entries.reduce((a, e) => a + e.projectedRibbit, 0);
+  check("projections sum to the prize (10,000)", projSum === 10000, `got ${projSum}`);
+  const summaries = await api("/api/bounties/live");
+  check("per-game summary lists the flip bounty for indicators",
+    summaries.data.games?.flip?.prizeRibbit > 0, JSON.stringify(summaries.data.games?.flip));
 
   // ---------------- free-game bounty pays weekly (time-based) ----------------
   console.log("— Free-game bounty pays on time, not on spend");

@@ -8,6 +8,7 @@ import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
 import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { FairCommit } from "@/components/fair-commit";
+import { BountyStandings } from "@/components/bounty-standings";
 
 type DiceResult = {
   outcome: { rolled: number; target: number; multiplier: number };
@@ -250,6 +251,9 @@ export default function DicePage() {
           </p>
         )}
         {!sandbox && <FairCommit clientSeed={clientSeed} />}
+      </div>
+      <div className="mt-6">
+        <BountyStandings game="dice" />
       </div>
     </div>
   );
