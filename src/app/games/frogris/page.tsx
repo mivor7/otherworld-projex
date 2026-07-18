@@ -152,6 +152,14 @@ export default function FrogrisPage() {
     if (!canvas || !nextCanvas) return;
     const ctx = canvas.getContext("2d")!;
     const nctx = nextCanvas.getContext("2d")!;
+    // HiDPI: render at device resolution, draw in logical pixels.
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    nextCanvas.width = 104 * dpr;
+    nextCanvas.height = 104 * dpr;
+    nctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     let raf = 0;
     let last = performance.now();
     let acc = 0;
@@ -165,15 +173,42 @@ export default function FrogrisPage() {
       alpha = 1
     ) => {
       c.globalAlpha = alpha;
+      // body
       c.fillStyle = PIECE_COLORS[piece];
       c.beginPath();
-      c.roundRect(x + 1.5, y + 1.5, size - 3, size - 3, 4);
+      c.roundRect(x + 1.5, y + 1.5, size - 3, size - 3, 5);
       c.fill();
-      c.fillStyle = "rgba(255,255,255,0.12)";
+      // bottom shade for depth
+      const shade = c.createLinearGradient(0, y + size * 0.45, 0, y + size);
+      shade.addColorStop(0, "rgba(0,0,0,0)");
+      shade.addColorStop(1, "rgba(0,0,0,0.28)");
+      c.fillStyle = shade;
       c.beginPath();
-      c.roundRect(x + 3, y + 3, size - 6, (size - 6) / 2.6, 3);
+      c.roundRect(x + 1.5, y + 1.5, size - 3, size - 3, 5);
       c.fill();
+      // gloss cap
+      c.fillStyle = "rgba(255,255,255,0.14)";
+      c.beginPath();
+      c.roundRect(x + 3, y + 3, size - 6, (size - 6) / 2.7, 3.5);
+      c.fill();
+      // keyline
+      c.strokeStyle = "rgba(0,0,0,0.32)";
+      c.lineWidth = 1;
+      c.beginPath();
+      c.roundRect(x + 1.5, y + 1.5, size - 3, size - 3, 5);
+      c.stroke();
       c.globalAlpha = 1;
+    };
+
+    // Ghost cells are outlined, not filled — quieter and more legible.
+    const drawGhost = (x: number, y: number, piece: number) => {
+      ctx.strokeStyle = PIECE_COLORS[piece];
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(x + 2.5, y + 2.5, CELL - 5, CELL - 5, 4);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
     };
 
     const tick = (now: number) => {
@@ -216,6 +251,14 @@ export default function FrogrisPage() {
       for (let c = 1; c < FCOLS; c++) {
         ctx.beginPath(); ctx.moveTo(c * CELL, 0); ctx.lineTo(c * CELL, H); ctx.stroke();
       }
+      // side walls of the well
+      for (const [gx0, gx1] of [[0, 14], [W, W - 14]] as const) {
+        const wall = ctx.createLinearGradient(gx0, 0, gx1, 0);
+        wall.addColorStop(0, "rgba(0,0,0,0.26)");
+        wall.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = wall;
+        ctx.fillRect(Math.min(gx0, gx1), 0, 14, H);
+      }
 
       if (g) {
         for (let r = 0; r < FROWS; r++) {
@@ -229,19 +272,25 @@ export default function FrogrisPage() {
           let gy = g.y;
           while (!collides(g.board, g.piece, g.rot, g.x, gy + 1)) gy += 1;
           for (const [cx, cy] of cellsOf(g.piece, g.rot)) {
-            if (gy + cy >= 0) drawCell(ctx, (g.x + cx) * CELL, (gy + cy) * CELL, g.piece, CELL, 0.16);
+            if (gy + cy >= 0) drawGhost((g.x + cx) * CELL, (gy + cy) * CELL, g.piece);
           }
           for (const [cx, cy] of cellsOf(g.piece, g.rot)) {
             if (g.y + cy >= 0) drawCell(ctx, (g.x + cx) * CELL, (g.y + cy) * CELL, g.piece);
           }
         }
 
-        // Line-clear flash — a fading lime sweep over the rows just cleared.
-        if (g.lastClear && g.frame - g.lastClear.frame < 14) {
-          const t = 1 - (g.frame - g.lastClear.frame) / 14;
-          ctx.fillStyle = `oklch(0.85 0.09 150 / ${(t * 0.35).toFixed(3)})`;
+        // Line-clear flash — white core with a lime bloom, fading out.
+        if (g.lastClear && g.frame - g.lastClear.frame < 18) {
+          const t = 1 - (g.frame - g.lastClear.frame) / 18;
           for (const r of g.lastClear.rows) {
-            ctx.fillRect(0, r * CELL, W, CELL);
+            const bloom = ctx.createLinearGradient(0, (r - 0.6) * CELL, 0, (r + 1.6) * CELL);
+            bloom.addColorStop(0, "rgba(0,0,0,0)");
+            bloom.addColorStop(0.5, `oklch(0.85 0.09 150 / ${(t * 0.4).toFixed(3)})`);
+            bloom.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = bloom;
+            ctx.fillRect(0, (r - 0.6) * CELL, W, CELL * 2.2);
+            ctx.fillStyle = `oklch(0.98 0.005 150 / ${(t * t * 0.5).toFixed(3)})`;
+            ctx.fillRect(0, r * CELL + 2, W, CELL - 4);
           }
         }
 
@@ -299,7 +348,7 @@ export default function FrogrisPage() {
               width={W}
               height={H}
               className="rounded-lg border"
-              style={{ borderColor: "var(--hairline-strong)" }}
+              style={{ borderColor: "var(--hairline-strong)", width: W, height: H }}
             />
             <div
               className="absolute inset-0 rounded-lg pointer-events-none"
@@ -341,7 +390,7 @@ export default function FrogrisPage() {
                 width={104}
                 height={104}
                 className="rounded-md border"
-                style={{ borderColor: "var(--hairline)" }}
+                style={{ borderColor: "var(--hairline)", width: 104, height: 104 }}
               />
             </div>
             <div className="space-y-3">

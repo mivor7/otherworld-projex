@@ -124,12 +124,18 @@ export default function FlipPage() {
             style={spinning ? undefined : { transform: `rotateY(${rotation}deg)` }}
           >
             <div className="coin-face coin-face--front">
-              🐸
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/art/ribbit-mark.jpg" alt="Frog side" className="coin-face-art" />
+              <span className="coin-face-sheen" aria-hidden />
               <span className="coin-face-ring" aria-hidden />
+              <span className="coin-face-badge" aria-hidden>🐸</span>
             </div>
             <div className="coin-face coin-face--back">
-              🪰
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/art/logo.png" alt="Fly side" className="coin-face-art" />
+              <span className="coin-face-sheen" aria-hidden />
               <span className="coin-face-ring" aria-hidden />
+              <span className="coin-face-badge" aria-hidden>🪰</span>
             </div>
           </div>
         </div>

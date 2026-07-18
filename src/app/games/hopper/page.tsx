@@ -32,6 +32,9 @@ export default function HopperPage() {
   const { me } = useSession();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<HopperState | null>(null);
+  // Attract mode: local traffic cruising behind the start overlay so the
+  // board is never a dead black box. Never recorded, never submitted.
+  const attractRef = useRef<HopperState | null>(null);
   const queueRef = useRef<number[]>([]);
   const traceRef = useRef<HInput[]>([]);
   const runTokenRef = useRef<string | null>(null);
@@ -136,12 +139,21 @@ export default function HopperPage() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
+    // HiDPI: render at device resolution, draw in logical pixels.
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     let raf = 0;
     let last = performance.now();
     let acc = 0;
 
+    if (!attractRef.current) {
+      attractRef.current = createHopper((Math.random() * 2 ** 31) | 0);
+    }
+
     const tick = (now: number) => {
-      const g = gameRef.current;
+      let g = gameRef.current;
 
       // Fixed-step sim — identical on every display refresh rate.
       if (g && !g.over) {
@@ -160,27 +172,63 @@ export default function HopperPage() {
           submittedRef.current = true;
           submitScore(g.score, traceRef.current);
         }
+      } else if (!g || g.over) {
+        // idle: keep the attract traffic flowing (frog waits on the verge)
+        const a = attractRef.current!;
+        acc += now - last;
+        if (acc > 250) acc = 250;
+        while (acc >= HFRAME_MS) {
+          acc -= HFRAME_MS;
+          hopperFrame(a);
+        }
+        if (!g) g = a;
       }
       last = now;
 
       // ——— render ———
+      const nowMs = performance.now();
       ctx.fillStyle = ARCADE.bg;
       ctx.fillRect(0, 0, W, H);
+      const isSafeRow = (r: number) =>
+        r === 0 || r === HROWS - 1 || r === Math.floor(HROWS / 2);
       for (let r = 0; r < HROWS; r++) {
-        const isSafe = r === 0 || r === HROWS - 1 || r === Math.floor(HROWS / 2);
-        ctx.fillStyle = isSafe ? "oklch(0.78 0.11 150 / 0.07)" : "rgba(255,255,255,0.02)";
-        ctx.fillRect(0, r * HCELL, W, HCELL - 1);
-        if (!isSafe) {
-          // Lane dashes.
-          ctx.strokeStyle = "rgba(255,255,255,0.05)";
+        const isSafe = isSafeRow(r);
+        if (isSafe) {
+          const verge = ctx.createLinearGradient(0, r * HCELL, 0, (r + 1) * HCELL);
+          verge.addColorStop(0, "oklch(0.78 0.11 150 / 0.1)");
+          verge.addColorStop(1, "oklch(0.78 0.11 150 / 0.05)");
+          ctx.fillStyle = verge;
+          ctx.fillRect(0, r * HCELL, W, HCELL - 1);
+        } else {
+          const tarmac = ctx.createLinearGradient(0, r * HCELL, 0, (r + 1) * HCELL);
+          tarmac.addColorStop(0, "rgba(255,255,255,0.035)");
+          tarmac.addColorStop(0.5, "rgba(255,255,255,0.015)");
+          tarmac.addColorStop(1, "rgba(0,0,0,0.06)");
+          ctx.fillStyle = tarmac;
+          ctx.fillRect(0, r * HCELL, W, HCELL - 1);
+          // lane dashes
+          ctx.strokeStyle = "rgba(255,255,255,0.06)";
           ctx.setLineDash([10, 14]);
           ctx.beginPath();
           ctx.moveTo(0, r * HCELL + HCELL / 2);
           ctx.lineTo(W, r * HCELL + HCELL / 2);
           ctx.stroke();
           ctx.setLineDash([]);
+          // curbs where road meets a safe verge
+          ctx.fillStyle = "oklch(0.78 0.11 150 / 0.14)";
+          if (isSafeRow(r - 1)) ctx.fillRect(0, r * HCELL, W, 2);
+          if (isSafeRow(r + 1)) ctx.fillRect(0, (r + 1) * HCELL - 3, W, 2);
         }
       }
+      // goal row shimmer — a slow light band drifting across
+      const bandX = ((nowMs / 26) % (W + 220)) - 110;
+      const shimmer = ctx.createLinearGradient(bandX - 90, 0, bandX + 90, 0);
+      shimmer.addColorStop(0, "rgba(255,255,255,0)");
+      shimmer.addColorStop(0.5, "oklch(0.85 0.09 150 / 0.07)");
+      shimmer.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = shimmer;
+      ctx.fillRect(0, 0, W, HCELL - 1);
+
       ctx.fillStyle = ARCADE.limeFaint;
       ctx.font = "11px 'Geist Mono', ui-monospace, monospace";
       ctx.fillText("GOAL +10", 10, HCELL - 17);
@@ -193,36 +241,108 @@ export default function HopperPage() {
       if (g) {
         g.cars.forEach((car, i) => {
           const color = CAR_COLORS[(car.lane + i) % CAR_COLORS.length];
+          const cy = car.lane * HCELL;
+          const bodyY = cy + 8;
+          const bodyH = HCELL - 17;
+          // ground shadow
+          ctx.fillStyle = "rgba(0,0,0,0.3)";
+          ctx.beginPath();
+          ctx.roundRect(car.x + 2, bodyY + 4, car.len, bodyH, 7);
+          ctx.fill();
+          // body with vertical sheen
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.roundRect(car.x, car.lane * HCELL + 8, car.len, HCELL - 17, 6);
+          ctx.roundRect(car.x, bodyY, car.len, bodyH, 7);
           ctx.fill();
-          // Cabin highlight + a light "front" hinting the direction.
-          ctx.fillStyle = "rgba(255,255,255,0.1)";
+          const sheen = ctx.createLinearGradient(0, bodyY, 0, bodyY + bodyH);
+          sheen.addColorStop(0, "rgba(255,255,255,0.22)");
+          sheen.addColorStop(0.45, "rgba(255,255,255,0.02)");
+          sheen.addColorStop(1, "rgba(0,0,0,0.22)");
+          ctx.fillStyle = sheen;
           ctx.beginPath();
-          ctx.roundRect(car.x + 3, car.lane * HCELL + 11, car.len - 6, 8, 4);
+          ctx.roundRect(car.x, bodyY, car.len, bodyH, 7);
           ctx.fill();
-          ctx.fillStyle = "rgba(255,255,255,0.35)";
-          const frontX = car.speed > 0 ? car.x + car.len - 5 : car.x + 2;
-          ctx.fillRect(frontX, car.lane * HCELL + 12, 3, HCELL - 25);
+          // glass cabin toward the front
+          const fwd = car.speed > 0;
+          const cabinW = Math.min(car.len * 0.34, 30);
+          const cabinX = fwd
+            ? car.x + car.len - cabinW - 8
+            : car.x + 8;
+          ctx.fillStyle = "rgba(6,12,10,0.55)";
+          ctx.beginPath();
+          ctx.roundRect(cabinX, bodyY + 4, cabinW, bodyH - 8, 4);
+          ctx.fill();
+          // headlights (front) & taillights (rear)
+          const frontX = fwd ? car.x + car.len - 3.5 : car.x + 3.5;
+          const rearX = fwd ? car.x + 3.5 : car.x + car.len - 3.5;
+          ctx.fillStyle = "oklch(0.92 0.05 95 / 0.85)";
+          ctx.beginPath();
+          ctx.arc(frontX, bodyY + 5, 1.8, 0, 7);
+          ctx.arc(frontX, bodyY + bodyH - 5, 1.8, 0, 7);
+          ctx.fill();
+          ctx.fillStyle = "oklch(0.55 0.16 25 / 0.85)";
+          ctx.beginPath();
+          ctx.arc(rearX, bodyY + 5, 1.6, 0, 7);
+          ctx.arc(rearX, bodyY + bodyH - 5, 1.6, 0, 7);
+          ctx.fill();
         });
 
-        // Frog — small hop bounce right after a move.
+        // Frog — drawn, not an emoji: consistent everywhere, and it can
+        // squash-and-stretch on the hop.
         const sinceHop = g.frame - g.lastHopFrame;
-        const bounce = sinceHop < 6 ? Math.sin((sinceHop / 6) * Math.PI) * 4 : 0;
-        ctx.font = `${HCELL - 12}px serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.shadowColor = ARCADE.lime;
-        ctx.shadowBlur = 8;
-        ctx.fillText(
-          "🐸",
-          g.frog.col * HCELL + HCELL / 2,
-          g.frog.row * HCELL + HCELL / 2 + 2 - bounce
-        );
-        ctx.shadowBlur = 0;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "alphabetic";
+        const hopT = sinceHop < 6 ? Math.sin((sinceHop / 6) * Math.PI) : 0;
+        const fx2 = g.frog.col * HCELL + HCELL / 2;
+        const fy2 = g.frog.row * HCELL + HCELL / 2 + 1;
+        // ground shadow shrinks mid-hop
+        ctx.fillStyle = `rgba(0,0,0,${0.32 - hopT * 0.14})`;
+        ctx.beginPath();
+        ctx.ellipse(fx2, fy2 + 11, 11 - hopT * 3, 3.6, 0, 0, 7);
+        ctx.fill();
+        ctx.save();
+        ctx.translate(fx2, fy2 - hopT * 5);
+        ctx.scale(1 + hopT * 0.08, 1 + hopT * 0.14);
+        // rear legs
+        ctx.fillStyle = "oklch(0.55 0.1 150)";
+        ctx.beginPath();
+        ctx.ellipse(-9.5, 6, 5, 7.5, -0.5, 0, 7);
+        ctx.ellipse(9.5, 6, 5, 7.5, 0.5, 0, 7);
+        ctx.fill();
+        // body
+        const bodyGrad = ctx.createRadialGradient(0, -4, 2, 0, 0, 13);
+        bodyGrad.addColorStop(0, "oklch(0.83 0.1 150)");
+        bodyGrad.addColorStop(0.7, "oklch(0.68 0.11 150)");
+        bodyGrad.addColorStop(1, "oklch(0.5 0.09 150)");
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 1, 10.5, 11.5, 0, 0, 7);
+        ctx.fill();
+        // belly sheen
+        ctx.fillStyle = "oklch(0.9 0.05 150 / 0.35)";
+        ctx.beginPath();
+        ctx.ellipse(0, 5, 6, 5, 0, 0, 7);
+        ctx.fill();
+        // eye domes + pupils
+        for (const sideX of [-5.5, 5.5]) {
+          ctx.fillStyle = "oklch(0.72 0.1 150)";
+          ctx.beginPath();
+          ctx.arc(sideX, -9, 4.2, 0, 7);
+          ctx.fill();
+          ctx.fillStyle = "oklch(0.97 0.003 270)";
+          ctx.beginPath();
+          ctx.arc(sideX, -9.5, 2.6, 0, 7);
+          ctx.fill();
+          ctx.fillStyle = ARCADE.ink;
+          ctx.beginPath();
+          ctx.arc(sideX, -10, 1.3, 0, 7);
+          ctx.fill();
+        }
+        // front feet
+        ctx.fillStyle = "oklch(0.6 0.1 150)";
+        ctx.beginPath();
+        ctx.ellipse(-6, 10, 3, 2, 0, 0, 7);
+        ctx.ellipse(6, 10, 3, 2, 0, 0, 7);
+        ctx.fill();
+        ctx.restore();
 
         // Brief danger flash on a lost life.
         if (g.frame - g.lastDeathFrame < 12 && !g.over) {
@@ -231,13 +351,16 @@ export default function HopperPage() {
           ctx.fillRect(0, 0, W, H);
         }
 
-        setHud((h) => {
-          const seconds = Math.floor((g.frame * HFRAME_MS) / 1000);
-          return h.score !== g.score || h.lives !== g.lives || h.over !== g.over ||
-            h.level !== g.level || h.seconds !== seconds || !h.started
-            ? { score: g.score, lives: g.lives, level: g.level, over: g.over, started: true, seconds }
-            : h;
-        });
+        const real = gameRef.current;
+        if (real) {
+          setHud((h) => {
+            const seconds = Math.floor((real.frame * HFRAME_MS) / 1000);
+            return h.score !== real.score || h.lives !== real.lives || h.over !== real.over ||
+              h.level !== real.level || h.seconds !== seconds || !h.started
+              ? { score: real.score, lives: real.lives, level: real.level, over: real.over, started: true, seconds }
+              : h;
+          });
+        }
       }
       raf = requestAnimationFrame(tick);
     };

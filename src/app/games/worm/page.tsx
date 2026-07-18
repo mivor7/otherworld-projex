@@ -47,6 +47,9 @@ export default function WormPage() {
   const { me } = useSession();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
+  // Attract mode: a little self-driving worm behind the start overlay.
+  // Local entropy only — never recorded, never submitted.
+  const attractRef = useRef<Game | null>(null);
   const runTokenRef = useRef<string | null>(null);
   const pendingSubmitRef = useRef<Promise<void> | null>(null);
   const popRef = useRef<{ x: number; y: number; at: number } | null>(null);
@@ -86,6 +89,27 @@ export default function WormPage() {
     },
     [loadBoard]
   );
+
+  const makeLocalGame = useCallback((): Game => {
+    const rand = mulberry32((Math.random() * 2 ** 31) | 0);
+    const snake = initialSnake();
+    return {
+      snake,
+      dir: DIRS[0],
+      nextDir: DIRS[0],
+      fly: spawnFly(rand, snake),
+      rand,
+      steps: 0,
+      trace: [],
+      score: 0,
+      flies: 0,
+      over: false,
+      started: true,
+      stepMs: BASE_MS,
+      acc: 0,
+      last: performance.now(),
+    };
+  }, []);
 
   const start = useCallback(async () => {
     setSubmitMsg(null);
@@ -172,6 +196,11 @@ export default function WormPage() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
+    // HiDPI: render at device resolution, draw in logical pixels.
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     let raf = 0;
 
     const step = (g: Game) => {
@@ -198,9 +227,48 @@ export default function WormPage() {
       g.steps += 1;
     };
 
+    // Greedy auto-pilot for the attract worm: chase the fly, never reverse,
+    // avoid walls and its own body; on death, a fresh worm takes over.
+    const drive = (a: Game) => {
+      const head = a.snake[0];
+      const blocked = (x: number, y: number) =>
+        x < 0 || x >= GRID || y < 0 || y >= GRID ||
+        a.snake.some((seg) => seg.x === x && seg.y === y);
+      const cands: Point[] = [];
+      if (a.fly.x > head.x) cands.push(DIRS[0]);
+      if (a.fly.x < head.x) cands.push(DIRS[1]);
+      if (a.fly.y < head.y) cands.push(DIRS[2]);
+      if (a.fly.y > head.y) cands.push(DIRS[3]);
+      cands.push(DIRS[0], DIRS[1], DIRS[2], DIRS[3]);
+      for (const d of cands) {
+        if (d.x === -a.dir.x && d.y === -a.dir.y) continue;
+        if (!blocked(head.x + d.x, head.y + d.y)) {
+          a.nextDir = d;
+          return;
+        }
+      }
+    };
+
     const tick = (now: number) => {
-      const g = gameRef.current;
-      if (g && !g.over) {
+      let g = gameRef.current;
+      if (!g || g.over) {
+        // idle: run the attract worm instead
+        if (!attractRef.current || attractRef.current.over) {
+          attractRef.current = makeLocalGame();
+        }
+        const a = attractRef.current;
+        a.acc += now - a.last;
+        a.last = now;
+        if (a.acc > 400) a.acc = 400;
+        while (a.acc >= a.stepMs) {
+          a.acc -= a.stepMs;
+          drive(a);
+          step(a);
+          if (a.over) break;
+        }
+        if (!g) g = a;
+      }
+      if (g && !g.over && g === gameRef.current) {
         g.acc += now - g.last;
         g.last = now;
         if (g.acc > 400) g.acc = 400; // background-tab catch-up cap
@@ -209,56 +277,108 @@ export default function WormPage() {
           step(g);
           if (g.over) break;
         }
-      } else if (g) {
-        g.last = now;
+      } else if (gameRef.current) {
+        gameRef.current.last = now;
       }
 
-      // draw
+      // draw — quiet checkerboard well
       ctx.fillStyle = ARCADE.bg;
       ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = ARCADE.grid;
-      for (let i = 1; i < GRID; i++) {
-        ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, H); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(W, i * CELL); ctx.stroke();
+      ctx.fillStyle = "oklch(1 0 0 / 0.016)";
+      for (let cy = 0; cy < GRID; cy++) {
+        for (let cx = (cy % 2); cx < GRID; cx += 2) {
+          ctx.fillRect(cx * CELL, cy * CELL, CELL, CELL);
+        }
       }
 
       if (g) {
-        // fly
+        const nowMs = performance.now();
+        // fly — grounded by a soft shadow, hovering gently
+        const bob = Math.sin(nowMs / 260) * 1.6;
+        const flyX = g.fly.x * CELL + CELL / 2;
+        const flyY = g.fly.y * CELL + CELL / 2;
+        ctx.fillStyle = "oklch(0 0 0 / 0.3)";
+        ctx.beginPath();
+        ctx.ellipse(flyX, flyY + 7, 6, 2.2, 0, 0, 7);
+        ctx.fill();
         ctx.font = `${CELL - 4}px serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("🪰", g.fly.x * CELL + CELL / 2, g.fly.y * CELL + CELL / 2 + 1);
-        // worm
-        g.snake.forEach((s, i) => {
-          const t = i / Math.max(1, g.snake.length - 1);
-          if (i === 0) {
-            ctx.shadowColor = ARCADE.lime;
-            ctx.shadowBlur = 10;
-          }
-          const fill =
-            i === 0 ? ARCADE.limeSoft : `oklch(${(0.74 - t * 0.24).toFixed(3)} 0.1 150)`;
-          ctx.fillStyle = fill;
+        ctx.fillText("🪰", flyX, flyY + 1 + bob);
+
+        // worm — one continuous body: dark keyline under a lime gradient,
+        // round joins, tail tapering into shadow
+        const pts = g.snake.map((seg) => ({
+          x: seg.x * CELL + CELL / 2,
+          y: seg.y * CELL + CELL / 2,
+        }));
+        if (pts.length > 1) {
+          const head = pts[0];
+          const tail = pts[pts.length - 1];
+          const grad = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
+          grad.addColorStop(0, "oklch(0.42 0.06 150)");
+          grad.addColorStop(0.65, "oklch(0.66 0.1 150)");
+          grad.addColorStop(1, "oklch(0.8 0.11 150)");
+          ctx.lineJoin = "round";
+          ctx.lineCap = "round";
           ctx.beginPath();
-          ctx.roundRect(s.x * CELL + 2, s.y * CELL + 2, CELL - 4, CELL - 4, i === 0 ? 7 : 5);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          // Bridge to the previous segment so the worm reads as one body.
-          if (i > 0) {
-            const prev = g.snake[i - 1];
-            const bx = (Math.min(s.x, prev.x) + 0.5) * CELL;
-            const by = (Math.min(s.y, prev.y) + 0.5) * CELL;
-            ctx.fillStyle = fill;
-            if (s.x !== prev.x) ctx.fillRect(bx, s.y * CELL + 4, CELL, CELL - 8);
-            else ctx.fillRect(s.x * CELL + 4, by, CELL - 8, CELL);
-          }
-        });
-        // eyes on head
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.strokeStyle = "oklch(0.1 0.012 165)";
+          ctx.lineWidth = CELL - 4;
+          ctx.stroke();
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = CELL - 7;
+          ctx.stroke();
+          // faint dorsal highlight
+          ctx.strokeStyle = "oklch(1 0 0 / 0.1)";
+          ctx.lineWidth = Math.max(2, CELL - 16);
+          ctx.stroke();
+        }
+
+        // head — glowing cap with direction-aware eyes
         const h = g.snake[0];
-        ctx.fillStyle = ARCADE.ink;
+        const hx = h.x * CELL + CELL / 2;
+        const hy = h.y * CELL + CELL / 2;
+        ctx.shadowColor = ARCADE.lime;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = ARCADE.limeSoft;
         ctx.beginPath();
-        ctx.arc(h.x * CELL + CELL / 2 - 4, h.y * CELL + CELL / 2 - 3, 2, 0, 7);
-        ctx.arc(h.x * CELL + CELL / 2 + 4, h.y * CELL + CELL / 2 - 3, 2, 0, 7);
+        ctx.arc(hx, hy, CELL / 2 - 2.5, 0, 7);
         ctx.fill();
+        ctx.shadowBlur = 0;
+        const dx = g.dir.x, dy = g.dir.y;
+        const px = -dy, py = dx; // perpendicular
+        for (const side of [-1, 1]) {
+          const ex = hx + px * 4.5 * side + dx * 2.5;
+          const ey = hy + py * 4.5 * side + dy * 2.5;
+          ctx.fillStyle = "oklch(0.97 0.003 270)";
+          ctx.beginPath();
+          ctx.arc(ex, ey, 3, 0, 7);
+          ctx.fill();
+          ctx.fillStyle = ARCADE.ink;
+          ctx.beginPath();
+          ctx.arc(ex + dx * 1.2, ey + dy * 1.2, 1.6, 0, 7);
+          ctx.fill();
+        }
+
+        // eat ripple — an expanding ring where the fly vanished
+        if (popRef.current) {
+          const age = (nowMs - popRef.current.at) / 450;
+          if (age < 1) {
+            ctx.strokeStyle = `oklch(0.78 0.11 150 / ${(0.5 * (1 - age)).toFixed(3)})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(
+              popRef.current.x * CELL + CELL / 2,
+              popRef.current.y * CELL + CELL / 2,
+              4 + age * 18,
+              0,
+              7
+            );
+            ctx.stroke();
+          }
+        }
 
         // "+10" pop where the fly was eaten.
         if (popRef.current) {
@@ -280,18 +400,21 @@ export default function WormPage() {
           }
         }
 
-        setHud((prev) =>
-          prev.score !== g.score || prev.flies !== g.flies || prev.over !== g.over ||
-          prev.started !== g.started || prev.steps !== g.steps
-            ? { score: g.score, flies: g.flies, steps: g.steps, over: g.over, started: g.started }
-            : prev
-        );
+        const real = gameRef.current;
+        if (real) {
+          setHud((prev) =>
+            prev.score !== real.score || prev.flies !== real.flies || prev.over !== real.over ||
+            prev.started !== real.started || prev.steps !== real.steps
+              ? { score: real.score, flies: real.flies, steps: real.steps, over: real.over, started: real.started }
+              : prev
+          );
+        }
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [submitScore]);
+  }, [submitScore, makeLocalGame]);
 
   return (
     <div className="pt-10 max-w-4xl mx-auto">

@@ -111,22 +111,61 @@ export default function DicePage() {
           </div>
         )}
         {/* Result track */}
-        <div className="relative h-10 rounded-lg bg-abyss border border-edge mb-2 overflow-hidden">
+        <div
+          className="relative h-12 rounded-lg mb-1 overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(180deg, oklch(0.13 0.01 165), oklch(0.16 0.012 165))",
+            border: "1px solid var(--hairline-strong)",
+            boxShadow: "inset 0 2px 10px oklch(0 0 0 / 0.45)",
+          }}
+        >
+          {/* win zone with a soft falloff toward the line */}
           <div
-            className="absolute inset-y-0 left-0 bg-neon/15 border-r-2 border-neon"
-            style={{ width: `${target}%` }}
+            className="absolute inset-y-0 left-0"
+            style={{
+              width: `${target}%`,
+              background:
+                "linear-gradient(90deg, oklch(0.78 0.11 150 / 0.06), oklch(0.78 0.11 150 / 0.2))",
+              borderRight: "2px solid var(--color-neon)",
+              boxShadow: "4px 0 14px -6px oklch(0.78 0.11 150 / 0.6)",
+            }}
           />
+          {/* measured ticks every 10 */}
+          {Array.from({ length: 9 }, (_, i) => (
+            <span
+              key={i}
+              className="absolute bottom-0 w-px h-2"
+              style={{ left: `${(i + 1) * 10}%`, background: "oklch(1 0 0 / 0.14)" }}
+            />
+          ))}
           {rolling && <div className="dice-scan" aria-hidden />}
           {result && !rolling && (
             <div
-              className={`dice-marker absolute top-0 bottom-0 w-1 ${result.win ? "bg-neon" : "bg-danger"}`}
+              className="dice-marker absolute top-1/2"
               style={{ left: `${result.outcome.rolled}%` }}
               title={`rolled ${result.outcome.rolled}`}
-            />
+            >
+              <span
+                className="block w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45"
+                style={{
+                  background: result.win ? "var(--color-neon)" : "var(--color-danger)",
+                  boxShadow: result.win
+                    ? "0 0 12px oklch(0.78 0.11 150 / 0.9)"
+                    : "0 0 12px oklch(0.64 0.18 25 / 0.9)",
+                }}
+              />
+            </div>
           )}
-          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-neon">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neon">
             win zone &lt; {target}
           </span>
+        </div>
+        <div
+          className="flex justify-between mono text-[0.6rem] px-0.5 mb-2"
+          style={{ color: "var(--text-dim)" }}
+        >
+          <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
         </div>
         <input
           type="range"

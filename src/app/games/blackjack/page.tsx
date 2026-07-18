@@ -305,13 +305,43 @@ export default function BlackjackPage() {
 
         {/* Table felt */}
         <div
-          className="rounded-lg p-5 sm:p-6 mb-6"
+          className="rounded-xl p-5 sm:p-6 mb-6 relative overflow-hidden"
           style={{
-            background: "oklch(0.14 0.015 160)",
-            border: "1px solid oklch(0.78 0.11 150 / 0.12)",
+            background:
+              "radial-gradient(130% 110% at 50% -20%, oklch(0.19 0.03 160), oklch(0.135 0.018 160) 55%, oklch(0.115 0.015 160))",
+            border: "1px solid oklch(0.78 0.11 150 / 0.14)",
+            boxShadow:
+              "inset 0 0 60px oklch(0 0 0 / 0.5), inset 0 0 0 1px oklch(1 0 0 / 0.03)",
           }}
         >
-          <div className="space-y-6">
+          {/* etched table markings */}
+          <svg
+            className="absolute inset-x-0 bottom-0 w-full pointer-events-none"
+            viewBox="0 0 600 150"
+            preserveAspectRatio="xMidYMax meet"
+            aria-hidden
+          >
+            <defs>
+              <path id="bj-arc" d="M 60 150 A 300 210 0 0 1 540 150" fill="none" />
+              <path id="bj-arc-text" d="M 78 150 A 285 200 0 0 1 522 150" fill="none" />
+            </defs>
+            <use
+              href="#bj-arc"
+              stroke="oklch(0.78 0.11 150 / 0.16)"
+              strokeWidth="1.2"
+            />
+            <text
+              fontSize="10.5"
+              letterSpacing="3.5"
+              fill="oklch(0.78 0.11 150 / 0.3)"
+              style={{ fontFamily: "var(--font-mono, monospace)" }}
+            >
+              <textPath href="#bj-arc-text" startOffset="50%" textAnchor="middle">
+                BLACKJACK PAYS 3 : 2 · DEALER STANDS ON 17
+              </textPath>
+            </text>
+          </svg>
+          <div className="space-y-6 relative">
             <Hand
               label="Dealer"
               cards={view?.dealer ?? []}
@@ -444,14 +474,20 @@ function PlayingCard({
   if (hidden || card === undefined) {
     return (
       <div
-        className="card-in w-14 h-20 sm:w-16 sm:h-24 rounded-lg border flex items-center justify-center"
+        className="card-in w-14 h-20 sm:w-16 sm:h-24 rounded-lg border relative flex items-center justify-center overflow-hidden"
         style={{
-          borderColor: "var(--hairline-strong)",
+          borderColor: "oklch(0 0 0 / 0.5)",
           background:
-            "repeating-linear-gradient(45deg, oklch(0.17 0.02 150), oklch(0.17 0.02 150) 4px, oklch(0.14 0.015 150) 4px, oklch(0.14 0.015 150) 8px)",
+            "repeating-linear-gradient(45deg, oklch(0.19 0.022 150) 0 3px, oklch(0.145 0.015 150) 3px 6px), repeating-linear-gradient(-45deg, oklch(0.19 0.022 150) 0 3px, oklch(0.145 0.015 150) 3px 6px)",
+          backgroundBlendMode: "overlay",
+          boxShadow: "0 3px 10px oklch(0 0 0 / 0.5), inset 0 0 0 1px oklch(1 0 0 / 0.06)",
         }}
       >
-        <span className="text-neon opacity-40 text-lg">◆</span>
+        <span
+          className="absolute inset-[5px] rounded-md"
+          style={{ border: "1px solid oklch(0.78 0.11 150 / 0.25)" }}
+        />
+        <span className="text-neon opacity-45 text-base">◆</span>
       </div>
     );
   }
@@ -460,20 +496,38 @@ function PlayingCard({
   const red = suit === "♥" || suit === "♦";
   return (
     <div
-      className="card-in w-14 h-20 sm:w-16 sm:h-24 rounded-lg flex flex-col justify-between p-1.5 select-none"
+      className="card-in w-14 h-20 sm:w-16 sm:h-24 rounded-lg relative select-none overflow-hidden"
       style={{
-        background: "oklch(0.97 0.003 270)",
-        color: red ? "oklch(0.5 0.19 25)" : "oklch(0.2 0.01 270)",
-        border: "1px solid oklch(0 0 0 / 0.35)",
-        boxShadow: "0 2px 8px oklch(0 0 0 / 0.4)",
+        background:
+          "repeating-linear-gradient(0deg, oklch(1 0 0 / 0.35) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, oklch(0 0 0 / 0.02) 0 1px, transparent 1px 3px), linear-gradient(160deg, oklch(0.985 0.002 270), oklch(0.94 0.004 270))",
+        color: red ? "oklch(0.48 0.19 25)" : "oklch(0.19 0.01 270)",
+        border: "1px solid oklch(0 0 0 / 0.4)",
+        boxShadow:
+          "0 3px 10px oklch(0 0 0 / 0.45), inset 0 1px 0 oklch(1 0 0 / 0.8)",
         animationDelay: `${delay}ms`,
       }}
     >
-      <div className="text-sm font-semibold leading-none" style={{ fontFamily: "var(--font-display)" }}>
-        {rank}
-        <span className="block text-base leading-none mt-0.5">{suit}</span>
+      {/* corner index — top left */}
+      <div
+        className="absolute top-1 left-1.5 text-center leading-none"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        <div className="text-[0.82rem] font-bold tracking-tight">{rank}</div>
+        <div className="text-[0.72rem] -mt-px">{suit}</div>
       </div>
-      <div className="text-2xl text-right leading-none">{suit}</div>
+      {/* corner index — bottom right, rotated like a real card */}
+      <div
+        className="absolute bottom-1 right-1.5 text-center leading-none rotate-180"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        <div className="text-[0.82rem] font-bold tracking-tight">{rank}</div>
+        <div className="text-[0.72rem] -mt-px">{suit}</div>
+      </div>
+      {/* center pip over a faint watermark */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="absolute text-[3.2rem] opacity-[0.07]">{suit}</span>
+        <span className="text-[1.55rem]">{suit}</span>
+      </div>
     </div>
   );
 }
