@@ -7,6 +7,50 @@ import { ApiError } from "./api";
 
 const ANTI_SNIPE_MS = 2 * 60 * 1000;
 
+/**
+ * Cancel a live auction and refund the current high bidder's locked funds.
+ * Race-safe: claims the auction status first, so it can't fight settlement or
+ * a double-cancel.
+ */
+export async function cancelAuction(auctionId: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.auction.updateMany({
+      where: { id: auctionId, status: "live" },
+      data: { status: "cancelled", winnerUserId: null },
+    });
+    if (claimed.count === 0) {
+      throw new ApiError("Auction is not live — cannot cancel", 409);
+    }
+    const high = await tx.bid.findFirst({
+      where: { auctionId, status: "active" },
+    });
+    if (high) {
+      await tx.bid.update({ where: { id: high.id }, data: { status: "refunded" } });
+      // Release the escrow lock. Guarded so a broken invariant fails loudly.
+      const released = await tx.user.updateMany({
+        where: { id: high.userId, ribbitLocked: { gte: high.amountRaw } },
+        data: { ribbitLocked: { decrement: high.amountRaw } },
+      });
+      if (released.count === 0) {
+        throw new Error(`Escrow underflow cancelling auction ${auctionId}`);
+      }
+    }
+  });
+}
+
+/**
+ * End a live auction immediately by pulling its close time to now, then run
+ * the (idempotent, race-safe) settlement.
+ */
+export async function endAuctionNow(auctionId: string): Promise<void> {
+  const claimed = await prisma.auction.updateMany({
+    where: { id: auctionId, status: "live" },
+    data: { endsAt: new Date() },
+  });
+  if (claimed.count === 0) throw new ApiError("Auction is not live", 409);
+  await settleDueAuctions();
+}
+
 export async function settleDueAuctions(): Promise<void> {
   const due = await prisma.auction.findMany({
     where: { status: "live", endsAt: { lte: new Date() } },

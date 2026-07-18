@@ -105,7 +105,10 @@ async function processQueue() {
             kind: "payout",
             amount: wd.amountRaw,
             asset: "RIBBIT",
-            note: `Withdrawal to ${wd.destination.slice(0, 4)}…`,
+            note:
+              wd.kind === "bounty"
+                ? `Bounty prize → ${wd.destination.slice(0, 4)}…`
+                : `Withdrawal to ${wd.destination.slice(0, 4)}…`,
             ref: signature,
           },
         }),

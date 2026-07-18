@@ -35,6 +35,7 @@ model User {
   seeds        ServerSeed[]
   ledger       LedgerEntry[]
   arcadeRuns   ArcadeRun[]
+  bountyAwards BountyAward[]
 }
 
 // Every credit movement is written to an append-only ledger for auditability.
@@ -122,8 +123,13 @@ model Withdrawal {
   user        User      @relation(fields: [userId], references: [id])
   amountRaw   BigInt
   destination String // wallet pubkey
-  status      String    @default("pending") // "pending" | "sent" | "rejected"
+  status      String    @default("pending") // "pending" | "processing" | "sent" | "rejected"
   signature   String? // payout tx signature once sent
+  // "balance" = user withdrawing their own escrow; "bounty" = a prize payout
+  // funded by the treasury (no user-balance debit). Both flow through the
+  // same off-server payout worker.
+  kind        String    @default("balance")
+  ref         String? // bounty id for bounty payouts
   createdAt   DateTime  @default(now())
   processedAt DateTime?
 
@@ -143,6 +149,9 @@ model Auction {
   currentRaw   BigInt   @default(0)
   winnerUserId String?
   status       String   @default("live") // "live" | "settled" | "cancelled"
+  // Physical/RWA lots need delivery tracking after they settle.
+  fulfilled       Boolean @default(false)
+  fulfillmentNote String?
   startsAt     DateTime @default(now())
   endsAt       DateTime
   createdAt    DateTime @default(now())
@@ -197,11 +206,33 @@ model Bounty {
   prizeRibbit BigInt // prize pool in raw $RIBBIT units
   prizeText   String? // display override e.g. "5,000 $RIBBIT + badge"
   status      String   @default("open") // "open" | "closed" | "paid"
+  paidAt      DateTime?
   startsAt    DateTime @default(now())
   endsAt      DateTime
   createdAt   DateTime @default(now())
 
+  awards      BountyAward[]
+
   @@index([status, endsAt])
+}
+
+// One row per winner paid for a bounty. The prize is split across the top
+// ranks; each award queues a treasury-funded Withdrawal (kind "bounty") that
+// the off-server payout worker pays out — the same audited path as balance
+// withdrawals. Records are immutable proof of who was paid what and why.
+model BountyAward {
+  id           String   @id @default(cuid())
+  bountyId     String
+  bounty       Bounty   @relation(fields: [bountyId], references: [id])
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  rank         Int
+  amountRaw    BigInt
+  value        Int // the score / net-credits that won this rank (audit trail)
+  withdrawalId String? // linked payout in the withdrawal queue
+  createdAt    DateTime @default(now())
+
+  @@index([bountyId])
 }
 
 // One row per issued arcade run token (id = the token's jti). Starting a new
