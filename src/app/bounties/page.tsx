@@ -36,6 +36,16 @@ const GAME_LABELS: Record<string, string> = {
   blackjack: "Blackjack",
 };
 
+// Same artwork the arcade uses, so a bounty reads as its game at a glance.
+const GAME_ART: Record<string, string> = {
+  flip: "/art/owp_pump.png",
+  dice: "/art/art-dice.jpg",
+  blackjack: "/art/owp_bj.png",
+  hopper: "/art/owp_frogger.png",
+  frogris: "/art/owp_frogris.png",
+  worm: "/art/owp_worm.png",
+};
+
 export default function BountiesPage() {
   const [open, setOpen] = useState<Bounty[]>([]);
   const [closed, setClosed] = useState<Bounty[]>([]);
@@ -116,6 +126,27 @@ export default function BountiesPage() {
           )}
           {open.map((b) => (
             <div key={b.id} className="panel panel-hover p-6">
+              <div className="flex gap-4">
+                {b.game && GAME_ART[b.game] && (
+                  <Link
+                    href={`/games/${b.game}`}
+                    className="shrink-0 hidden sm:block group/thumb"
+                    title={GAME_LABELS[b.game] ?? b.game}
+                  >
+                    <span
+                      className="block w-[84px] h-[84px] rounded-lg overflow-hidden border"
+                      style={{ borderColor: "var(--hairline-strong)" }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={GAME_ART[b.game]}
+                        alt=""
+                        className="w-full h-full object-cover transition-transform group-hover/thumb:scale-105"
+                      />
+                    </span>
+                  </Link>
+                )}
+                <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex gap-1.5 mb-2.5 flex-wrap">
@@ -182,6 +213,8 @@ export default function BountiesPage() {
                   Free-game bounty — pays out weekly to every eligible winner.
                 </p>
               )}
+                </div>
+              </div>
             </div>
           ))}
 
@@ -193,11 +226,22 @@ export default function BountiesPage() {
                   key={b.id}
                   className="panel p-4 opacity-70 flex justify-between items-center gap-3"
                 >
-                  <div className="min-w-0">
-                    <span className="font-medium tracking-tight">{b.title}</span>
-                    <span className="text-fog text-sm ml-3">
-                      {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`}
-                    </span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    {b.game && GAME_ART[b.game] && (
+                      <span
+                        className="block w-10 h-10 rounded-md overflow-hidden border shrink-0"
+                        style={{ borderColor: "var(--hairline)" }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={GAME_ART[b.game]} alt="" className="w-full h-full object-cover" />
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <span className="font-medium tracking-tight">{b.title}</span>
+                      <span className="text-fog text-sm ml-3">
+                        {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`}
+                      </span>
+                    </div>
                   </div>
                   <span className="badge">{b.status}</span>
                 </div>
