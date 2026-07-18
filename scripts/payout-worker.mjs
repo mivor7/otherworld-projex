@@ -49,6 +49,17 @@ const fromAta = getAssociatedTokenAddressSync(MINT, signer.publicKey, true);
 
 console.log(`Payout worker up. Treasury: ${signer.publicKey.toBase58()}`);
 
+// Rows stuck in "processing" mean a previous run died between sending and
+// marking. NEVER auto-retry those — verify on-chain first, then resolve in
+// /admin (mark sent with the signature, or reject to refund).
+const limbo = await prisma.withdrawal.findMany({ where: { status: "processing" } });
+for (const wd of limbo) {
+  console.error(
+    `⚠ ${wd.id}: stuck in "processing" (${wd.amountRaw} raw → ${wd.destination}). ` +
+      "Check the chain before resolving in /admin."
+  );
+}
+
 async function processQueue() {
   const pending = await prisma.withdrawal.findMany({
     where: { status: "pending" },
@@ -59,6 +70,17 @@ async function processQueue() {
   for (const wd of pending) {
     if (wd.amountRaw > MAX_PAYOUT) {
       console.log(`↷ ${wd.id}: above MAX_PAYOUT, leaving for manual review`);
+      continue;
+    }
+    // Claim the row BEFORE touching the chain — if an admin rejected (and
+    // refunded) it a moment ago, or another worker instance grabbed it, we
+    // must not send. An on-chain payment is irreversible.
+    const claimed = await prisma.withdrawal.updateMany({
+      where: { id: wd.id, status: "pending" },
+      data: { status: "processing" },
+    });
+    if (claimed.count === 0) {
+      console.log(`↷ ${wd.id}: no longer pending, skipping`);
       continue;
     }
     try {
@@ -90,6 +112,11 @@ async function processQueue() {
       ]);
       console.log(`✓ ${wd.id}: paid ${wd.amountRaw} raw → ${wd.destination} (${signature})`);
     } catch (e) {
+      // Send failed before confirmation — release the claim for a retry.
+      await prisma.withdrawal.updateMany({
+        where: { id: wd.id, status: "processing" },
+        data: { status: "pending" },
+      });
       console.error(`✗ ${wd.id}: ${e.message} — will retry next cycle`);
     }
   }

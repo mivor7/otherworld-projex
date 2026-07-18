@@ -119,7 +119,10 @@ export default function AuctionsPage() {
     return () => clearInterval(t);
   }, [load]);
 
+  const depositValid = Number.isFinite(amount) && amount >= 1;
+
   const doDeposit = async () => {
+    if (!depositValid) return;
     setBusy(true);
     setMsg(null);
     const res = await depositForBidding(amount);
@@ -255,7 +258,11 @@ export default function AuctionsPage() {
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
                 />
-                <button className="btn btn-primary" onClick={doDeposit} disabled={busy}>
+                <button
+                  className="btn btn-primary"
+                  onClick={doDeposit}
+                  disabled={busy || !depositValid}
+                >
                   {busy ? "…" : "Deposit"}
                 </button>
               </div>

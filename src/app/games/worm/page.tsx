@@ -51,6 +51,7 @@ export default function WormPage() {
   // Local entropy only — never recorded, never submitted.
   const attractRef = useRef<Game | null>(null);
   const runTokenRef = useRef<string | null>(null);
+  const overAtRef = useRef(0);
   const pendingSubmitRef = useRef<Promise<void> | null>(null);
   const popRef = useRef<{ x: number; y: number; at: number } | null>(null);
   const [hud, setHud] = useState({ score: 0, flies: 0, steps: 0, over: true, started: false });
@@ -121,6 +122,7 @@ export default function WormPage() {
     }
     runTokenRef.current = null;
     popRef.current = null;
+    overAtRef.current = 0;
     if (me.signedIn) {
       try {
         const res = await fetch("/api/arcade/start", {
@@ -185,6 +187,9 @@ export default function WormPage() {
       }
       if (e.key === " " && (!gameRef.current || gameRef.current.over)) {
         e.preventDefault();
+        // A run just ended: swallow the Space that was steering the game so
+        // it can't skip the recap and void the submission window.
+        if (overAtRef.current && performance.now() - overAtRef.current < 700) return;
         start();
       }
     };
@@ -277,6 +282,7 @@ export default function WormPage() {
           step(g);
           if (g.over) break;
         }
+        if (g.over && overAtRef.current === 0) overAtRef.current = performance.now();
       } else if (gameRef.current) {
         gameRef.current.last = now;
       }

@@ -42,6 +42,7 @@ export default function FrogrisPage() {
   const runTokenRef = useRef<string | null>(null);
   const pendingSubmitRef = useRef<Promise<void> | null>(null);
   const submittedRef = useRef(false);
+  const overAtRef = useRef(0);
   const popRef = useRef<Pop | null>(null);
   const prevScoreRef = useRef(0);
   const [hud, setHud] = useState({
@@ -112,6 +113,7 @@ export default function FrogrisPage() {
     queueRef.current = [];
     traceRef.current = [];
     submittedRef.current = false;
+    overAtRef.current = 0;
     popRef.current = null;
     prevScoreRef.current = 0;
   }, [me.signedIn]);
@@ -129,6 +131,9 @@ export default function FrogrisPage() {
       const g = gameRef.current;
       if (e.key === " " && (!g || g.over)) {
         e.preventDefault();
+        // Space was the hard-drop key a moment ago — don't let the press
+        // that ended the run instantly restart it.
+        if (overAtRef.current && performance.now() - overAtRef.current < 700) return;
         start();
         return;
       }
@@ -236,6 +241,7 @@ export default function FrogrisPage() {
         }
         if (g.over && !submittedRef.current) {
           submittedRef.current = true;
+          overAtRef.current = performance.now();
           submitScore(g.score, traceRef.current);
         }
       }

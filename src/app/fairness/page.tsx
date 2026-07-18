@@ -230,7 +230,10 @@ export default function FairnessPage() {
               min={0}
               placeholder="Nonce"
               value={vNonce}
-              onChange={(e) => setVNonce(Number(e.target.value))}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                setVNonce(Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0);
+              }}
             />
           </div>
           <div className="flex flex-wrap gap-3">

@@ -6,7 +6,7 @@ import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
-import { useClientSeed } from "@/components/use-client-seed";
+import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { FairCommit } from "@/components/fair-commit";
 
 type View = {
@@ -247,7 +247,9 @@ export default function BlackjackPage() {
   );
 
   const dealNew = () =>
-    sandbox ? dealPractice() : post({ action: "deal", wager, clientSeed });
+    sandbox
+      ? dealPractice()
+      : post({ action: "deal", wager, clientSeed: clientSeed || randomClientSeed() });
   const act = (action: "hit" | "stand" | "double") =>
     sandbox
       ? actPractice(action)

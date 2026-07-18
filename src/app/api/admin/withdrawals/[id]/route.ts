@@ -17,27 +17,33 @@ export const POST = handler(
     if (!wd || wd.status !== "pending") return err("Withdrawal not found or already processed", 404);
 
     if (data.action === "reject") {
-      // Refund the debited balance.
-      await prisma.$transaction([
-        prisma.withdrawal.update({
-          where: { id },
+      // Refund the debited balance. The status guard INSIDE the transaction
+      // makes this once-only — a double-click or a race with the payout
+      // worker can never refund twice or refund a paid withdrawal.
+      const refunded = await prisma.$transaction(async (tx) => {
+        const claimed = await tx.withdrawal.updateMany({
+          where: { id, status: "pending" },
           data: { status: "rejected", processedAt: new Date() },
-        }),
-        prisma.user.update({
+        });
+        if (claimed.count === 0) return false;
+        await tx.user.update({
           where: { id: wd.userId },
           data: { ribbitBalance: { increment: wd.amountRaw } },
-        }),
-      ]);
+        });
+        return true;
+      });
+      if (!refunded) return err("Already processed by another action", 409);
       return ok({ status: "rejected" });
     }
 
     if (!data.signature) return err("Provide the payout tx signature");
-    await prisma.$transaction([
-      prisma.withdrawal.update({
-        where: { id },
+    const marked = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.withdrawal.updateMany({
+        where: { id, status: "pending" },
         data: { status: "sent", signature: data.signature, processedAt: new Date() },
-      }),
-      prisma.treasuryEvent.create({
+      });
+      if (claimed.count === 0) return false;
+      await tx.treasuryEvent.create({
         data: {
           kind: "payout",
           amount: wd.amountRaw,
@@ -45,8 +51,10 @@ export const POST = handler(
           note: `Withdrawal to ${wd.destination.slice(0, 4)}…`,
           ref: data.signature,
         },
-      }),
-    ]);
+      });
+      return true;
+    });
+    if (!marked) return err("Already processed by another action", 409);
     return ok({ status: "sent" });
   }
 );

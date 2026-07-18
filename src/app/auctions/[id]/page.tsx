@@ -82,26 +82,34 @@ export default function AuctionDetailPage({
     BigInt(auction.currentRaw) > 0n
       ? BigInt(auction.currentRaw) + BigInt(auction.minIncrement)
       : BigInt(auction.startBidRaw);
-  const suggested = bid ?? Math.ceil(fromRawClient(minNext));
+  const suggested =
+    bid !== null && Number.isFinite(bid) ? bid : Math.ceil(fromRawClient(minNext));
+  const bidValid = Number.isFinite(suggested) && suggested > 0;
   const youAreHigh = auction.bids.some((b) => b.status === "active" && b.isYou);
 
   const placeBid = async () => {
+    if (!bidValid) return;
     setBusy(true);
     setMsg(null);
-    const res = await fetch(`/api/auctions/${id}/bid`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amountRaw: toRawClient(suggested).toString() }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setMsg({ kind: "ok", text: "You hold the high bid." });
-      load();
-      await refresh();
-    } else {
-      setMsg({ kind: "err", text: data.error ?? "Bid failed" });
+    try {
+      const res = await fetch(`/api/auctions/${id}/bid`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountRaw: toRawClient(suggested).toString() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMsg({ kind: "ok", text: "You hold the high bid." });
+        load();
+        await refresh();
+      } else {
+        setMsg({ kind: "err", text: data.error ?? "Bid failed" });
+      }
+    } catch {
+      setMsg({ kind: "err", text: "Network hiccup — your bid was not placed. Try again." });
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   return (
@@ -195,13 +203,15 @@ export default function AuctionDetailPage({
                     type="number"
                     className="input"
                     min={Math.ceil(fromRawClient(minNext))}
-                    value={suggested}
-                    onChange={(e) => setBid(Number(e.target.value))}
+                    value={Number.isFinite(suggested) ? suggested : ""}
+                    onChange={(e) =>
+                      setBid(e.target.value === "" ? null : Number(e.target.value))
+                    }
                   />
                   <button
                     className="btn btn-primary"
                     onClick={placeBid}
-                    disabled={busy || !me.signedIn || youAreHigh}
+                    disabled={busy || !me.signedIn || youAreHigh || !bidValid}
                   >
                     {busy ? "…" : "Place bid"}
                   </button>
@@ -235,6 +245,9 @@ export default function AuctionDetailPage({
                     ({fmtRibbit(me.ribbitAvailable ?? 0)} available)
                   </p>
                   <p>Bids in the final 2 minutes extend the hammer by 2 minutes.</p>
+                  {!me.signedIn && (
+                    <p className="text-gold">Sign in with your wallet (top right) to bid.</p>
+                  )}
                 </div>
               </>
             )}

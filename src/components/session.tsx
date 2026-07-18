@@ -73,6 +73,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wallet }),
       });
+      if (!nonceRes.ok) return false;
       const { message } = await nonceRes.json();
       const signature = await signMessage(new TextEncoder().encode(message));
       const verifyRes = await fetch("/api/auth/verify", {

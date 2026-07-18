@@ -6,7 +6,7 @@ import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
-import { useClientSeed } from "@/components/use-client-seed";
+import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { FairCommit } from "@/components/fair-commit";
 
 type DiceResult = {
@@ -62,7 +62,7 @@ export default function DicePage() {
     const res = await fetch("/api/games/dice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target, wager, clientSeed }),
+      body: JSON.stringify({ target, wager, clientSeed: clientSeed || randomClientSeed() }),
     });
     const data = await res.json();
     await new Promise((r) => setTimeout(r, 600));

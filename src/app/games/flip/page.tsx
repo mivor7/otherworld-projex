@@ -6,7 +6,7 @@ import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
-import { useClientSeed } from "@/components/use-client-seed";
+import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { FairCommit } from "@/components/fair-commit";
 
 type FlipResult = {
@@ -70,7 +70,7 @@ export default function FlipPage() {
     const res = await fetch("/api/games/flip", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ side, wager, clientSeed }),
+      body: JSON.stringify({ side, wager, clientSeed: clientSeed || randomClientSeed() }),
     });
     const data = await res.json();
     if (!res.ok) {

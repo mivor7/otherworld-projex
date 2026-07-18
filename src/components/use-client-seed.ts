@@ -38,6 +38,8 @@ export function useClientSeed() {
     setSeedState(v);
   }, []);
 
-  // Fallback keeps rounds playable before hydration finishes.
-  return { seed: seed || randomClientSeed(), setSeed, randomize, ready: seed !== "" };
+  // Empty until hydration reads localStorage — callers fall back to
+  // randomClientSeed() at USE time. Never generate here: a per-render random
+  // value breaks hydration and gives the UI a moving target.
+  return { seed, setSeed, randomize, ready: seed !== "" };
 }

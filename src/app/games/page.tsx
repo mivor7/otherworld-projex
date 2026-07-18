@@ -82,7 +82,14 @@ export default function GamesPage() {
       .catch(() => {});
   }, [me.signedIn]);
 
+  const burnValid =
+    Number.isFinite(burnAmount) && burnAmount >= CLIENT_CONFIG.ribbitPerCredit;
+  const burnRemainder = burnValid ? burnAmount % CLIENT_CONFIG.ribbitPerCredit : 0;
+
   const doBurn = async () => {
+    // Guard hard: a burn below the credit price would destroy tokens for
+    // zero credits — the chain can't undo it.
+    if (!burnValid) return;
     setBusy(true);
     setMsg(null);
     const res = await burnForCredits(burnAmount);
@@ -205,7 +212,16 @@ export default function GamesPage() {
                   value={burnAmount}
                   onChange={(e) => setBurnAmount(Number(e.target.value))}
                 />
-                <button className="btn btn-primary" onClick={doBurn} disabled={busy}>
+                <button
+                  className="btn btn-primary"
+                  onClick={doBurn}
+                  disabled={busy || !burnValid}
+                  title={
+                    burnValid
+                      ? undefined
+                      : `Minimum ${CLIENT_CONFIG.ribbitPerCredit.toLocaleString()} $RIBBIT`
+                  }
+                >
                   {busy ? "…" : "Burn"}
                 </button>
               </div>
@@ -224,9 +240,19 @@ export default function GamesPage() {
                 {CLIENT_CONFIG.ribbitPerCredit.toLocaleString()} $RIBBIT = 1 credit —
                 you’ll receive{" "}
                 <span className="text-neon">
-                  {Math.floor(burnAmount / CLIENT_CONFIG.ribbitPerCredit)}
+                  {burnValid
+                    ? Math.floor(burnAmount / CLIENT_CONFIG.ribbitPerCredit)
+                    : 0}
                 </span>
-                . Burns are permanent and verified on-chain.
+                .{" "}
+                {burnRemainder > 0 && (
+                  <span className="text-gold">
+                    {burnRemainder.toLocaleString()} $RIBBIT of that burns without
+                    granting a credit — use a multiple of{" "}
+                    {CLIENT_CONFIG.ribbitPerCredit.toLocaleString()}.{" "}
+                  </span>
+                )}
+                Burns are permanent and verified on-chain.
               </p>
               {CLIENT_CONFIG.devFaucet && (
                 <button className="btn btn-ghost w-full mb-3" onClick={doFaucet} disabled={busy}>

@@ -40,6 +40,7 @@ export default function HopperPage() {
   const runTokenRef = useRef<string | null>(null);
   const pendingSubmitRef = useRef<Promise<void> | null>(null);
   const submittedRef = useRef(false);
+  const overAtRef = useRef(0);
   const [hud, setHud] = useState({
     score: 0, lives: 3, level: 0, over: true, started: false, seconds: 0,
   });
@@ -106,6 +107,7 @@ export default function HopperPage() {
     queueRef.current = [];
     traceRef.current = [];
     submittedRef.current = false;
+    overAtRef.current = 0;
   }, [me.signedIn]);
 
   const enqueue = useCallback((d: number) => {
@@ -128,6 +130,7 @@ export default function HopperPage() {
       }
       if (e.key === " " && (!gameRef.current || gameRef.current.over)) {
         e.preventDefault();
+        if (overAtRef.current && performance.now() - overAtRef.current < 700) return;
         start();
       }
     };
@@ -170,6 +173,7 @@ export default function HopperPage() {
         }
         if (g.over && !submittedRef.current) {
           submittedRef.current = true;
+          overAtRef.current = performance.now();
           submitScore(g.score, traceRef.current);
         }
       } else if (!g || g.over) {
