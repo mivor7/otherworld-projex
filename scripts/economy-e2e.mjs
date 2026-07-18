@@ -164,6 +164,34 @@ try {
   check("per-game summary lists the flip bounty for indicators",
     summaries.data.games?.flip?.prizeRibbit > 0, JSON.stringify(summaries.data.games?.flip));
 
+  // ---------------- buyers are eligible (spend = burns + buys) ----------------
+  console.log("— A credit-buyer (no pure burn) still qualifies for prizes");
+  const b6 = await prisma.bounty.create({
+    data: {
+      title: "ECON buyer", description: "e2e", game: "blackjack", kind: "leaderboard",
+      prizeRibbit: 8000n * RAW, autoPay: true, triggerCreditVolume: 100000,
+      endsAt: new Date(Date.now() + 7 * 864e5),
+    },
+  });
+  bountyIds.push(b6.id);
+  const buyer = await prisma.user.create({ data: { wallet: `econ-buyer-${Math.round(performance.now())}` } });
+  userIds.push(buyer.id);
+  // NO BurnEvent — only a credit purchase (part burned, part to house).
+  await prisma.creditPurchase.create({
+    data: { userId: buyer.id, signature: `econ-buy-life-${buyer.id}`, ribbitRaw: 2000n * RAW, burnedRaw: 1000n * RAW, houseRaw: 1000n * RAW, credits: 20, createdAt: new Date(Date.now() - 40 * 864e5) },
+  });
+  await prisma.creditPurchase.create({
+    data: { userId: buyer.id, signature: `econ-buy-win-${buyer.id}`, ribbitRaw: 300n * RAW, burnedRaw: 150n * RAW, houseRaw: 150n * RAW, credits: 3, createdAt: new Date(b6.startsAt.getTime() + 500) },
+  });
+  const bseed = await prisma.serverSeed.create({ data: { userId: buyer.id, seed: "s", seedHash: "h", active: false } });
+  await prisma.gameRound.create({
+    data: { userId: buyer.id, seedId: bseed.id, game: "blackjack", nonce: 0, clientSeed: "x", params: "{}", outcome: "{}", wager: 120, payout: 320, houseTake: 0, settled: true, createdAt: new Date(b6.startsAt.getTime() + 1000) },
+  });
+  const buyerLive = await api("/api/bounties/live?game=blackjack");
+  check("credit-buyer with no pure burn is eligible & ranked",
+    buyerLive.data.entries?.some((e) => e.projectedRibbit > 0),
+    JSON.stringify(buyerLive.data.entries));
+
   // ---------------- free-game bounty pays weekly (time-based) ----------------
   console.log("— Free-game bounty pays on time, not on spend");
   const b4 = await prisma.bounty.create({
@@ -197,6 +225,7 @@ try {
     await prisma.gameRound.deleteMany({ where: { userId: id } });
     await prisma.serverSeed.deleteMany({ where: { userId: id } });
     await prisma.burnEvent.deleteMany({ where: { userId: id } });
+    await prisma.creditPurchase.deleteMany({ where: { userId: id } });
     await prisma.ledgerEntry.deleteMany({ where: { userId: id } });
     await prisma.user.deleteMany({ where: { id } });
   }

@@ -1,25 +1,42 @@
 // Prize-board eligibility helpers — one source of truth for the
 // skin-in-the-game rules:
-//   1. lifetime verified burns ≥ RANKED_MIN_BURNED_RIBBIT, and
-//   2. burns INSIDE the board window ≥ RANKED_MIN_WINDOW_BURNED_RIBBIT
-// Rule 2 is the anti-sybil multiplier: splitting play across N wallets costs
-// N× fresh burns every single window, not one historical burn per wallet.
-// Either threshold set to 0 disables that rule.
+//   1. lifetime $RIBBIT spent on credits ≥ RANKED_MIN_BURNED_RIBBIT, and
+//   2. spend INSIDE the board window ≥ RANKED_MIN_WINDOW_BURNED_RIBBIT
+// "Spend" counts BOTH pure burns AND credit purchases (a buyer is a spender —
+// they burn part and pay the house the rest; both are skin in the game). Rule
+// 2 is the anti-sybil multiplier: splitting play across N wallets costs N×
+// fresh spend every window. Either threshold set to 0 disables that rule.
 import { prisma } from "./db";
 import { CONFIG, toRaw } from "./config";
 
-/** Burned raw units per user, optionally restricted to a window. */
+/**
+ * Total $RIBBIT a user has committed to credits (burns + buys), optionally
+ * restricted to a window. Buys count their full amount — the whole payment is
+ * real spend, regardless of the burn/house split.
+ */
 export async function burnTotals(
   userIds: string[],
   since?: Date
 ): Promise<Map<string, bigint>> {
   if (userIds.length === 0) return new Map();
-  const burns = await prisma.burnEvent.groupBy({
-    by: ["userId"],
-    where: { userId: { in: userIds }, ...(since ? { createdAt: { gte: since } } : {}) },
-    _sum: { amountRaw: true },
-  });
-  return new Map(burns.map((b) => [b.userId, b._sum.amountRaw ?? 0n]));
+  const whenBurn = since ? { createdAt: { gte: since } } : {};
+  const [burns, buys] = await Promise.all([
+    prisma.burnEvent.groupBy({
+      by: ["userId"],
+      where: { userId: { in: userIds }, ...whenBurn },
+      _sum: { amountRaw: true },
+    }),
+    prisma.creditPurchase.groupBy({
+      by: ["userId"],
+      where: { userId: { in: userIds }, ...whenBurn },
+      _sum: { ribbitRaw: true },
+    }),
+  ]);
+  const totals = new Map<string, bigint>();
+  for (const b of burns) totals.set(b.userId, b._sum.amountRaw ?? 0n);
+  for (const p of buys)
+    totals.set(p.userId, (totals.get(p.userId) ?? 0n) + (p._sum.ribbitRaw ?? 0n));
+  return totals;
 }
 
 /**

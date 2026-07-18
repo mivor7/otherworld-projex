@@ -29,16 +29,19 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // (eyJ… — the pre-registry format). Test tokens are adm-run-/econ-r-/demo-run-.
 const isRealToken = (t) => UUID.test(t) || t.startsWith("eyJ");
 
-const [users, scores, burns, deposits] = await Promise.all([
+const [users, scores, burns, buys, deposits] = await Promise.all([
   prisma.user.findMany({ select: { id: true, wallet: true } }),
   prisma.arcadeScore.findMany({ select: { userId: true, runToken: true } }),
   prisma.burnEvent.findMany({ select: { userId: true, signature: true } }),
+  prisma.creditPurchase.findMany({ select: { userId: true, signature: true } }),
   prisma.deposit.findMany({ select: { userId: true } }),
 ]);
 
 const real = new Set();
 for (const s of scores) if (isRealToken(s.runToken)) real.add(s.userId);
 for (const b of burns) if (!TEST_BURN.test(b.signature)) real.add(b.userId);
+// A real credit purchase (on-chain tx signature) marks a real buyer/spender.
+for (const b of buys) if (!TEST_BURN.test(b.signature)) real.add(b.userId);
 for (const d of deposits) real.add(d.userId);
 
 const testUserIds = users.filter((u) => !real.has(u.id)).map((u) => u.id);
