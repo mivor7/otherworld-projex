@@ -8,7 +8,7 @@
 import { z } from "zod";
 import { err, handler, ok, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { ARCADE_GAMES, requiredRevenueRibbit } from "@/lib/bounty";
+import { ARCADE_GAMES, requiredCreditSpend } from "@/lib/bounty";
 import {
   SETTING_DEFS,
   settingDef,
@@ -90,19 +90,22 @@ export const POST = handler(async (req: Request) => {
   invalidateSettingsCache();
   const after = (await houseConfig())[def.key as keyof HouseConfig];
 
-  // The margin re-prices every open auto-pay credit bounty's required-revenue
-  // reference, so the stored marker matches the live gate. (Only the margin
-  // affects required revenue now — the credit price and house edge no longer
-  // touch bounty funding.)
+  // The credit price, buy-split and margin all feed the required credit-spend,
+  // so a change to any of them re-derives every open auto-pay credit bounty's
+  // stored threshold — keeping the meter and the payout gate in agreement.
+  // (The house edge is NOT here — it no longer affects bounties.)
   let rederived = 0;
-  if (def.key === "bountyHouseMargin" && String(before) !== String(after)) {
+  if (
+    ["ribbitPerCredit", "buyBurnShare", "bountyHouseMargin"].includes(def.key) &&
+    String(before) !== String(after)
+  ) {
     const open = await prisma.bounty.findMany({
       where: { status: "open", autoPay: true, game: { not: null } },
       select: { id: true, game: true, prizeRibbit: true, triggerCreditVolume: true },
     });
     for (const b of open) {
       if (!b.game || ARCADE_GAMES.has(b.game)) continue; // weekly, no marker
-      const marker = await requiredRevenueRibbit(b.prizeRibbit);
+      const marker = await requiredCreditSpend(b.prizeRibbit);
       if (marker !== b.triggerCreditVolume) {
         await prisma.bounty.update({
           where: { id: b.id },

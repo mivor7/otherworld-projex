@@ -7,7 +7,7 @@ import { z } from "zod";
 import { err, handler, ok, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { toRaw } from "@/lib/config";
-import { ARCADE_GAMES, awardBounty, requiredRevenueRibbit } from "@/lib/bounty";
+import { ARCADE_GAMES, awardBounty, requiredCreditSpend } from "@/lib/bounty";
 
 const body = z.object({
   action: z.enum(["edit", "close", "cancel", "delete", "award"]),
@@ -52,7 +52,7 @@ export const POST = handler(
       // credit-game bounty — never trust a client-supplied threshold.
       const isCreditGame = !!bounty.game && !ARCADE_GAMES.has(bounty.game);
       const triggerCreditVolume =
-        autoPay && isCreditGame ? await requiredRevenueRibbit(prizeRaw) : null;
+        autoPay && isCreditGame ? await requiredCreditSpend(prizeRaw) : null;
 
       const updated = await prisma.bounty.update({
         where: { id },
