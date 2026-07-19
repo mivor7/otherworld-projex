@@ -45,10 +45,13 @@ check("bounty progress meters present", withProgress.length > 0,
 // Credit-game bounties expose a sane credit-spend meter: a positive threshold
 // and progress that never exceeds it. (The exact threshold formula is
 // server-owned — prize x (1+margin) / ((1-burnShare) x ribbitPerCredit).)
+// A credit bounty exposes a positive threshold and non-negative spend. Spend
+// CAN exceed the threshold — that's the valid "meter full, waiting for a
+// net-positive winner" state — so we don't cap it.
 let meterBad = null;
 for (const b of bounties.json?.open ?? []) {
   if (b.progress?.mode !== "credit") continue;
-  if (!(b.progress.threshold > 0) || b.progress.spent > b.progress.threshold + 1)
+  if (!(b.progress.threshold > 0) || b.progress.spent < 0)
     meterBad = `${b.title}: spent ${b.progress.spent} / threshold ${b.progress.threshold}`;
 }
 check("credit bounties show a sane spend meter", !meterBad, meterBad ?? "");

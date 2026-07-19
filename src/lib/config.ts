@@ -29,6 +29,11 @@ export const CONFIG = {
   // read against this address.
   treasuryWallet: process.env.TREASURY_WALLET ?? "",
 
+  // Public address of the payout hot wallet (the worker's signer). PUBLIC key
+  // ONLY — the private key never leaves the worker box. Set so the admin panel
+  // can display the float that actually pays withdrawals/prizes.
+  payoutWallet: process.env.PAYOUT_WALLET ?? "",
+
   // Burn-to-play: how many whole $RIBBIT one play credit costs.
   ribbitPerCredit: num(process.env.RIBBIT_PER_CREDIT, 100),
 

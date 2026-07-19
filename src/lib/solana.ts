@@ -224,3 +224,36 @@ export async function getTreasuryStats(): Promise<TreasuryStats> {
     };
   }
 }
+
+// SOL + $RIBBIT for any PUBLIC address (e.g. the payout hot wallet), read-only.
+// Cached per-instance. Never throws. Only a public address is ever needed —
+// the payout wallet's private key stays on the worker box.
+const walletCache = new Map<string, { at: number; value: TreasuryStats }>();
+
+export async function getWalletBalances(address: string): Promise<TreasuryStats> {
+  if (!address) return { configured: false, solBalance: null, ribbitBalance: null, wallet: null };
+  const hit = walletCache.get(address);
+  if (hit && Date.now() - hit.at < STATS_TTL_MS) return hit.value;
+  try {
+    const owner = new PublicKey(address);
+    const conn = connection();
+    const [lamports, tokenAccounts] = await Promise.all([
+      conn.getBalance(owner),
+      conn.getParsedTokenAccountsByOwner(owner, { mint: new PublicKey(CONFIG.ribbitMint) }),
+    ]);
+    const ribbit = tokenAccounts.value.reduce(
+      (sum, a) => sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0),
+      0
+    );
+    const value: TreasuryStats = {
+      configured: true,
+      solBalance: lamports / LAMPORTS_PER_SOL,
+      ribbitBalance: ribbit,
+      wallet: address,
+    };
+    walletCache.set(address, { at: Date.now(), value });
+    return value;
+  } catch {
+    return { configured: true, solBalance: null, ribbitBalance: null, wallet: address };
+  }
+}

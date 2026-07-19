@@ -152,6 +152,7 @@ export default function GamesPage() {
             : "Payment verified — your credits are in your balance.",
       });
       await refresh();
+      window.dispatchEvent(new Event("owp:balance")); // update the top-panel $RIBBIT
     } else {
       setMsg({ kind: "err", text: res.error });
     }

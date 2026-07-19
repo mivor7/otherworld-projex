@@ -182,6 +182,15 @@ export default function AuctionsPage() {
         }
       />
 
+      <div className="mt-6">
+        <Notice kind="info">
+          <span className="font-medium text-frost">The Auction House is under
+          development.</span> Lots require admin approval, and the bidding flow
+          is still being finished — feel free to look around, but expect rough
+          edges here while the other wings are live.
+        </Notice>
+      </div>
+
       <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 mt-8">
         <div>
           <div className="chips mb-5">

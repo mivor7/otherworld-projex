@@ -6,12 +6,14 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useSession } from "./session";
 import { CopyChip } from "./copy-chip";
+import { useRibbitBalance } from "./use-ribbit-balance";
 import { fmtRibbit, shortWallet } from "@/lib/client-config";
 
 export function WalletButton() {
   const { publicKey, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
   const { me, signIn, signOut, signingIn, signInError } = useSession();
+  const ribbit = useRibbitBalance();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -69,8 +71,14 @@ export function WalletButton() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="mono text-neon">{me.credits ?? 0} cr</span>
-        <span className="mono">{shortWallet(me.wallet ?? "")}</span>
+        <span className="mono text-gold" title="$RIBBIT in your wallet">
+          {ribbit === null
+            ? "…"
+            : ribbit.toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
+          $RIBBIT
+        </span>
+        <span className="mono text-neon" title="Play credits">{me.credits ?? 0} cr</span>
+        <span className="mono hidden sm:inline">{shortWallet(me.wallet ?? "")}</span>
         <span
           className="text-fog transition-transform"
           style={{ transform: open ? "rotate(180deg)" : undefined }}
@@ -91,11 +99,19 @@ export function WalletButton() {
 
           <div className="space-y-2 text-sm mb-4">
             <div className="flex justify-between">
+              <span className="text-fog">$RIBBIT in wallet</span>
+              <span className="stat-number text-gold">
+                {ribbit === null
+                  ? "…"
+                  : ribbit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-fog">Play credits</span>
               <span className="stat-number text-neon">{me.credits ?? 0}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-fog">$RIBBIT available</span>
+              <span className="text-fog">Bidding balance</span>
               <span className="stat-number">{fmtRibbit(me.ribbitAvailable ?? 0)}</span>
             </div>
             <div className="flex justify-between">
@@ -105,6 +121,9 @@ export function WalletButton() {
           </div>
 
           <div className="grid gap-1.5 mb-4">
+            <Link href="/games" className="btn btn-primary w-full !justify-start" onClick={() => setOpen(false)}>
+              Buy credits
+            </Link>
             <Link href="/account" className="btn btn-ghost w-full !justify-start" onClick={() => setOpen(false)}>
               My account
             </Link>

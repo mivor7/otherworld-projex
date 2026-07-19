@@ -44,6 +44,12 @@ type Overview = {
       ribbitBalance: number | null;
       wallet: string | null;
     };
+    payout: {
+      configured: boolean;
+      solBalance: number | null;
+      ribbitBalance: number | null;
+      wallet: string | null;
+    };
   };
 };
 
@@ -301,6 +307,7 @@ export default function AdminPage() {
 
   const s = data?.stats;
   const treasury = s?.treasury;
+  const payout = s?.payout;
 
   return (
     <div className="pt-10">
@@ -360,6 +367,22 @@ export default function AdminPage() {
               ? treasury.solBalance.toFixed(3)
               : "—"
           }
+        />
+        <StatCard
+          label="Payout wallet $RIBBIT"
+          value={
+            payout?.configured && payout.ribbitBalance !== null
+              ? payout.ribbitBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })
+              : payout?.configured
+                ? "—"
+                : "not set"
+          }
+          sub={
+            payout?.configured && payout.solBalance !== null
+              ? `${payout.solBalance.toFixed(3)} SOL for fees`
+              : "set PAYOUT_WALLET (public address)"
+          }
+          tone="gold"
         />
       </div>
 

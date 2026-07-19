@@ -1,6 +1,7 @@
 import { handler, ok, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { getTreasuryStats } from "@/lib/solana";
+import { getTreasuryStats, getWalletBalances } from "@/lib/solana";
+import { CONFIG } from "@/lib/config";
 
 export const GET = handler(async () => {
   await requireAdmin();
@@ -16,6 +17,7 @@ export const GET = handler(async () => {
     lockedAgg,
     unfulfilled,
     treasury,
+    payout,
   ] = await Promise.all([
     prisma.listingApplication.findMany({
       where: { status: "pending" },
@@ -44,6 +46,7 @@ export const GET = handler(async () => {
       take: 100,
     }),
     getTreasuryStats(),
+    getWalletBalances(CONFIG.payoutWallet),
   ]);
 
   return ok({
@@ -74,6 +77,7 @@ export const GET = handler(async () => {
       ).toString(),
       lockedRaw: (lockedAgg._sum.ribbitLocked ?? 0n).toString(),
       treasury,
+      payout, // the hot wallet that actually pays withdrawals/prizes
     },
   });
 });
