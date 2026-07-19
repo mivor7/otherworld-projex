@@ -70,11 +70,17 @@ function removePending(signature: string) {
 const isAlreadyRedeemed = (e: string) => /already/i.test(e);
 /** Not-found-yet on chain — worth retrying, the tx may still be propagating. */
 const isNotYetVisible = (e: string) => /could not verify/i.test(e);
+/** Server throttle — stop hammering; the saved signature retries later. */
+const isRateLimited = (e: string) => /too many/i.test(e);
+
+const SAVED_MSG =
+  "Your payment is safe — the signature is saved and will be redeemed " +
+  "automatically next time you open this page, or paste it below.";
 
 async function redeemWithRetry(url: string, signature: string): Promise<ChainResult> {
   let last: ChainResult = { ok: false, error: "Redemption failed" };
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (attempt > 0) await new Promise((r) => setTimeout(r, 4000));
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 5000));
     try {
       last = await postJson(url, { signature });
     } catch {
@@ -89,14 +95,14 @@ async function redeemWithRetry(url: string, signature: string): Promise<ChainRes
       removePending(signature);
       return { ok: true, data: { alreadyRedeemed: true } };
     }
+    // Rate-limited: do NOT keep retrying (that's what caused the lockout).
+    // Leave it saved and let the next page load / manual retry handle it.
+    if (isRateLimited(last.error)) {
+      return { ok: false, error: `The house is busy verifying. ${SAVED_MSG}` };
+    }
     if (!isNotYetVisible(last.error)) return last; // terminal (e.g. wrong wallet)
   }
-  return {
-    ok: false,
-    error:
-      `${last.ok ? "" : last.error}. Your payment is safe — the signature is saved ` +
-      "and will be redeemed automatically on your next visit, or paste it below.",
-  };
+  return { ok: false, error: `${last.ok ? "" : last.error}. ${SAVED_MSG}` };
 }
 
 /**

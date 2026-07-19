@@ -678,34 +678,64 @@ export default function AdminPage() {
                   onChange={(e) => setBountyForm({ ...bountyForm, durationDays: Number(e.target.value) })} />
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm text-fog cursor-pointer">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={bountyForm.autoPay}
                 onChange={(e) => setBountyForm({ ...bountyForm, autoPay: e.target.checked })}
               />
-              Auto-pay every eligible winner pro-rata when triggered
+              <span className="text-frost">Settle this bounty automatically</span>
             </label>
-            {bountyForm.autoPay && !bountyIsFree && (
-              <div
-                className="panel p-3 text-xs leading-relaxed"
-                style={{ color: "var(--text-dim)" }}
-              >
-                Auto-triggers after{" "}
-                <span className="stat-number text-neon">
-                  {computedTrigger.toLocaleString()}
-                </span>{" "}
-                credits are wagered on {bountyForm.game} — derived from the prize so
-                the house edge-take on that play covers it plus{" "}
-                {Math.round(liveNum("bountyHouseMargin", CLIENT_CONFIG.bountyHouseMargin) * 100)}%
-                margin. Set the prize; the threshold follows automatically.
-              </div>
-            )}
-            {bountyForm.autoPay && bountyIsFree && (
-              <p className="text-xs" style={{ color: "var(--text-dim)" }}>
-                Free game — pays out weekly (at the duration you set) to every eligible winner.
-              </p>
-            )}
+            {/* Always explain exactly what will happen — auto vs manual, and
+                the real trigger in both credits and $RIBBIT. */}
+            {(() => {
+              const rpc = liveNum("ribbitPerCredit", CLIENT_CONFIG.ribbitPerCredit);
+              const edge = liveNum("houseEdge", CLIENT_CONFIG.houseEdge);
+              const margin = liveNum("bountyHouseMargin", CLIENT_CONFIG.bountyHouseMargin);
+              const multiple = (1 + margin) / edge; // wagering ÷ prize
+              const wagerRibbit = Math.round(computedTrigger * rpc);
+              if (!bountyForm.autoPay) {
+                return (
+                  <div className="panel p-3 text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                    <span className="text-frost font-medium">Manual bounty.</span> It runs as a
+                    leaderboard for {bountyForm.durationDays} days; then <em>you</em> pick winners and
+                    splits in “Bounty payouts” below and pay them. No automatic trigger, no progress meter.
+                  </div>
+                );
+              }
+              if (bountyIsFree) {
+                return (
+                  <div className="panel p-3 text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                    <span className="text-frost font-medium">Auto-pay · free game.</span> Pays every{" "}
+                    {bountyForm.durationDays} days to all eligible winners, split by best score. Free
+                    episodes are time-based — no spend meter.
+                    <div className="mt-1.5 opacity-80">
+                      Requires the global <span className="text-frost">Bounty auto-pay</span> switch (House
+                      controls, above) to be ON.
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div className="panel p-3 text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                  <span className="text-frost font-medium">Auto-pay · credit game.</span> Unlocks once{" "}
+                  <span className="stat-number text-neon">{computedTrigger.toLocaleString()} credits</span>{" "}
+                  (≈ {wagerRibbit.toLocaleString()} $RIBBIT) have been wagered on {bountyForm.game}, then
+                  pays all eligible winners pro-rata.
+                  <div className="mt-1.5">
+                    That&apos;s ~{multiple.toFixed(0)}× the prize in wagering — the{" "}
+                    {Math.round(edge * 100)}% house edge on that much play covers the{" "}
+                    {bountyForm.prizeRibbit.toLocaleString()} $RIBBIT prize plus a{" "}
+                    {Math.round(margin * 100)}% margin. You set only the prize; this follows the live
+                    house settings.
+                  </div>
+                  <div className="mt-1.5 opacity-80">
+                    Cheaper test? Use a smaller prize, or raise the house edge in House controls.
+                    Requires the global <span className="text-frost">Bounty auto-pay</span> switch to be ON.
+                  </div>
+                </div>
+              );
+            })()}
             {(() => {
               // Same rules the server enforces — shown HERE, so the button
               // can never silently refuse.

@@ -190,13 +190,13 @@ export default function BountiesPage() {
               </div>
               {b.progress?.mode === "credit" && (
                 <div className="mt-4">
-                  <div className="flex items-baseline justify-between mb-1.5">
+                  <div className="flex items-baseline justify-between mb-1.5 gap-2 flex-wrap">
                     <span className="kicker !text-[0.6rem]">
-                      Reward unlocks as the game is played
+                      Prize unlocks as players wager on {GAME_LABELS[b.game ?? ""] ?? "the game"}
                     </span>
                     <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
                       {b.progress.spent.toLocaleString()} /{" "}
-                      {b.progress.threshold.toLocaleString()} credits · {b.progress.pct}%
+                      {b.progress.threshold.toLocaleString()} credits wagered · {b.progress.pct}%
                     </span>
                   </div>
                   <div
@@ -213,8 +213,9 @@ export default function BountiesPage() {
                     />
                   </div>
                   <p className="text-xs mt-1.5" style={{ color: "var(--text-dim)" }}>
-                    Pays out automatically the moment the bar fills — every eligible
-                    winner shares it, sized to how they did.
+                    Every credit wagered here fills the bar. The moment it&apos;s full the{" "}
+                    {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`} pays out automatically,
+                    split across all eligible winners by how well they did.
                   </p>
                 </div>
               )}

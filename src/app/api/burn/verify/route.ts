@@ -32,8 +32,9 @@ export const POST = handler(async (req: Request) => {
   const existing = await prisma.burnEvent.findUnique({ where: { signature } });
   if (existing) return err("This burn was already redeemed", 409);
 
-  // RPC-lookup guard — same budget as the buy path.
-  rateLimit(`chain-verify:${session.userId}`, 6, 60_000);
+  // RPC-lookup guard — same generous budget as the buy path so a real
+  // payment's retries are never blocked from redeeming.
+  rateLimit(`chain-verify:${session.userId}`, 30, 60_000);
   const amountRaw = await verifyBurnTx(signature, session.wallet);
   if (amountRaw === null) {
     return err(

@@ -163,12 +163,16 @@ export async function creditSpendForGame(game: string, since: Date): Promise<num
  * players saw can only be met or raised, and a pool that pays has always
  * earned its keep at current rules.
  */
+// The trigger a credit bounty must satisfy right now = always derived LIVE
+// from the current prize + house settings. No max()-with-stored guard: that
+// made the threshold sticky (could only ever rise), so lowering the credit
+// price or edge left an absurd, frozen number on the meter. Only an admin can
+// change those settings, so recomputing live is both correct and predictable.
 async function effectiveTriggerVolume(bounty: {
   prizeRibbit: bigint;
   triggerCreditVolume: number | null;
 }): Promise<number> {
-  const live = await computeTriggerCreditVolume(bounty.prizeRibbit);
-  return Math.max(bounty.triggerCreditVolume ?? 0, live);
+  return computeTriggerCreditVolume(bounty.prizeRibbit);
 }
 
 /**

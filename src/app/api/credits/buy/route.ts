@@ -30,9 +30,10 @@ export const POST = handler(async (req: Request) => {
   const usedAsDeposit = await prisma.deposit.findUnique({ where: { signature } });
   if (usedAsDeposit) return err("That transaction was already redeemed as a deposit", 409);
 
-  // Each verification is an RPC lookup — don't let bogus signatures drain
-  // the quota. A real purchase needs at most a couple of attempts.
-  rateLimit(`chain-verify:${session.userId}`, 6, 60_000);
+  // Each verification is an RPC lookup — bound bogus-signature spam, but keep
+  // the ceiling well above what a real purchase + its confirmation-timeout
+  // retries need, so a legitimate payment is never blocked from redeeming.
+  rateLimit(`chain-verify:${session.userId}`, 30, 60_000);
   const legs = await verifyBuyTx(signature, session.wallet);
   if (!legs) {
     return err(
