@@ -308,9 +308,17 @@ export default function AdminPage() {
         title="Admin console"
         desc={`Live auctions: ${data?.liveAuctions ?? "…"} · open bounties: ${data?.openBounties ?? "…"}`}
       />
+      {/* Action feedback follows you — the console is long, and a notice
+          rendered only at the top is invisible from the create forms. */}
       {msg && (
-        <div className="mb-4">
-          <Notice kind="info">{msg}</Notice>
+        <div
+          className="fixed bottom-4 right-4 z-[90] max-w-md shadow-xl cursor-pointer"
+          onClick={() => setMsg(null)}
+          title="Dismiss"
+        >
+          <Notice kind={/fail|error|must|denied|refus|invalid|least|under|between/i.test(msg) ? "err" : "info"}>
+            {msg}
+          </Notice>
         </div>
       )}
 
@@ -605,9 +613,31 @@ export default function AdminPage() {
                   onChange={(e) => setAuctionForm({ ...auctionForm, durationHours: Number(e.target.value) })} />
               </div>
             </div>
+            {(() => {
+              const problems = [
+                auctionForm.title.trim().length < 3 && "title needs at least 3 characters",
+                auctionForm.description.trim().length < 10 && "description needs at least 10 characters",
+                !(auctionForm.startBidRibbit > 0) && "start bid must be above 0",
+                !(auctionForm.minIncrementRibbit > 0) && "min step must be above 0",
+                !(auctionForm.durationHours >= 1 && auctionForm.durationHours <= 336) &&
+                  "hours must be 1–336",
+              ].filter(Boolean) as string[];
+              return problems.length > 0 ? (
+                <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+                  To create: {problems.join(" · ")}
+                </p>
+              ) : null;
+            })()}
             <button
               className="btn btn-portal w-full"
-              disabled={busy || auctionForm.title.length < 3}
+              disabled={
+                busy ||
+                auctionForm.title.trim().length < 3 ||
+                auctionForm.description.trim().length < 10 ||
+                !(auctionForm.startBidRibbit > 0) ||
+                !(auctionForm.minIncrementRibbit > 0) ||
+                !(auctionForm.durationHours >= 1 && auctionForm.durationHours <= 336)
+              }
               onClick={() => act("/api/admin/auctions", auctionForm)}
             >
               Create auction
@@ -676,13 +706,33 @@ export default function AdminPage() {
                 Free game — pays out weekly (at the duration you set) to every eligible winner.
               </p>
             )}
-            <button
-              className="btn btn-portal w-full"
-              disabled={busy || bountyForm.title.length < 3}
-              onClick={() => act("/api/admin/bounties", bountyForm)}
-            >
-              Create bounty
-            </button>
+            {(() => {
+              // Same rules the server enforces — shown HERE, so the button
+              // can never silently refuse.
+              const problems = [
+                bountyForm.title.trim().length < 3 && "title needs at least 3 characters",
+                bountyForm.description.trim().length < 10 && "description needs at least 10 characters",
+                !(bountyForm.prizeRibbit > 0) && "prize must be above 0",
+                !(bountyForm.durationDays >= 1 && bountyForm.durationDays <= 90) &&
+                  "days must be 1–90",
+              ].filter(Boolean) as string[];
+              return (
+                <>
+                  {problems.length > 0 && (
+                    <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+                      To create: {problems.join(" · ")}
+                    </p>
+                  )}
+                  <button
+                    className="btn btn-portal w-full"
+                    disabled={busy || problems.length > 0}
+                    onClick={() => act("/api/admin/bounties", bountyForm)}
+                  >
+                    Create bounty
+                  </button>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
