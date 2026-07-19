@@ -11,7 +11,8 @@ const BASE = process.argv[2] ?? "https://otherworld-projex.vercel.app";
 let passed = 0, failed = 0;
 const check = (name, ok, detail = "") => {
   console.log(`  ${ok ? "✓" : "✗ FAIL:"} ${name}${ok || !detail ? "" : ` — ${detail}`}`);
-  ok ? passed++ : failed++;
+  if (ok) passed++;
+  else failed++;
 };
 
 const get = async (p) => {

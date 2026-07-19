@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { StaleBundleReload } from "@/components/stale-bundle-reload";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { InteractiveFX, ScrollProgress } from "@/components/fx";
@@ -58,6 +59,7 @@ export default function RootLayout({
           Skip to content
         </a>
         <Providers>
+          <StaleBundleReload />
           <InteractiveFX />
           <ScrollProgress />
           <Navbar />
