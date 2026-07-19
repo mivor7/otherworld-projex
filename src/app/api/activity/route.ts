@@ -3,6 +3,9 @@ import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { fromRaw } from "@/lib/config";
 
+// Live data — never cache; always read current DB state.
+export const dynamic = "force-dynamic";
+
 const short = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 const GAME_NAMES: Record<string, string> = {
   flip: "Frog Flip",

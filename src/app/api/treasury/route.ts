@@ -4,6 +4,9 @@ import { getTreasuryStats } from "@/lib/solana";
 import { CONFIG } from "@/lib/config";
 import { houseConfig } from "@/lib/settings";
 
+// Live data — never cache; always read current DB state.
+export const dynamic = "force-dynamic";
+
 export const GET = handler(async () => {
   const [chain, burnAgg, buyAgg, takeAgg, roundCount, paidAgg, recent] =
     await Promise.all([

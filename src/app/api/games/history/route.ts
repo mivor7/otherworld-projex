@@ -1,6 +1,9 @@
 import { handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
 
+// Live data — never cache; always read current DB state.
+export const dynamic = "force-dynamic";
+
 export const GET = handler(async () => {
   const session = await requireSession();
   // Unsettled rounds are excluded — a live blackjack hand's outcome blob

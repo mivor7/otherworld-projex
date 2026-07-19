@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { eligibleBurners } from "@/lib/ranked";
 import { houseConfig } from "@/lib/settings";
 
+// Live data — never cache; always read current DB state.
+export const dynamic = "force-dynamic";
+
 function short(wallet: string) {
   return `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
 }

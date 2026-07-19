@@ -5,6 +5,9 @@ import { z } from "zod";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
 
+// Live data — never cache; always read current DB state.
+export const dynamic = "force-dynamic";
+
 const body = z.object({ amountRaw: z.string().regex(/^[0-9]{1,18}$/) });
 
 export const POST = handler(async (req: Request) => {

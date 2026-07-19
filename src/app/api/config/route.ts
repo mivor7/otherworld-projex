@@ -7,6 +7,9 @@
 import { handler, ok } from "@/lib/api";
 import { houseConfig } from "@/lib/settings";
 
+// Live data — never cache; always read current DB state.
+export const dynamic = "force-dynamic";
+
 export const GET = handler(async () => {
   const cfg = await houseConfig();
   return ok({

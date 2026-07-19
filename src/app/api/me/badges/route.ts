@@ -5,6 +5,9 @@ import { toRaw } from "@/lib/config";
 import { burnTotals } from "@/lib/ranked";
 import { houseConfig } from "@/lib/settings";
 
+// Live data — never cache; always read current DB state.
+export const dynamic = "force-dynamic";
+
 export const GET = handler(async () => {
   const session = await requireSession();
   const userId = session.userId;

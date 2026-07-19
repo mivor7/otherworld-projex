@@ -2,6 +2,9 @@ import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { autoSettleBounties, bountyProgress } from "@/lib/bounty";
 
+// Live data — never cache; always read current DB state.
+export const dynamic = "force-dynamic";
+
 export const GET = handler(async () => {
   const now = new Date();
   // Non-auto bounties simply close at their deadline; auto bounties settle

@@ -9,7 +9,6 @@ import { prisma } from "./db";
 import { fromRaw } from "./config";
 import { burnTotals, eligibleBurners } from "./ranked";
 import { houseConfig } from "./settings";
-import { getTreasuryStats } from "./solana";
 import { ApiError } from "./api";
 
 export const ARCADE_GAMES = new Set(["hopper", "frogris", "worm"]);
@@ -266,14 +265,14 @@ export async function awardBountyProRata(bountyId: string): Promise<AwardResult 
   const totalValue = ranked.reduce((s, e) => s + Math.max(0, e.value), 0);
   if (totalValue <= 0) return null;
 
-  // Cap the payout at the treasury's live balance (best-effort: only enforced
-  // when the treasury is configured and readable).
-  let prize = bounty.prizeRibbit;
-  const treasury = await getTreasuryStats();
-  if (treasury.configured && treasury.ribbitBalance !== null) {
-    const balRaw = BigInt(Math.floor(treasury.ribbitBalance * 1_000_000));
-    if (balRaw < prize) prize = balRaw;
-  }
+  // The prize is fixed and pre-committed when the bounty is posted, and the
+  // spend trigger already guaranteed the house took in more than the prize
+  // before this fires — so it always pays in FULL. The treasury (the owners'
+  // public reserve) is never the payer and never gates the prize; solvency is
+  // the payout worker's job — if its separate hot-wallet float can't cover a
+  // queued payout, that row simply stays pending and retries (visible in
+  // /admin) until the float is topped up. No winner is ever silently shorted.
+  const prize = bounty.prizeRibbit;
   if (prize <= 0n) return null;
 
   // Pro-rata shares — same math as the live projection players see.

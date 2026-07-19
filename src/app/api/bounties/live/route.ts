@@ -12,6 +12,9 @@ import { getSession } from "@/lib/session";
 import { fromRaw } from "@/lib/config";
 import { autoSettleBounties, bountyProgress, bountyStandings } from "@/lib/bounty";
 
+// Live data — never cache; always read current DB state.
+export const dynamic = "force-dynamic";
+
 const short = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 
 // Standings are the expensive part (ranking + eligibility aggregates) and
