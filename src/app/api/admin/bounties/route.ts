@@ -16,6 +16,34 @@ const body = z.object({
   autoPay: z.boolean().default(false),
 });
 
+// Full bounty list for the admin manage panel — every status, with award
+// counts so the UI knows what's editable/deletable.
+export const GET = handler(async () => {
+  await requireAdmin();
+  const bounties = await prisma.bounty.findMany({
+    orderBy: [{ status: "asc" }, { endsAt: "asc" }],
+    take: 60,
+    include: { _count: { select: { awards: true } } },
+  });
+  return ok(
+    bounties.map((b) => ({
+      id: b.id,
+      title: b.title,
+      description: b.description,
+      target: b.target,
+      game: b.game,
+      kind: b.kind,
+      prizeRibbit: Number(b.prizeRibbit / 10n ** 6n),
+      prizeText: b.prizeText,
+      status: b.status,
+      autoPay: b.autoPay,
+      triggerCreditVolume: b.triggerCreditVolume,
+      endsAt: b.endsAt,
+      awards: b._count.awards,
+    }))
+  );
+});
+
 export const POST = handler(async (req: Request) => {
   await requireAdmin();
   const data = body.parse(await req.json());

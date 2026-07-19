@@ -90,6 +90,32 @@ type LiveAuction = {
   _count: { bids: number };
 };
 
+type ManagedBounty = {
+  id: string;
+  title: string;
+  target: string | null;
+  game: string | null;
+  kind: string;
+  prizeRibbit: number;
+  status: string;
+  autoPay: boolean;
+  triggerCreditVolume: number | null;
+  endsAt: string;
+  awards: number;
+};
+
+type PlayerProfile = {
+  wallet: string;
+  isBanned: boolean;
+  credits: number;
+  ribbitBalance: string;
+  ribbitLocked: string;
+  burnedRibbit: number;
+  boughtRibbit: number;
+  createdAt: string;
+  counts: { burns: number; purchases: number; rounds: number; scores: number; bids: number; withdrawals: number };
+};
+
 // Prize-split presets. Percentages re-normalize server-side if fewer eligible
 // winners exist, so the whole pot is always distributed.
 const SPLIT_PRESETS: { key: string; label: string; splits: number[] }[] = [
@@ -138,6 +164,16 @@ export default function AdminPage() {
     )
   );
 
+  const [manage, setManage] = useState<ManagedBounty[]>([]);
+  const [editBounty, setEditBounty] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", target: "", prizeRibbit: 0, extendDays: 0, autoPay: false });
+  const [editAuction, setEditAuction] = useState<string | null>(null);
+  const [auctionEditForm, setAuctionEditForm] = useState({ title: "", description: "", startBidRibbit: 0, minIncrementRibbit: 0, extendHours: 0 });
+  const [playerWallet, setPlayerWallet] = useState("");
+  const [player, setPlayer] = useState<PlayerProfile | null>(null);
+  const [playerErr, setPlayerErr] = useState<string | null>(null);
+  const [creditDelta, setCreditDelta] = useState(0);
+  const [creditNote, setCreditNote] = useState("");
   const [review, setReview] = useState<Review[]>([]);
   const [paid, setPaid] = useState<PaidBounty[]>([]);
   const [pool, setPool] = useState<Pool | null>(null);
@@ -164,7 +200,20 @@ export default function AdminPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setLiveAuctions(Array.isArray(d.live) ? d.live : []))
       .catch(() => {});
+    fetch("/api/admin/bounties")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((rows) => Array.isArray(rows) && setManage(rows))
+      .catch(() => {});
   }, []);
+
+  const lookupPlayer = async (wallet: string) => {
+    setPlayerErr(null);
+    setPlayer(null);
+    const res = await fetch(`/api/admin/users?wallet=${encodeURIComponent(wallet.trim())}`);
+    const d = await res.json();
+    if (res.ok) setPlayer(d);
+    else setPlayerErr(d.error ?? "Lookup failed");
+  };
   useEffect(() => {
     if (me.isAdmin) load();
   }, [me.isAdmin, load]);
@@ -523,7 +572,101 @@ export default function AdminPage() {
                       >
                         Cancel &amp; refund
                       </button>
+                      <button
+                        className="btn btn-ghost text-xs"
+                        disabled={busy}
+                        onClick={() => {
+                          if (editAuction === a.id) {
+                            setEditAuction(null);
+                          } else {
+                            setEditAuction(a.id);
+                            setAuctionEditForm({
+                              title: a.title,
+                              description: "",
+                              startBidRibbit: Number(BigInt(a.startBidRaw) / 10n ** 6n),
+                              minIncrementRibbit: 0,
+                              extendHours: 0,
+                            });
+                          }
+                        }}
+                      >
+                        {editAuction === a.id ? "Close editor" : "Edit"}
+                      </button>
+                      {a._count.bids === 0 && (
+                        <button
+                          className="btn btn-ghost text-xs !text-danger"
+                          disabled={busy}
+                          onClick={() =>
+                            act(
+                              `/api/admin/auctions/${a.id}`,
+                              { action: "delete" },
+                              "Delete this lot permanently? (No bids — safe to remove.)"
+                            )
+                          }
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
+                    {editAuction === a.id && (
+                      <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: "var(--hairline)" }}>
+                        <input className="input !text-xs" placeholder="Title" value={auctionEditForm.title}
+                          onChange={(e) => setAuctionEditForm({ ...auctionEditForm, title: e.target.value })} />
+                        <textarea className="input !text-xs" placeholder="New description (leave empty to keep)"
+                          value={auctionEditForm.description}
+                          onChange={(e) => setAuctionEditForm({ ...auctionEditForm, description: e.target.value })} />
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-[0.65rem] text-fog">
+                              Start bid {a._count.bids > 0 && "(locked — has bids)"}
+                            </label>
+                            <input className="input !text-xs" type="number" disabled={a._count.bids > 0}
+                              value={auctionEditForm.startBidRibbit}
+                              onChange={(e) => setAuctionEditForm({ ...auctionEditForm, startBidRibbit: Number(e.target.value) })} />
+                          </div>
+                          <div>
+                            <label className="text-[0.65rem] text-fog">
+                              Min step {a._count.bids > 0 && "(locked)"}
+                            </label>
+                            <input className="input !text-xs" type="number" disabled={a._count.bids > 0}
+                              placeholder="keep"
+                              value={auctionEditForm.minIncrementRibbit || ""}
+                              onChange={(e) => setAuctionEditForm({ ...auctionEditForm, minIncrementRibbit: Number(e.target.value) })} />
+                          </div>
+                          <div>
+                            <label className="text-[0.65rem] text-fog">Extend hours</label>
+                            <input className="input !text-xs" type="number"
+                              value={auctionEditForm.extendHours}
+                              onChange={(e) => setAuctionEditForm({ ...auctionEditForm, extendHours: Number(e.target.value) })} />
+                          </div>
+                        </div>
+                        <button
+                          className="btn btn-primary text-xs"
+                          disabled={busy}
+                          onClick={async () => {
+                            await act(`/api/admin/auctions/${a.id}`, {
+                              action: "edit",
+                              title: auctionEditForm.title,
+                              ...(auctionEditForm.description.length >= 10
+                                ? { description: auctionEditForm.description }
+                                : {}),
+                              ...(a._count.bids === 0 && auctionEditForm.startBidRibbit > 0
+                                ? { startBidRibbit: auctionEditForm.startBidRibbit }
+                                : {}),
+                              ...(a._count.bids === 0 && auctionEditForm.minIncrementRibbit > 0
+                                ? { minIncrementRibbit: auctionEditForm.minIncrementRibbit }
+                                : {}),
+                              ...(auctionEditForm.extendHours
+                                ? { extendHours: auctionEditForm.extendHours }
+                                : {}),
+                            });
+                            setEditAuction(null);
+                          }}
+                        >
+                          Save changes
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -563,6 +706,266 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Bounty management — every bounty, editable */}
+      <div className="mt-8">
+        <div className="kicker mb-3">Bounty management</div>
+        {manage.length === 0 ? (
+          <p className="text-fog text-sm">No bounties yet.</p>
+        ) : (
+          <div className="panel p-5 space-y-3">
+            {manage.map((b) => (
+              <div key={b.id} className="panel p-4">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="font-medium tracking-tight">{b.title}</span>
+                  {b.game && <span className="badge">{b.game}</span>}
+                  <span className="badge badge-gold">
+                    {b.prizeRibbit.toLocaleString()} $RIBBIT
+                  </span>
+                  <span
+                    className={`badge ${
+                      b.status === "open"
+                        ? "badge-live"
+                        : b.status === "paid"
+                          ? "badge-gold"
+                          : ""
+                    }`}
+                  >
+                    {b.status}
+                  </span>
+                  {b.autoPay && (
+                    <span className="badge badge-portal">
+                      auto{b.triggerCreditVolume ? ` · ${b.triggerCreditVolume.toLocaleString()} cr` : " · weekly"}
+                    </span>
+                  )}
+                  <span className="text-xs ml-auto" style={{ color: "var(--text-dim)" }}>
+                    ends {new Date(b.endsAt).toLocaleDateString()}
+                    {b.awards > 0 && ` · ${b.awards} paid`}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {b.status !== "paid" && (
+                    <button
+                      className="btn btn-ghost text-xs"
+                      disabled={busy}
+                      onClick={() => {
+                        if (editBounty === b.id) {
+                          setEditBounty(null);
+                        } else {
+                          setEditBounty(b.id);
+                          setEditForm({
+                            title: b.title,
+                            target: b.target ?? "",
+                            prizeRibbit: b.prizeRibbit,
+                            extendDays: 0,
+                            autoPay: b.autoPay,
+                          });
+                        }
+                      }}
+                    >
+                      {editBounty === b.id ? "Close editor" : "Edit"}
+                    </button>
+                  )}
+                  {b.status === "open" && (
+                    <button
+                      className="btn btn-ghost text-xs"
+                      disabled={busy}
+                      onClick={() => act(`/api/admin/bounties/${b.id}`, { action: "close" })}
+                    >
+                      Close early
+                    </button>
+                  )}
+                  {(b.status === "open" || b.status === "closed") && (
+                    <button
+                      className="btn btn-ghost text-xs"
+                      disabled={busy}
+                      onClick={() =>
+                        act(
+                          `/api/admin/bounties/${b.id}`,
+                          { action: "cancel" },
+                          "Cancel this bounty with no payout?"
+                        )
+                      }
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  {b.status !== "paid" && b.awards === 0 && (
+                    <button
+                      className="btn btn-ghost text-xs !text-danger"
+                      disabled={busy}
+                      onClick={() =>
+                        act(
+                          `/api/admin/bounties/${b.id}`,
+                          { action: "delete" },
+                          "Delete this bounty permanently? (Nothing has been paid — safe to remove.)"
+                        )
+                      }
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+                {editBounty === b.id && (
+                  <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: "var(--hairline)" }}>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <input className="input !text-xs" placeholder="Title" value={editForm.title}
+                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+                      <input className="input !text-xs" placeholder="Target" value={editForm.target}
+                        onChange={(e) => setEditForm({ ...editForm, target: e.target.value })} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 items-end">
+                      <div>
+                        <label className="text-[0.65rem] text-fog">Prize $RIBBIT</label>
+                        <input className="input !text-xs" type="number" value={editForm.prizeRibbit}
+                          onChange={(e) => setEditForm({ ...editForm, prizeRibbit: Number(e.target.value) })} />
+                      </div>
+                      <div>
+                        <label className="text-[0.65rem] text-fog">Extend days (±)</label>
+                        <input className="input !text-xs" type="number" value={editForm.extendDays}
+                          onChange={(e) => setEditForm({ ...editForm, extendDays: Number(e.target.value) })} />
+                      </div>
+                      <label className="flex items-center gap-2 text-xs text-fog cursor-pointer pb-2">
+                        <input type="checkbox" checked={editForm.autoPay}
+                          onChange={(e) => setEditForm({ ...editForm, autoPay: e.target.checked })} />
+                        Auto-pay
+                      </label>
+                    </div>
+                    <p className="text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
+                      Changing the prize on an auto-pay credit bounty re-derives its
+                      spend trigger automatically (house margin preserved).
+                    </p>
+                    <button
+                      className="btn btn-primary text-xs"
+                      disabled={busy || editForm.title.length < 3 || editForm.prizeRibbit <= 0}
+                      onClick={async () => {
+                        await act(`/api/admin/bounties/${b.id}`, {
+                          action: "edit",
+                          title: editForm.title,
+                          target: editForm.target || null,
+                          prizeRibbit: editForm.prizeRibbit,
+                          autoPay: editForm.autoPay,
+                          ...(editForm.extendDays ? { extendDays: editForm.extendDays } : {}),
+                        });
+                        setEditBounty(null);
+                      }}
+                    >
+                      Save changes
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Player management */}
+      <div className="mt-8">
+        <div className="kicker mb-3">Player management</div>
+        <div className="panel p-5">
+          <div className="flex flex-wrap gap-2 mb-4">
+            <input
+              className="input flex-1 min-w-64 !text-xs mono"
+              placeholder="Wallet address"
+              value={playerWallet}
+              onChange={(e) => setPlayerWallet(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && playerWallet.trim() && lookupPlayer(playerWallet)}
+            />
+            <button
+              className="btn btn-primary text-xs"
+              disabled={busy || playerWallet.trim().length < 32}
+              onClick={() => lookupPlayer(playerWallet)}
+            >
+              Look up
+            </button>
+          </div>
+          {playerErr && <Notice kind="err">{playerErr}</Notice>}
+          {player && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="mono text-xs break-all">{player.wallet}</span>
+                {player.isBanned ? (
+                  <span className="badge !text-danger">banned</span>
+                ) : (
+                  <span className="badge badge-live">active</span>
+                )}
+                <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+                  joined {new Date(player.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <div className="kicker !text-[0.6rem]">Credits</div>
+                  <div className="stat-number text-neon">{player.credits.toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="kicker !text-[0.6rem]">Escrow / locked</div>
+                  <div className="stat-number">
+                    {fmtRibbit(player.ribbitBalance)} / {fmtRibbit(player.ribbitLocked)}
+                  </div>
+                </div>
+                <div>
+                  <div className="kicker !text-[0.6rem]">Burned / bought</div>
+                  <div className="stat-number text-gold">
+                    {player.burnedRibbit.toLocaleString()} / {player.boughtRibbit.toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <div className="kicker !text-[0.6rem]">Activity</div>
+                  <div className="text-xs text-fog pt-1">
+                    {player.counts.rounds} rounds · {player.counts.scores} runs ·{" "}
+                    {player.counts.bids} bids · {player.counts.withdrawals} wd
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-end gap-2 pt-2 border-t" style={{ borderColor: "var(--hairline)" }}>
+                <button
+                  className={`btn text-xs ${player.isBanned ? "btn-primary" : "btn-ghost !text-danger"}`}
+                  disabled={busy}
+                  onClick={async () => {
+                    await act(
+                      "/api/admin/users",
+                      { wallet: player.wallet, action: player.isBanned ? "unban" : "ban" },
+                      player.isBanned
+                        ? "Unban this wallet?"
+                        : "Ban this wallet? Sign-in and all authenticated actions are blocked immediately."
+                    );
+                    lookupPlayer(player.wallet);
+                  }}
+                >
+                  {player.isBanned ? "Unban wallet" : "Ban wallet"}
+                </button>
+                <div>
+                  <label className="text-[0.65rem] text-fog">Credits ±</label>
+                  <input className="input !text-xs max-w-28" type="number" value={creditDelta || ""}
+                    placeholder="±"
+                    onChange={(e) => setCreditDelta(Math.trunc(Number(e.target.value)) || 0)} />
+                </div>
+                <input className="input !text-xs flex-1 min-w-40" placeholder="Reason (goes in the ledger)"
+                  value={creditNote}
+                  onChange={(e) => setCreditNote(e.target.value)} />
+                <button
+                  className="btn btn-portal text-xs"
+                  disabled={busy || !creditDelta || creditNote.trim().length < 3}
+                  onClick={async () => {
+                    await act(
+                      "/api/admin/users",
+                      { wallet: player.wallet, action: "credits", delta: creditDelta, note: creditNote.trim() },
+                      `${creditDelta > 0 ? "Grant" : "Remove"} ${Math.abs(creditDelta)} credits ${creditDelta > 0 ? "to" : "from"} this wallet?`
+                    );
+                    setCreditDelta(0);
+                    setCreditNote("");
+                    lookupPlayer(player.wallet);
+                  }}
+                >
+                  Apply credits
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

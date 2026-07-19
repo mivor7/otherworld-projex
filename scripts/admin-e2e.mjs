@@ -299,6 +299,138 @@ try {
     autoFree.status === 200 && autoFree.data.triggerCreditVolume === null,
     `status ${autoFree.status} data ${JSON.stringify(autoFree.data)}`);
 
+  // ---------------- BOUNTY EDIT / DELETE ----------------
+  console.log("— Bounty edit re-derives the trigger; delete obeys the audit rules");
+  const eb = await admin.api("/api/admin/bounties", {
+    method: "POST",
+    body: JSON.stringify({
+      title: "ADM editable", description: "e2e edit/delete test",
+      game: "dice", prizeRibbit: 5000, durationDays: 7, autoPay: true,
+    }),
+  });
+  if (eb.data?.id) bountyIds.push(eb.data.id);
+  check("editable bounty created w/ trigger 1875", eb.data?.triggerCreditVolume === 1875);
+  const edit = await admin.api(`/api/admin/bounties/${eb.data.id}`, {
+    method: "POST",
+    body: JSON.stringify({ action: "edit", title: "ADM edited", prizeRibbit: 10000, extendDays: 3 }),
+  });
+  check("edit succeeds and re-derives trigger (10000 → 3750)",
+    edit.status === 200 && edit.data.triggerCreditVolume === 3750,
+    JSON.stringify(edit.data));
+  const edited = await prisma.bounty.findUnique({ where: { id: eb.data.id } });
+  check("edit persisted (title + prize)",
+    edited.title === "ADM edited" && edited.prizeRibbit === 10000n * RAW);
+
+  const del = await admin.api(`/api/admin/bounties/${eb.data.id}`, {
+    method: "POST", body: JSON.stringify({ action: "delete" }),
+  });
+  check("unpaid bounty deletes", del.status === 200 && del.data.deleted === true);
+  const gone = await prisma.bounty.findUnique({ where: { id: eb.data.id } });
+  check("deleted bounty is gone", gone === null);
+
+  // paid bounties are immutable: bId was paid earlier in this run
+  const delPaid = await admin.api(`/api/admin/bounties/${bId}`, {
+    method: "POST", body: JSON.stringify({ action: "delete" }),
+  });
+  check("paid bounty refuses delete (409)", delPaid.status === 409, `got ${delPaid.status}`);
+  const editPaid = await admin.api(`/api/admin/bounties/${bId}`, {
+    method: "POST", body: JSON.stringify({ action: "edit", title: "nope, immutable" }),
+  });
+  check("paid bounty refuses edit (409)", editPaid.status === 409, `got ${editPaid.status}`);
+
+  // ---------------- AUCTION EDIT / DELETE ----------------
+  console.log("— Auction edit locks terms once bids exist; delete needs a clean lot");
+  const cleanLot = await prisma.auction.create({
+    data: { title: "ADM clean lot", description: "e2e", startBidRaw: 10n * RAW, minIncrement: 1n * RAW,
+      endsAt: new Date(Date.now() + 3600_000) },
+  });
+  auctionIds.push(cleanLot.id);
+  const aEdit = await admin.api(`/api/admin/auctions/${cleanLot.id}`, {
+    method: "POST",
+    body: JSON.stringify({ action: "edit", title: "ADM clean lot v2", startBidRibbit: 25, extendHours: 2 }),
+  });
+  check("bid-less lot: full edit ok", aEdit.status === 200, JSON.stringify(aEdit.data));
+  const editedLot = await prisma.auction.findUnique({ where: { id: cleanLot.id } });
+  check("lot terms updated", editedLot.title === "ADM clean lot v2" && editedLot.startBidRaw === 25n * RAW);
+
+  // auc2 (settled earlier) has bids: terms locked; use a live lot with a bid
+  const bidLot = await prisma.auction.create({
+    data: { title: "ADM bid lot", description: "e2e", startBidRaw: 10n * RAW, minIncrement: 1n * RAW,
+      endsAt: new Date(Date.now() + 3600_000) },
+  });
+  auctionIds.push(bidLot.id);
+  await prisma.user.update({ where: { id: wbU.id }, data: { ribbitBalance: 200n * RAW, ribbitLocked: 0n } });
+  await winnerB.api(`/api/auctions/${bidLot.id}/bid`, {
+    method: "POST", body: JSON.stringify({ amountRaw: (20n * RAW).toString() }),
+  });
+  const lockedEdit = await admin.api(`/api/admin/auctions/${bidLot.id}`, {
+    method: "POST", body: JSON.stringify({ action: "edit", startBidRibbit: 50 }),
+  });
+  check("lot with bids: terms edit refused (409)", lockedEdit.status === 409, `got ${lockedEdit.status}`);
+  const copyEdit = await admin.api(`/api/admin/auctions/${bidLot.id}`, {
+    method: "POST", body: JSON.stringify({ action: "edit", title: "ADM bid lot (copy fix)" }),
+  });
+  check("lot with bids: copy edit still ok", copyEdit.status === 200);
+  const delBid = await admin.api(`/api/admin/auctions/${bidLot.id}`, {
+    method: "POST", body: JSON.stringify({ action: "delete" }),
+  });
+  check("lot with bids refuses delete (409)", delBid.status === 409, `got ${delBid.status}`);
+  const delClean = await admin.api(`/api/admin/auctions/${cleanLot.id}`, {
+    method: "POST", body: JSON.stringify({ action: "delete" }),
+  });
+  check("clean lot deletes", delClean.status === 200 && delClean.data.deleted === true);
+  // still cancel bidLot so escrow unlocks for cleanup
+  await admin.api(`/api/admin/auctions/${bidLot.id}`, {
+    method: "POST", body: JSON.stringify({ action: "cancel" }),
+  });
+
+  // ---------------- PLAYER MANAGEMENT: ban + credits ----------------
+  console.log("— Ban bites live sessions; credit adjustments are guarded + ledgered");
+  const banned = player();
+  await banned.signIn();
+  wallets.push(banned.wallet);
+  const preBan = await banned.api("/api/arcade/start", {
+    method: "POST", body: JSON.stringify({ game: "worm" }),
+  });
+  check("player can act before ban", preBan.status === 200);
+  const doBan = await admin.api("/api/admin/users", {
+    method: "POST", body: JSON.stringify({ wallet: banned.wallet, action: "ban" }),
+  });
+  check("ban succeeds", doBan.status === 200 && doBan.data.isBanned === true);
+  const postBan = await banned.api("/api/arcade/start", {
+    method: "POST", body: JSON.stringify({ game: "worm" }),
+  });
+  check("banned wallet blocked on a LIVE session (403)", postBan.status === 403,
+    `got ${postBan.status}`);
+  let freshSignIn = true;
+  try { await banned.signIn(); } catch { freshSignIn = false; }
+  check("banned wallet cannot sign in again", freshSignIn === false);
+  await admin.api("/api/admin/users", {
+    method: "POST", body: JSON.stringify({ wallet: banned.wallet, action: "unban" }),
+  });
+  const postUnban = await banned.api("/api/arcade/start", {
+    method: "POST", body: JSON.stringify({ game: "worm" }),
+  });
+  check("unban restores access", postUnban.status === 200, `got ${postUnban.status}`);
+
+  const grant = await admin.api("/api/admin/users", {
+    method: "POST",
+    body: JSON.stringify({ wallet: banned.wallet, action: "credits", delta: 50, note: "e2e comp" }),
+  });
+  check("credit grant applies", grant.status === 200 && grant.data.credits === 50);
+  const over = await admin.api("/api/admin/users", {
+    method: "POST",
+    body: JSON.stringify({ wallet: banned.wallet, action: "credits", delta: -100, note: "e2e over" }),
+  });
+  check("over-removal refused (409, guarded ledger)", over.status === 409, `got ${over.status}`);
+  const ledger = await prisma.ledgerEntry.findFirst({
+    where: { user: { wallet: banned.wallet }, kind: "admin" },
+  });
+  check("adjustment is ledgered with the admin's note",
+    !!ledger && ledger.delta === 50 && (ledger.ref ?? "").includes("e2e comp"));
+  const profile = await admin.api(`/api/admin/users?wallet=${banned.wallet}`);
+  check("player lookup returns profile", profile.status === 200 && profile.data.credits === 50);
+
   // overview stats present
   const ov = await admin.api("/api/admin/overview");
   check("overview exposes house stats", ov.status === 200 &&

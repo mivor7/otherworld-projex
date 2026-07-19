@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getSession, isAdminWallet, type Session } from "./session";
-import { jsonSafe } from "./db";
+import { jsonSafe, prisma } from "./db";
 import { InsufficientCredits } from "./credits";
 
 export function ok(data: unknown, init?: number) {
@@ -21,6 +21,13 @@ export class ApiError extends Error {
 export async function requireSession(): Promise<Session> {
   const session = await getSession();
   if (!session) throw new ApiError("Sign in with your wallet first", 401);
+  // Bans bite immediately — not just at the next sign-in. Session JWTs
+  // outlive a ban, so re-check the flag on every authenticated request.
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { isBanned: true },
+  });
+  if (!user || user.isBanned) throw new ApiError("This wallet is suspended", 403);
   return session;
 }
 
