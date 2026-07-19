@@ -18,7 +18,7 @@ type Entry = {
   isYou: boolean;
 };
 type Progress =
-  | { mode: "credit"; spent: number; threshold: number; pct: number }
+  | { mode: "revenue"; fundedRibbit: number; requiredRibbit: number; pct: number }
   | { mode: "time"; endsAt: string }
   | null;
 type Live = {
@@ -69,12 +69,13 @@ export function BountyStandings({ game }: { game: string }) {
       </div>
       <div className="font-medium tracking-tight mb-3">{b.title}</div>
 
-      {b.progress?.mode === "credit" && (
+      {b.progress?.mode === "revenue" && (
         <div className="mb-4">
           <div className="flex items-baseline justify-between mb-1.5">
-            <span className="kicker !text-[0.6rem]">Pool fills as the game is played</span>
+            <span className="kicker !text-[0.6rem]">Prize funds as the house earns</span>
             <span className="mono text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
-              {b.progress.spent.toLocaleString()} / {b.progress.threshold.toLocaleString()} · {b.progress.pct}%
+              {b.progress.fundedRibbit.toLocaleString(undefined, { maximumFractionDigits: 0 })} /{" "}
+              {b.progress.requiredRibbit.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT · {b.progress.pct}%
             </span>
           </div>
           <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.01 165)" }}>
@@ -87,7 +88,7 @@ export function BountyStandings({ game }: { game: string }) {
             />
           </div>
           <p className="text-[0.7rem] mt-1.5" style={{ color: "var(--text-dim)" }}>
-            Pays out the moment the bar fills — every eligible winner shares it.
+            Pays out once the house has banked enough — every eligible winner shares it.
           </p>
         </div>
       )}

@@ -129,57 +129,54 @@ export function splitPrize(prizeRaw: bigint, splits: number[]): bigint[] {
   return shares;
 }
 
-/**
- * Auto-derive a credit-game bounty's spend threshold from its prize: require
- * enough play that the house edge-take covers the prize plus the configured
- * margin. trigger = (prizeCredits × (1 + margin)) / edge. This guarantees a
- * bounty that pays out has already earned the house more than it costs.
- */
-export async function computeTriggerCreditVolume(prizeRaw: bigint): Promise<number> {
+// ——— Revenue-gated bounties ———
+// A bounty pays only once the house has actually banked enough REAL $RIBBIT to
+// cover it. Real revenue = the treasury share of every credit purchase
+// (CreditPurchase.houseRaw); the burn leg and the internal house-edge on
+// credit play do NOT count — only $RIBBIT that truly reached the treasury.
+// This is the only quantity that guarantees "the house got the right amount
+// before it pays." The house edge is now purely a game-fairness setting and
+// has no bearing on when a bounty triggers.
+
+/** Real $RIBBIT the house must have banked to justify paying `prizeRaw`. */
+export async function requiredRevenueRaw(prizeRaw: bigint): Promise<bigint> {
   const cfg = await houseConfig();
-  const prizeCredits = fromRaw(prizeRaw) / cfg.ribbitPerCredit;
-  const vol = Math.ceil(
-    (prizeCredits * (1 + cfg.bountyHouseMargin)) / cfg.houseEdge
-  );
-  return Math.max(1, vol);
-}
-
-/** Total credits wagered on a game since `since` — the auto-bounty trigger. */
-export async function creditSpendForGame(game: string, since: Date): Promise<number> {
-  const agg = await prisma.gameRound.aggregate({
-    where: { game, createdAt: { gte: since } },
-    _sum: { wager: true },
-  });
-  return agg._sum.wager ?? 0;
+  const mult = BigInt(Math.round((1 + cfg.bountyHouseMargin) * 1000));
+  return (prizeRaw * mult) / 1000n; // prize × (1 + margin)
 }
 
 /**
- * The trigger a credit bounty must actually satisfy RIGHT NOW: never weaker
- * than what was posted, and never weaker than what today's live economy
- * (edge / credit price / margin) demands. Stored triggers are derived at
- * creation — if an admin later softens the economy (lower edge, cheaper
- * credits), the stored threshold would under-charge for the prize and break
- * the house-nets-positive invariant. max() keeps both promises: the meter
- * players saw can only be met or raised, and a pool that pays has always
- * earned its keep at current rules.
+ * Whole-$RIBBIT revenue a credit bounty must have banked before it auto-pays.
+ * Stored in Bounty.triggerCreditVolume as the "auto-pay credit bounty" marker
+ * (non-null) and a human-readable reference; the live gate recomputes it.
  */
-// The trigger a credit bounty must satisfy right now = always derived LIVE
-// from the current prize + house settings. No max()-with-stored guard: that
-// made the threshold sticky (could only ever rise), so lowering the credit
-// price or edge left an absurd, frozen number on the meter. Only an admin can
-// change those settings, so recomputing live is both correct and predictable.
-async function effectiveTriggerVolume(bounty: {
-  prizeRibbit: bigint;
-  triggerCreditVolume: number | null;
-}): Promise<number> {
-  return computeTriggerCreditVolume(bounty.prizeRibbit);
+export async function requiredRevenueRibbit(prizeRaw: bigint): Promise<number> {
+  return Math.max(1, Math.round(fromRaw(await requiredRevenueRaw(prizeRaw))));
 }
 
 /**
- * Progress of an auto-bounty toward its trigger, for the public "reward fills
- * as you play" bar. Credit games measure credit-spend vs threshold; free
- * games are time-based (weekly, endsAt). Uses the same effective trigger the
- * settle path enforces, so the bar can never sit at 100% without paying.
+ * House revenue still available to fund NEW bounties = treasury share of all
+ * credit purchases, minus every $RIBBIT already committed to paid bounties.
+ * The house can therefore never pay out more in bounties than the credit
+ * economy has actually earned it. Clamped at 0.
+ */
+export async function houseRevenueAvailableRaw(tx: {
+  creditPurchase: { aggregate: typeof prisma.creditPurchase.aggregate };
+  bountyAward: { aggregate: typeof prisma.bountyAward.aggregate };
+} = prisma): Promise<bigint> {
+  const [rev, paid] = await Promise.all([
+    tx.creditPurchase.aggregate({ _sum: { houseRaw: true } }),
+    tx.bountyAward.aggregate({ _sum: { amountRaw: true } }),
+  ]);
+  const avail = (rev._sum.houseRaw ?? 0n) - (paid._sum.amountRaw ?? 0n);
+  return avail > 0n ? avail : 0n;
+}
+
+/**
+ * Progress toward a bounty paying out, for the public meter.
+ *  · credit games → "revenue" mode: how much house revenue is banked toward
+ *    the prize (+margin) it needs before it auto-pays.
+ *  · free arcade games → "time" mode: weekly, pays at endsAt.
  */
 export async function bountyProgress(bounty: {
   game: string | null;
@@ -189,21 +186,22 @@ export async function bountyProgress(bounty: {
   startsAt: Date;
   endsAt: Date;
 }): Promise<
-  | { mode: "credit"; spent: number; threshold: number; pct: number }
+  | { mode: "revenue"; fundedRibbit: number; requiredRibbit: number; pct: number }
   | { mode: "time"; endsAt: Date }
   | null
 > {
   if (!bounty.autoPay || !bounty.game) return null;
   if (!ARCADE_GAMES.has(bounty.game) && bounty.triggerCreditVolume) {
-    const [spent, threshold] = await Promise.all([
-      creditSpendForGame(bounty.game, bounty.startsAt),
-      effectiveTriggerVolume(bounty),
+    const [available, required] = await Promise.all([
+      houseRevenueAvailableRaw(),
+      requiredRevenueRaw(bounty.prizeRibbit),
     ]);
+    const funded = available > required ? required : available;
     return {
-      mode: "credit",
-      spent,
-      threshold,
-      pct: threshold > 0 ? Math.min(100, Math.round((spent / threshold) * 100)) : 0,
+      mode: "revenue",
+      fundedRibbit: fromRaw(funded),
+      requiredRibbit: fromRaw(required),
+      pct: required > 0n ? Math.min(100, Number((funded * 100n) / required)) : 0,
     };
   }
   return { mode: "time", endsAt: bounty.endsAt };
@@ -269,21 +267,25 @@ export async function awardBountyProRata(bountyId: string): Promise<AwardResult 
   const totalValue = ranked.reduce((s, e) => s + Math.max(0, e.value), 0);
   if (totalValue <= 0) return null;
 
-  // The prize is fixed and pre-committed when the bounty is posted, and the
-  // spend trigger already guaranteed the house took in more than the prize
-  // before this fires — so it always pays in FULL. The treasury (the owners'
-  // public reserve) is never the payer and never gates the prize; solvency is
-  // the payout worker's job — if its separate hot-wallet float can't cover a
-  // queued payout, that row simply stays pending and retries (visible in
-  // /admin) until the float is topped up. No winner is ever silently shorted.
   const prize = bounty.prizeRibbit;
   if (prize <= 0n) return null;
+  const required = await requiredRevenueRaw(prize);
 
-  // Pro-rata shares — same math as the live projection players see.
+  // Pro-rata shares — same math as the live projection players see. The full
+  // prize always pays (no per-payout treasury cap); sustainability is the
+  // revenue gate below, checked INSIDE the transaction.
   const shares = proRataShares(prize, ranked.map((e) => e.value));
 
   const result = await prisma.$transaction(
     async (tx) => {
+      // REVENUE GATE (the core of the model): the house must have banked
+      // prize + margin in real $RIBBIT (credit-purchase treasury share, minus
+      // everything already awarded) before this pays. Checked inside the
+      // Serializable tx so two bounties settling concurrently can never spend
+      // the same revenue — one will serialization-fail and retry.
+      const available = await houseRevenueAvailableRaw(tx);
+      if (available < required) return null; // not funded yet — stays open
+
       // Only OPEN bounties auto-pay. "Closed" is a definitive stop (admin
       // closed it early, or it expired unmet) — an admin can still award a
       // closed bounty explicitly via awardBounty, but the automat never will.
@@ -376,13 +378,15 @@ async function renewWeeklyBounty(b: {
 }
 
 /**
- * Lazily settle any auto-bounty whose trigger has fired: credit-game bounties
- * once credits wagered ≥ triggerCreditVolume; free-game bounties at endsAt
- * (then a fresh weekly edition is rolled automatically). Credit bounties that
- * reach their deadline with the meter unfilled close UNPAID — the admin can
- * extend, repost or award them manually. Called on reads like the bounties
- * list, mirroring lazy auction settlement. Gated by the bounty auto-pay
- * switch so nothing pays until the owner turns it on.
+ * Lazily settle auto-bounties. awardBountyProRata self-gates on real house
+ * revenue (prize + margin banked) and on there being eligible winners, so we
+ * just try it:
+ *  · credit games — try to pay whenever revenue covers it; at the deadline,
+ *    if still unfunded/unwon, close UNPAID (admin can extend/repost/award).
+ *  · free arcade games — try at the deadline; then roll a fresh weekly edition
+ *    whether it paid or closed empty.
+ * Called on reads like the bounties list, mirroring lazy auction settlement.
+ * Gated by the bounty auto-pay switch so nothing pays until the owner enables it.
  */
 export async function autoSettleBounties(): Promise<void> {
   if (!(await houseConfig()).bountyAutoPay) return;
@@ -392,12 +396,13 @@ export async function autoSettleBounties(): Promise<void> {
   });
   for (const b of candidates) {
     try {
-      if (b.game && ARCADE_GAMES.has(b.game)) {
-        if (now < b.endsAt) continue; // free games: weekly / time-based
-        const res = await awardBountyProRata(b.id);
+      const isArcade = !!b.game && ARCADE_GAMES.has(b.game);
+      if (isArcade) {
+        if (now < b.endsAt) continue; // free games settle weekly, at the deadline
+        const res = await awardBountyProRata(b.id); // self-gates on revenue + winners
         if (!res) {
-          // Nobody eligible this week, or a concurrent caller settled it
-          // first. The guarded close means exactly one caller renews.
+          // Nobody eligible, not funded, or a concurrent caller settled it —
+          // the guarded close means exactly one caller renews.
           const closed = await prisma.bounty.updateMany({
             where: { id: b.id, status: "open" },
             data: { status: "closed" },
@@ -406,12 +411,10 @@ export async function autoSettleBounties(): Promise<void> {
         }
         await renewWeeklyBounty(b);
       } else if (b.triggerCreditVolume) {
-        const spent = await creditSpendForGame(b.game!, b.startsAt);
-        // Live-effective trigger: an economy softened after posting can't
-        // make an old bounty fire early and under-earn its prize.
-        if (spent >= (await effectiveTriggerVolume(b))) {
-          await awardBountyProRata(b.id);
-        } else if (now >= b.endsAt) {
+        // Credit game: pay as soon as revenue covers it (the gate lives inside
+        // awardBountyProRata). If the deadline passes still unfunded, close it.
+        const res = await awardBountyProRata(b.id);
+        if (!res && now >= b.endsAt) {
           await prisma.bounty.updateMany({
             where: { id: b.id, status: "open" },
             data: { status: "closed" },

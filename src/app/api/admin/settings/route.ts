@@ -8,7 +8,7 @@
 import { z } from "zod";
 import { err, handler, ok, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { ARCADE_GAMES, computeTriggerCreditVolume } from "@/lib/bounty";
+import { ARCADE_GAMES, requiredRevenueRibbit } from "@/lib/bounty";
 import {
   SETTING_DEFS,
   settingDef,
@@ -90,26 +90,23 @@ export const POST = handler(async (req: Request) => {
   invalidateSettingsCache();
   const after = (await houseConfig())[def.key as keyof HouseConfig];
 
-  // Changing the economy re-prices every open auto-pay credit bounty: their
-  // spend triggers are re-derived AND PERSISTED immediately, so the stored
-  // trigger, the admin panel and the public meter always show ONE number.
-  // (The settle path's max(stored, live) guard stays as belt-and-braces.)
+  // The margin re-prices every open auto-pay credit bounty's required-revenue
+  // reference, so the stored marker matches the live gate. (Only the margin
+  // affects required revenue now — the credit price and house edge no longer
+  // touch bounty funding.)
   let rederived = 0;
-  if (
-    ["ribbitPerCredit", "houseEdge", "bountyHouseMargin"].includes(def.key) &&
-    String(before) !== String(after)
-  ) {
+  if (def.key === "bountyHouseMargin" && String(before) !== String(after)) {
     const open = await prisma.bounty.findMany({
       where: { status: "open", autoPay: true, game: { not: null } },
       select: { id: true, game: true, prizeRibbit: true, triggerCreditVolume: true },
     });
     for (const b of open) {
-      if (!b.game || ARCADE_GAMES.has(b.game)) continue; // weekly, no trigger
-      const trigger = await computeTriggerCreditVolume(b.prizeRibbit);
-      if (trigger !== b.triggerCreditVolume) {
+      if (!b.game || ARCADE_GAMES.has(b.game)) continue; // weekly, no marker
+      const marker = await requiredRevenueRibbit(b.prizeRibbit);
+      if (marker !== b.triggerCreditVolume) {
         await prisma.bounty.update({
           where: { id: b.id },
-          data: { triggerCreditVolume: trigger },
+          data: { triggerCreditVolume: marker },
         });
         rederived++;
       }

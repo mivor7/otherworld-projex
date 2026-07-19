@@ -21,7 +21,7 @@ type Bounty = {
   status: string;
   endsAt: string;
   progress?:
-    | { mode: "credit"; spent: number; threshold: number; pct: number }
+    | { mode: "revenue"; fundedRibbit: number; requiredRibbit: number; pct: number }
     | { mode: "time"; endsAt: string }
     | null;
 };
@@ -188,15 +188,15 @@ export default function BountiesPage() {
                   <Countdown to={b.endsAt} />
                 </div>
               </div>
-              {b.progress?.mode === "credit" && (
+              {b.progress?.mode === "revenue" && (
                 <div className="mt-4">
                   <div className="flex items-baseline justify-between mb-1.5 gap-2 flex-wrap">
                     <span className="kicker !text-[0.6rem]">
-                      Prize unlocks as players wager on {GAME_LABELS[b.game ?? ""] ?? "the game"}
+                      Prize funds as the house earns
                     </span>
                     <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
-                      {b.progress.spent.toLocaleString()} /{" "}
-                      {b.progress.threshold.toLocaleString()} credits wagered · {b.progress.pct}%
+                      {b.progress.fundedRibbit.toLocaleString(undefined, { maximumFractionDigits: 0 })} /{" "}
+                      {b.progress.requiredRibbit.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT · {b.progress.pct}%
                     </span>
                   </div>
                   <div
@@ -213,9 +213,9 @@ export default function BountiesPage() {
                     />
                   </div>
                   <p className="text-xs mt-1.5" style={{ color: "var(--text-dim)" }}>
-                    Every credit wagered here fills the bar. The moment it&apos;s full the{" "}
-                    {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`} pays out automatically,
-                    split across all eligible winners by how well they did.
+                    Every credit bought feeds the house. Once it has banked enough to cover this
+                    prize, the {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`} pays out
+                    automatically — split across all eligible winners by how well they did.
                   </p>
                 </div>
               )}
