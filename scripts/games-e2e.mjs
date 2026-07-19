@@ -696,12 +696,15 @@ try {
     `bal ${uB.ribbitBalance} locked ${uB.ribbitLocked} events ${settleEvents}`
   );
 
-  // ---------------- BOUNTY POOL ----------------
+  // ---------------- BOUNTY BOARD TOTALS ----------------
+  // The board exposes fixed prizes on offer + everything actually paid out —
+  // openPrizeRaw must equal the sum of the open bounties' prizes.
   const bp = (await A.api("/api/bounties")).data;
+  const openSum = (bp.open ?? []).reduce((s, b) => s + BigInt(b.prizeRibbit), 0n);
   check(
-    "sustainable bounty pool exposed (30% of realized take)",
-    bp.pool && typeof bp.pool.poolCredits === "number" &&
-      bp.pool.poolCredits === Math.floor(bp.pool.houseTakeCredits * 0.3)
+    "board totals exposed (open prize value + paid out)",
+    bp.totals && BigInt(bp.totals.openPrizeRaw) === openSum &&
+      typeof bp.totals.paidOutRaw === "string"
   );
 } finally {
   console.log("\ncleaning test data…");

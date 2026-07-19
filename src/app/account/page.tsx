@@ -125,7 +125,7 @@ export default function AccountPage() {
           <div className="kicker">Move funds</div>
           <div className="grid gap-1.5">
             <Link href="/games" className="btn btn-ghost !text-xs w-full">
-              Burn for credits
+              Buy credits
             </Link>
             <button
               className="btn btn-ghost !text-xs w-full"

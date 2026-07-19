@@ -15,7 +15,7 @@ const EPISODES = [
     name: "Fraud Frog Exterminator",
     target: "The Fraud Frog Kingpin",
     brief: "Hunt the copy cats. Stop the fraud frogs before they reach your base.",
-    reward: "5,000 $RIBBIT",
+    reward: "pool TBA",
     href: null,
   },
   {
@@ -23,7 +23,7 @@ const EPISODES = [
     name: "Frogris",
     target: "The Stack-Smuggler",
     brief: "Stack the falling frogs. Clear the lines. Don't top out.",
-    reward: "7,500 $RIBBIT",
+    reward: "1,000 $RIBBIT weekly pool",
     href: "/games/frogris",
   },
   {
@@ -31,7 +31,7 @@ const EPISODES = [
     name: "Pac-Frog",
     target: "The Maze Ghost Boss",
     brief: "Eat the pellets. Dodge the ghosts. Survive the maze.",
-    reward: "10,000 $RIBBIT",
+    reward: "pool TBA",
     href: null,
   },
   {
@@ -39,7 +39,7 @@ const EPISODES = [
     name: "Worm Frog",
     target: "The Tail-Bite Serpent",
     brief: "Slither, grow, and don't bite your own tail.",
-    reward: "12,500 $RIBBIT",
+    reward: "1,000 $RIBBIT weekly pool",
     href: "/games/worm",
   },
   {
@@ -47,7 +47,7 @@ const EPISODES = [
     name: "Hopper",
     target: "The Highway Bandit",
     brief: "Hop the lanes. Dodge the traffic. Ride the logs home.",
-    reward: "15,000 $RIBBIT",
+    reward: "1,250 $RIBBIT weekly pool",
     href: "/games/hopper",
   },
   {
@@ -55,7 +55,7 @@ const EPISODES = [
     name: "Blackjack",
     target: "The House Toad",
     brief: "Beat the dealer. Hold the line. Bank the RIBBIT.",
-    reward: "1,200 $RIBBIT + Card Shark badge",
+    reward: "5,000 $RIBBIT unlock pool",
     href: "/games/blackjack",
   },
   {
@@ -63,7 +63,7 @@ const EPISODES = [
     name: "Poker Face",
     target: "The Swamp Bot Ring",
     brief: "Outplay three swamp bots. Win the pot. Bank the RIBBIT.",
-    reward: "2,500 $RIBBIT + Poker Face badge",
+    reward: "pool TBA",
     href: null,
   },
 ];
@@ -109,10 +109,10 @@ export default function AboutPage() {
           <div className="kicker pt-1.5">02 — House rules</div>
           <div className="grid sm:grid-cols-2 gap-4">
             {[
-              ["Burn to play", `${CLIENT_CONFIG.ribbitPerCredit} $RIBBIT buys one credit — burned on-chain, gone from supply forever. The arcade episodes are free.`],
+              ["Buy credits", `${CLIENT_CONFIG.ribbitPerCredit} $RIBBIT buys one credit in a single on-chain transaction — ${Math.round(CLIENT_CONFIG.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes. The arcade episodes are free.`],
               ["Provably fair", "Every table outcome derives from a seed the house commits to before you play. Rotate your seed and re-check every round yourself."],
-              ["One treasury", "The house take splits 50% treasury · 30% bounty pools · 20% operations. Balances read live from Solana; every movement is published."],
-              ["Escrowed bids", "Auction bids lock deposited $RIBBIT held by the treasury. Outbid funds release instantly; withdrawals queue for the treasury signer."],
+              ["Pools that pay themselves", "Every bounty posts a fixed $RIBBIT prize with an unlock meter derived from it. When the game's credit-spend fills the meter, all eligible winners are paid pro-rata — automatically."],
+              ["Escrowed bids", "Auction bids lock deposited $RIBBIT held by the treasury. Outbid funds release instantly; withdrawals queue for the payout signer."],
             ].map(([title, desc]) => (
               <div key={title} className="panel panel-hover p-5">
                 <div className="font-medium tracking-tight mb-1.5">{title}</div>
@@ -172,7 +172,8 @@ export default function AboutPage() {
             <p className="text-fog text-[0.95rem] leading-relaxed mb-5 max-w-xl">
               $RIBBIT launched fair on pump.fun — no premine, no team allocation
               held by the treasury. It is the only currency the house accepts:
-              burn it to play, bid it on lots, win it from bounty pools.
+              it buys your credits (part of every purchase is burned at the
+              mint), backs your bids, and pays out of every bounty pool.
             </p>
             <div className="flex items-center gap-2 flex-wrap mb-5">
               <code

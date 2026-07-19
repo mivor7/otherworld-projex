@@ -1,18 +1,21 @@
 # Other World Projex — $RIBBIT Bounty Arcade 🐸
 
-Decentralized gaming platform on Solana: burn **$RIBBIT** to play
-provably-fair games, bid in community auctions, hunt bounties — all backed by
-one transparent treasury.
+Decentralized gaming platform on Solana: buy credits with **$RIBBIT** (part
+burned, part to the house), play provably-fair games, bid in community
+auctions, hunt bounties — all backed by one transparent treasury.
 
 - **Games**: Frog Flip (coinflip), Pond Dice (roll-under), Hopper (free arcade).
   Commit–reveal fairness — every round independently verifiable at `/fairness`.
-- **Burn-to-play**: users burn $RIBBIT from their own wallet; the burn is
-  verified on-chain and converted to play credits. Supply only goes down.
+- **Buy credits**: one on-chain transaction splits between a verified burn
+  (`BUY_BURN_SHARE`, default 50%) and a treasury transfer — deflation plus
+  real house revenue. Pure burn-to-play remains as the pre-treasury fallback.
 - **Auction house**: bid deposited $RIBBIT on house or community listings.
   Escrowed bids, instant refunds on outbid, anti-snipe extensions, and a
   community "apply to list" flow with admin review.
-- **Bounties**: weekly leaderboard pools + one-off challenges, funded by the
-  house take (50% treasury / 30% prize pools / 20% ops — configurable).
+- **Bounties**: fixed $RIBBIT prizes with auto-derived unlock triggers —
+  credit-game pools pay the moment enough credits are wagered on that game
+  (trigger sized so the house nets positive), free arcade pools pay weekly at
+  a lower tier. Every eligible winner is paid pro-rata, automatically.
 - **Treasury**: live on-chain balances at `/treasury`; SOL custody via a small
   audited-by-design Anchor program with multisig admin + daily payout cap
   (`program/`).

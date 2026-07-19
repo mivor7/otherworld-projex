@@ -35,9 +35,6 @@ export const CONFIG = {
   // House edge applied to game payouts (0.04 = 4%).
   houseEdge: Math.min(0.15, Math.max(0.005, num(process.env.HOUSE_EDGE, 0.04))),
 
-  // Where the realized house take is allocated (display + payout worker).
-  houseSplit: { treasury: 0.5, prizePool: 0.3, ops: 0.2 },
-
   // Wager limits, in credits.
   minWager: num(process.env.MIN_WAGER, 1),
   maxWager: num(process.env.MAX_WAGER, 1_000),
@@ -54,8 +51,9 @@ export const CONFIG = {
     process.env.RANKED_MIN_WINDOW_BURNED_RIBBIT,
     100
   ),
-  // Share of realized house take that funds the weekly bounty pool. Prizes
-  // scale with real revenue and can never outrun it.
+  // Admin guidance only: the share of realized house take shown as a safe
+  // weekly budget for MANUAL bounty prizes. Auto-pay bounties don't need it —
+  // their triggers already price in the margin.
   bountyPoolShare: Math.min(
     1,
     Math.max(0, nonneg(process.env.BOUNTY_POOL_SHARE, 0.3))

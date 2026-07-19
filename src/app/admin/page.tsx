@@ -975,14 +975,15 @@ export default function AdminPage() {
         {pool && (
           <div className="panel p-4 text-sm flex flex-wrap items-baseline gap-x-6 gap-y-1 mb-4">
             <span>
-              <span className="text-fog">This week&apos;s sustainable pool: </span>
+              <span className="text-fog">Manual-prize budget this week: </span>
               <span className="stat-number text-neon">
                 {pool.poolCredits.toLocaleString()} credits
               </span>
             </span>
             <span className="text-xs" style={{ color: "var(--text-dim)" }}>
               {Math.round(pool.share * 100)}% of {pool.houseTakeCredits.toLocaleString()}{" "}
-              credits realized house take — keep total prizes at or under this.
+              credits realized house take — a guide for MANUAL awards only.
+              Auto-pay bounties price their own margin via the spend trigger.
             </span>
           </div>
         )}

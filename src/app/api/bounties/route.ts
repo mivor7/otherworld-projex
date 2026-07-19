@@ -1,6 +1,5 @@
 import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { bountyPool } from "@/lib/ranked";
 import { autoSettleBounties, bountyProgress } from "@/lib/bounty";
 
 export const GET = handler(async () => {
@@ -13,15 +12,14 @@ export const GET = handler(async () => {
   });
   await autoSettleBounties();
 
-  const weekStart = new Date(Date.now() - 7 * 24 * 3600 * 1000);
-  const [open, closed, pool] = await Promise.all([
+  const [open, closed, paidAgg] = await Promise.all([
     prisma.bounty.findMany({ where: { status: "open" }, orderBy: { endsAt: "asc" } }),
     prisma.bounty.findMany({
       where: { status: { in: ["closed", "paid"] } },
       orderBy: { endsAt: "desc" },
       take: 10,
     }),
-    bountyPool(weekStart),
+    prisma.bountyAward.aggregate({ _sum: { amountRaw: true } }),
   ]);
 
   // Per-bounty progress toward the auto-payout trigger — so players watch the
@@ -30,5 +28,12 @@ export const GET = handler(async () => {
     open.map(async (b) => ({ ...b, progress: await bountyProgress(b) }))
   );
 
-  return ok({ open: openWithProgress, closed, pool });
+  // Board headline numbers: fixed prizes currently on the board + everything
+  // the house has actually paid hunters to date.
+  const totals = {
+    openPrizeRaw: open.reduce((s, b) => s + b.prizeRibbit, 0n),
+    paidOutRaw: paidAgg._sum.amountRaw ?? 0n,
+  };
+
+  return ok({ open: openWithProgress, closed, totals });
 });

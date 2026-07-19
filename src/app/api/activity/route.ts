@@ -11,7 +11,7 @@ const GAME_NAMES: Record<string, string> = {
 };
 
 export const GET = handler(async () => {
-  const [rounds, bids, burns, scores] = await Promise.all([
+  const [rounds, bids, burns, scores, awards] = await Promise.all([
     prisma.gameRound.findMany({
       where: { settled: true },
       orderBy: { createdAt: "desc" },
@@ -35,6 +35,14 @@ export const GET = handler(async () => {
       orderBy: { createdAt: "desc" },
       take: 5,
       include: { user: { select: { wallet: true } } },
+    }),
+    prisma.bountyAward.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      include: {
+        user: { select: { wallet: true } },
+        bounty: { select: { title: true } },
+      },
     }),
   ]);
 
@@ -71,6 +79,12 @@ export const GET = handler(async () => {
       kind: "score",
       href: `/games/${s.game}`,
       text: `${short(s.user.wallet)} scored ${fmt(s.score)} in ${ARCADE_NAMES[s.game] ?? s.game}`,
+    })),
+    ...awards.map((a) => ({
+      at: a.createdAt,
+      kind: "award",
+      href: "/bounties",
+      text: `${short(a.user.wallet)} was paid ${fmt(fromRaw(a.amountRaw))} $RIBBIT from “${a.bounty.title}”`,
     })),
   ]
     .sort((a, b) => b.at.getTime() - a.at.getTime())

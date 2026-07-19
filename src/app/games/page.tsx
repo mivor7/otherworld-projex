@@ -142,7 +142,7 @@ export default function GamesPage() {
         badge="Tables open"
         title="Step into the"
         titleAccent="arcade"
-        subtitle="Casino tables run on credits from burned $RIBBIT — provably fair, published edge. The arcade episodes are free and feed the weekly bounty boards."
+        subtitle="Casino tables run on credits bought with $RIBBIT — part burned forever, part funding the prize pools. Provably fair, published edge. The arcade episodes are free and pay weekly bounties."
       />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">

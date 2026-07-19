@@ -14,10 +14,13 @@ type TreasuryData = {
   };
   ribbitMint: string;
   houseEdge: number;
-  houseSplit: { treasury: number; prizePool: number; ops: number };
+  economy: { buyBurnShare: number; bountyHouseMargin: number; ribbitPerCredit: number };
   totals: {
     ribbitBurnedRaw: string;
     burnCount: number;
+    creditsSoldRaw: string;
+    purchaseCount: number;
+    bountyPaidRaw: string;
     houseTakeCredits: number;
     wageredCredits: number;
     rounds: number;
@@ -79,7 +82,7 @@ export default function TreasuryPage() {
         badge="Live on-chain"
         title="The"
         titleAccent="Treasury"
-        subtitle="One vault backs the whole house. Balances read live from Solana; every take split and payout is published below."
+        subtitle="One vault backs the whole house — funded by the owners, replenished by the house share of every credit purchase and by token trade fees. Balances read live from Solana; every payout is published below."
         stats={stats}
       />
 
@@ -123,27 +126,42 @@ export default function TreasuryPage() {
               tone="portal"
             />
             <StatCard
-              label="Burn events"
-              value={String(data.totals.burnCount)}
-              sub={`${fmtRibbit(data.totals.ribbitBurnedRaw)} $RIBBIT destroyed`}
+              label="Credit sales"
+              value={String(data.totals.burnCount + data.totals.purchaseCount)}
+              sub={`${fmtRibbit(data.totals.ribbitBurnedRaw)} $RIBBIT burned forever`}
               tone="gold"
             />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4 mt-4">
             <div className="panel p-6">
-              <div className="kicker mb-5">Allocation of the take</div>
+              <div className="kicker mb-5">How the prizes are funded</div>
               {(
                 [
-                  ["Treasury reserve", data.houseSplit.treasury, "var(--color-neon)"],
-                  ["Bounty prize pools", data.houseSplit.prizePool, "var(--color-gold)"],
-                  ["Operations", data.houseSplit.ops, "var(--color-portal)"],
+                  [
+                    "Every credit purchase",
+                    `${Math.round(data.economy.buyBurnShare * 100)}% burned at the mint · ${Math.round((1 - data.economy.buyBurnShare) * 100)}% to the treasury`,
+                    "var(--color-neon)",
+                    1 - data.economy.buyBurnShare,
+                  ],
+                  [
+                    "Every table round",
+                    `flat ${Math.round(data.houseEdge * 100)}% house edge on payouts`,
+                    "var(--color-portal)",
+                    data.houseEdge * 5,
+                  ],
+                  [
+                    "Every bounty pool",
+                    `unlock meter sized to earn the prize +${Math.round(data.economy.bountyHouseMargin * 100)}% before it pays`,
+                    "var(--color-gold)",
+                    data.economy.bountyHouseMargin,
+                  ],
                 ] as const
-              ).map(([label, frac, color]) => (
+              ).map(([label, detail, color, frac]) => (
                 <div key={label} className="mb-4">
-                  <div className="flex justify-between text-sm mb-1.5">
-                    <span className="text-fog">{label}</span>
-                    <span className="stat-number">{Math.round(frac * 100)}%</span>
+                  <div className="flex justify-between gap-3 text-sm mb-1.5">
+                    <span className="text-frost font-medium whitespace-nowrap">{label}</span>
+                    <span className="text-fog text-right text-[0.8rem]">{detail}</span>
                   </div>
                   <div
                     className="h-1.5 rounded-full overflow-hidden"
@@ -151,15 +169,16 @@ export default function TreasuryPage() {
                   >
                     <div
                       className="h-full rounded-full"
-                      style={{ width: `${frac * 100}%`, background: color, opacity: 0.85 }}
+                      style={{ width: `${Math.min(1, frac) * 100}%`, background: color, opacity: 0.85 }}
                     />
                   </div>
                 </div>
               ))}
               <p className="text-xs mt-5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                House edge is a flat {Math.round(data.houseEdge * 100)}% on game
-                payouts. The take accrues in credits and is swept on-chain by the
-                treasury program.
+                Bounty prizes are fixed up front and paid from the treasury —{" "}
+                {fmtRibbit(data.totals.bountyPaidRaw)} $RIBBIT paid to hunters so
+                far. Triggers are derived from each prize, so a pool that pays
+                out has already earned the house more than it costs.
               </p>
             </div>
 
@@ -177,8 +196,9 @@ export default function TreasuryPage() {
                   on-chain before any bidding balance is credited.
                 </li>
                 <li>
-                  <span className="text-frost font-medium">Burns.</span> Burn-to-play
-                  $RIBBIT is destroyed at the mint — it never touches the treasury.
+                  <span className="text-frost font-medium">Burns.</span> The burn
+                  leg of every credit purchase is destroyed at the mint — it never
+                  touches the treasury. Only the house leg lands here.
                 </li>
               </ul>
               {data.chain.wallet && (

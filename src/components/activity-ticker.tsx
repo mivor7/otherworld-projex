@@ -10,6 +10,7 @@ type Event = { at: string; kind: string; text: string; href?: string };
 
 const DOT: Record<string, string> = {
   win: "var(--color-gold)",
+  award: "var(--color-gold)",
   bid: "var(--color-portal)",
   burn: "var(--color-danger)",
   score: "var(--color-neon)",

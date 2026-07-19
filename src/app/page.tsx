@@ -18,7 +18,7 @@ const WINGS = [
     image: "/art/owp_hero.jpg",
     kicker: "Wing I",
     title: "The Arcade",
-    desc: "Provably-fair games at a published house edge. Burn $RIBBIT for credits, call your shots, verify every roll.",
+    desc: "Provably-fair games at a published house edge. Credits bought with $RIBBIT — part burned forever, part funding the prizes. Verify every roll.",
     cta: "Enter",
   },
   {
@@ -34,7 +34,7 @@ const WINGS = [
     image: "/art/art-bounty.jpg",
     kicker: "Wing III",
     title: "The Bounty Board",
-    desc: "Weekly competitions and one-off challenges, funded by the house take. Top hunters split the pool.",
+    desc: "Fixed $RIBBIT pools that unlock as each game is played. Every eligible winner is paid automatically, pro-rata — free episodes pay weekly.",
     cta: "Open board",
   },
 ];
@@ -48,16 +48,36 @@ const EPISODES: { image: string; title: string; href?: string }[] = [
   { image: "/art/owp_poker.png", title: "Poker Face" },
 ];
 
+// "2h ago" style timestamps for the payout ledger.
+function ago(d: Date): string {
+  const s = Math.max(0, (Date.now() - d.getTime()) / 1000);
+  if (s < 3600) return `${Math.max(1, Math.floor(s / 60))}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+const shortWallet = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
+
 export default async function Home() {
-  const [chain, burnAgg, roundCount, liveAuctions, openBounties] =
+  const [chain, burnAgg, roundCount, liveAuctions, openBounties, awards, paidAgg] =
     await Promise.all([
       getTreasuryStats(),
       prisma.burnEvent.aggregate({ _sum: { amountRaw: true } }),
       prisma.gameRound.count(),
       prisma.auction.count({ where: { status: "live" } }),
       prisma.bounty.count({ where: { status: "open" } }),
+      prisma.bountyAward.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        include: {
+          user: { select: { wallet: true } },
+          bounty: { select: { title: true, game: true } },
+        },
+      }),
+      prisma.bountyAward.aggregate({ _sum: { amountRaw: true } }),
     ]);
   const burned = fromRaw(burnAgg._sum.amountRaw ?? 0n);
+  const paidOut = fromRaw(paidAgg._sum.amountRaw ?? 0n);
 
   return (
     <div className="pt-6">
@@ -72,9 +92,10 @@ export default async function Home() {
         titleAccent="bounty hunters."
         subtitle={
           <>
-            Burn $RIBBIT to play provably-fair games. Bid on lots in the
-            auction house. Hunt bounties funded by the house take. Every
-            credit, roll and payout settles against one transparent treasury.
+            Turn $RIBBIT into credits — part burned forever, part funding the
+            prize pool. Play provably-fair games, bid on lots, and hunt
+            bounties that pay out automatically. Everything settles against
+            one transparent treasury.
           </>
         }
         actions={
@@ -146,9 +167,9 @@ export default async function Home() {
         <div className="mesh-band p-4 sm:p-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             ["01", "Connect & sign", "A free message signature proves wallet ownership. No custody, no email, no password."],
-            ["02", "Burn for credits", `${CLIENT_CONFIG.ribbitPerCredit} $RIBBIT per credit — verified on-chain, removed from supply forever.`],
+            ["02", "Buy credits", `${CLIENT_CONFIG.ribbitPerCredit} $RIBBIT per credit, verified on-chain — ${Math.round(CLIENT_CONFIG.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes.`],
             ["03", "Play, bid, hunt", "Wager credits in the arcade, bid escrowed $RIBBIT on lots, climb the bounty boards."],
-            ["04", "The take flows back", "House take splits 50% treasury · 30% bounty pools · 20% operations. Every movement is published."],
+            ["04", "Pools unlock with play", "Every bounty posts a fixed $RIBBIT pool and a spend meter sized to it. The meter fills — every eligible winner is paid pro-rata, automatically."],
           ].map(([n, title, desc], i) => (
             <Reveal key={n} delay={i * 60}>
               <div className="panel panel-hover p-5 h-full">
@@ -159,6 +180,71 @@ export default async function Home() {
             </Reveal>
           ))}
         </div>
+      </section>
+
+      {/* The ledger — bounty payouts, proof the pools actually pay */}
+      <section className="mt-16">
+        <Reveal>
+          <div className="flex items-end justify-between mb-6 gap-4 flex-wrap">
+            <div>
+              <div className="kicker mb-2">The ledger</div>
+              <h2 className="text-[1.5rem]">Bounty payouts</h2>
+            </div>
+            <div className="text-right">
+              <div className="stat-number text-gold text-[1.25rem]">
+                {paidOut.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT
+              </div>
+              <div className="kicker !text-[0.6rem]">paid to hunters, all time</div>
+            </div>
+          </div>
+        </Reveal>
+        <Reveal delay={60}>
+          <div className="panel overflow-hidden">
+            {awards.length === 0 ? (
+              <div className="p-6 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-fog text-sm">
+                  No pools have triggered yet — the first hunts are filling
+                  their meters now.
+                </p>
+                <Link href="/bounties" className="btn btn-ghost">
+                  Watch the board →
+                </Link>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <tbody>
+                    {awards.map((a) => (
+                      <tr key={a.id} className="table-row">
+                        <td className="py-3 px-4 mono text-xs whitespace-nowrap">
+                          {shortWallet(a.user.wallet)}
+                        </td>
+                        <td className="py-3 pr-4 min-w-0">
+                          <Link
+                            href={a.bounty.game ? `/games/${a.bounty.game}` : "/bounties"}
+                            className="hover:text-neon transition-colors"
+                          >
+                            {a.bounty.title}
+                          </Link>
+                        </td>
+                        <td className="py-3 pr-4 stat-number text-gold text-right whitespace-nowrap">
+                          +{fromRaw(a.amountRaw).toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
+                          $RIBBIT
+                        </td>
+                        <td
+                          className="py-3 pr-4 text-xs text-right whitespace-nowrap"
+                          style={{ color: "var(--text-dim)" }}
+                        >
+                          {ago(a.createdAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </Reveal>
       </section>
 
       {/* Episodes — production slate */}
@@ -213,8 +299,9 @@ export default async function Home() {
               <div className="kicker mb-2">Settlement currency</div>
               <h2 className="text-[1.5rem] mb-3">$RIBBIT</h2>
               <p className="text-fog text-[0.9375rem] leading-relaxed max-w-lg mb-5">
-                One token fuels the house: burn it to play, bid it on lots, win
-                it from bounty pools. Launched fair on pump.fun — the treasury
+                One token fuels the house: it buys your credits (part of every
+                purchase is burned at the mint), backs your bids, and pays out
+                of every bounty pool. Launched fair on pump.fun — the treasury
                 holds no premine.
               </p>
               <div className="flex items-center gap-2 flex-wrap mb-6">

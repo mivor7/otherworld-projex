@@ -17,9 +17,9 @@ export function Footer() {
             </span>
           </div>
           <p className="text-fog leading-relaxed max-w-sm">
-            A decentralized bounty arcade on Solana. Burn $RIBBIT to play
-            provably-fair games, bid in the auction house, hunt bounties —
-            all against one transparent treasury.
+            A decentralized bounty arcade on Solana. Turn $RIBBIT into credits,
+            play provably-fair games, bid in the auction house, hunt bounties
+            that pay automatically — all against one transparent treasury.
           </p>
         </div>
         <div>
@@ -65,7 +65,7 @@ export function Footer() {
         style={{ borderTop: "1px solid var(--hairline)", color: "var(--text-dim)" }}
       >
         Games are for entertainment. $RIBBIT is a memecoin with no promise of financial
-        return. Play responsibly — never burn more than you can afford to lose.
+        return. Play responsibly — never spend more than you can afford to lose.
       </div>
     </footer>
   );

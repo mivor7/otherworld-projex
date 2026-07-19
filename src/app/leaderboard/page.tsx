@@ -150,13 +150,13 @@ export default function LeaderboardPage() {
       <p className="text-xs mt-4 leading-relaxed max-w-lg" style={{ color: "var(--text-dim)" }}>
         <span className="text-neon">Skin in the game:</span> prize boards rank
         wallets with {""}
-        {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT burned
-        lifetime and {CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+
-        burned inside the board week (table boards also need in-window wagering
-        volume). Anyone can play; burning mid-week ranks your best score
+        {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT spent on
+        credits lifetime and {CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+
+        spent inside the board week (table boards also need in-window wagering
+        volume). Anyone can play; buying credits mid-week ranks your best score
         retroactively. Every arcade run is replayed move-by-move and verified
-        on the server before it can rank — pools settle on each hunt’s closing
-        date, listed on the{" "}
+        on the server before it can rank — pools pay the moment they trigger,
+        listed on the{" "}
         <Link href="/bounties" className="text-neon hover:underline">
           bounty board
         </Link>

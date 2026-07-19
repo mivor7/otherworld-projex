@@ -49,7 +49,7 @@ const GAME_ART: Record<string, string> = {
 export default function BountiesPage() {
   const [open, setOpen] = useState<Bounty[]>([]);
   const [closed, setClosed] = useState<Bounty[]>([]);
-  const [pool, setPool] = useState<{ houseTakeCredits: number; poolCredits: number; share: number } | null>(null);
+  const [totals, setTotals] = useState<{ openPrizeRaw: string; paidOutRaw: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [boardGame, setBoardGame] = useState("hopper");
   const [board, setBoard] = useState<BoardRow[]>([]);
@@ -60,7 +60,7 @@ export default function BountiesPage() {
       .then((d) => {
         setOpen(d.open ?? []);
         setClosed(d.closed ?? []);
-        setPool(d.pool ?? null);
+        setTotals(d.totals ?? null);
         setLoaded(true);
       })
       .catch(() => {
@@ -87,18 +87,26 @@ export default function BountiesPage() {
         badge="The hunt is always open"
         title="Bounties &"
         titleAccent="competitions"
-        subtitle="Prize pools funded by the house take — 30% of every credit the house wins flows here. Top the boards, claim the pool."
+        subtitle="Fixed $RIBBIT pools, pre-funded by the house. Table bounties unlock as their game gets played; free episodes pay weekly. Every eligible winner shares the pool — paid automatically."
       />
 
-      {pool && (
-        <div className="panel p-4 mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
-          <span className="kicker !text-[0.6rem]">This week&apos;s pool</span>
-          <span className="stat-number text-neon">
-            {pool.poolCredits.toLocaleString()} credits
+      {totals && (
+        <div className="panel p-4 mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-1 text-sm">
+          <span>
+            <span className="kicker !text-[0.6rem] mr-3">On the board now</span>
+            <span className="stat-number text-neon">
+              {fmtRibbit(totals.openPrizeRaw)} $RIBBIT
+            </span>
+          </span>
+          <span>
+            <span className="kicker !text-[0.6rem] mr-3">Paid to hunters</span>
+            <span className="stat-number text-gold">
+              {fmtRibbit(totals.paidOutRaw)} $RIBBIT
+            </span>
           </span>
           <span className="text-xs" style={{ color: "var(--text-dim)" }}>
-            {Math.round(pool.share * 100)}% of the house take actually realized in the
-            last 7 days — prizes scale with real play, never promises.
+            Prizes are fixed up front; their unlock meters are sized so payouts
+            never outrun the house.
           </span>
         </div>
       )}
@@ -292,11 +300,12 @@ export default function BountiesPage() {
           )}
           <p className="text-xs mt-4 leading-relaxed" style={{ color: "var(--text-dim)" }}>
             Arcade boards rank best score; the tables rank net credits won.
-            Pools pay in $RIBBIT when the bounty closes.{" "}
-            <span className="text-neon">Prize boards rank active burners only</span> —{" "}
+            Pools pay in $RIBBIT the moment a bounty triggers.{" "}
+            <span className="text-neon">Prize boards rank active spenders only</span> —{" "}
             {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT
-            burned lifetime and {CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+
-            inside the board week.
+            spent on credits lifetime and{" "}
+            {CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside
+            the board week. Anyone can play free; only spenders collect.
           </p>
         </aside>
       </div>
