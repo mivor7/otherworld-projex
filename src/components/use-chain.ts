@@ -5,7 +5,7 @@
 // the tx signature is submitted to the API for server-side verification.
 import { useCallback } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey, Transaction } from "@solana/web3.js";
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createBurnCheckedInstruction,
@@ -143,6 +143,43 @@ export async function redeemSignature(url: string, signature: string): Promise<C
   return redeemWithRetry(url, signature.trim());
 }
 
+// Pre-flight check so users get a clear reason BEFORE we build a doomed tx —
+// instead of a cryptic wallet/RPC error after signing. Returns an error
+// message string, or null if funds are sufficient.
+async function insufficientFundsReason(
+  connection: Connection,
+  owner: PublicKey,
+  neededRibbitRaw: bigint
+): Promise<string | null> {
+  const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
+  const ata = getAssociatedTokenAddressSync(mint, owner, false, TP);
+  let balance = 0n;
+  try {
+    const b = await connection.getTokenAccountBalance(ata);
+    balance = BigInt(b.value.amount);
+  } catch {
+    balance = 0n; // no token account → no $RIBBIT held
+  }
+  const fmt = (raw: bigint) =>
+    (Number(raw) / 10 ** CLIENT_CONFIG.ribbitDecimals).toLocaleString(undefined, {
+      maximumFractionDigits: 2,
+    });
+  if (balance < neededRibbitRaw) {
+    return `Not enough $RIBBIT — you have ${fmt(balance)}, this needs ${fmt(neededRibbitRaw)}.`;
+  }
+  // A tiny bit of SOL is needed for the network fee (and to open a token
+  // account on first receipt). ~0.003 SOL covers it.
+  try {
+    const sol = await connection.getBalance(owner);
+    if (sol < 3_000_000) {
+      return "Not enough SOL for the network fee — add a little SOL (about 0.01) and retry.";
+    }
+  } catch {
+    // If the balance read fails, don't block — the wallet will surface it.
+  }
+  return null;
+}
+
 export function useChain() {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
@@ -154,6 +191,12 @@ export function useChain() {
       try {
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
         const ata = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
+        const shortfall = await insufficientFundsReason(
+          connection,
+          publicKey,
+          toRawClient(ribbitAmount)
+        );
+        if (shortfall) return { ok: false, error: shortfall };
         const tx = new Transaction().add(
           createBurnCheckedInstruction(
             ata,
@@ -211,6 +254,8 @@ export function useChain() {
         const burnRaw = total - houseRaw;
         if (burnRaw <= 0n || houseRaw <= 0n)
           return { ok: false, error: "Amount too small to split" };
+        const shortfall = await insufficientFundsReason(connection, publicKey, total);
+        if (shortfall) return { ok: false, error: shortfall };
         const tx = new Transaction().add(
           createAssociatedTokenAccountIdempotentInstruction(
             publicKey,
@@ -262,6 +307,12 @@ export function useChain() {
         const treasury = new PublicKey(CLIENT_CONFIG.treasuryWallet);
         const from = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
         const to = getAssociatedTokenAddressSync(mint, treasury, true, TP);
+        const shortfall = await insufficientFundsReason(
+          connection,
+          publicKey,
+          toRawClient(ribbitAmount)
+        );
+        if (shortfall) return { ok: false, error: shortfall };
         const tx = new Transaction().add(
           createAssociatedTokenAccountIdempotentInstruction(
             publicKey,

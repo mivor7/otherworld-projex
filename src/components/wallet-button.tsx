@@ -11,7 +11,7 @@ import { fmtRibbit, shortWallet } from "@/lib/client-config";
 export function WalletButton() {
   const { publicKey, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
-  const { me, signIn, signOut, signingIn } = useSession();
+  const { me, signIn, signOut, signingIn, signInError } = useSession();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -39,17 +39,24 @@ export function WalletButton() {
 
   if (!me.signedIn) {
     return (
-      <div className="flex items-center gap-2">
-        <button className="btn btn-primary" onClick={signIn} disabled={signingIn}>
-          {signingIn ? "Check your wallet…" : "Sign in"}
-        </button>
-        <button
-          className="btn btn-ghost mono !text-xs"
-          onClick={() => disconnect()}
-          title={`${publicKey.toBase58()} — click to disconnect`}
-        >
-          {shortWallet(publicKey.toBase58())}
-        </button>
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-2">
+          <button className="btn btn-primary" onClick={signIn} disabled={signingIn}>
+            {signingIn ? "Check your wallet…" : "Sign in"}
+          </button>
+          <button
+            className="btn btn-ghost mono !text-xs"
+            onClick={() => disconnect()}
+            title={`${publicKey.toBase58()} — click to disconnect`}
+          >
+            {shortWallet(publicKey.toBase58())}
+          </button>
+        </div>
+        {signInError && (
+          <span className="text-[0.7rem] text-danger max-w-[16rem] text-right leading-tight">
+            {signInError}
+          </span>
+        )}
       </div>
     );
   }

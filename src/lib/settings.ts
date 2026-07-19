@@ -49,7 +49,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "houseEdge",
     label: "House edge",
-    desc: "Flat edge applied to table payout multipliers (0.04 = 4%). Also feeds auto-bounty trigger derivation.",
+    desc: "Flat edge applied to table payout multipliers (0.04 = 4%). Game fairness only — it does NOT affect bounty triggers.",
     group: "Economy",
     kind: "share",
     min: 0.005,
@@ -59,7 +59,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "bountyHouseMargin",
     label: "Bounty trigger margin",
-    desc: "Auto-bounty triggers require edge-take of prize × (1 + margin) before paying. Higher = slower payouts, more house margin.",
+    desc: "A credit bounty needs enough credit-spend that the house netted prize × (1 + margin) in real $RIBBIT before it pays. Higher = more house margin, slower payouts.",
     group: "Economy",
     kind: "share",
     min: 0,
@@ -238,7 +238,16 @@ export async function houseConfig(): Promise<HouseConfig> {
   for (const def of SETTING_DEFS) {
     const raw = rows.get(def.key);
     const parsed = raw !== undefined ? parseSettingValue(def, raw) : null;
-    out[def.key] = parsed ?? def.envDefault;
+    let value = parsed ?? def.envDefault;
+    // The env default can sit outside the panel's [min,max] (its clamp differs
+    // from ours). Re-clamp numeric values to the def range so a wide env can't
+    // produce a degenerate config (e.g. buyBurnShare=1 → divide-by-zero in the
+    // bounty trigger). Overrides are already range-validated on write.
+    if (def.kind !== "bool" && typeof value === "number") {
+      if (def.min !== undefined) value = Math.max(def.min, value);
+      if (def.max !== undefined) value = Math.min(def.max, value);
+    }
+    out[def.key] = value;
   }
   return out as HouseConfig;
 }

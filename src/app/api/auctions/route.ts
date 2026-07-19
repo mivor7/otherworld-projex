@@ -12,6 +12,7 @@ export const GET = handler(async () => {
       where: { status: "live" },
       orderBy: { endsAt: "asc" },
       include: { _count: { select: { bids: true } } },
+      take: 100,
     }),
     prisma.auction.findMany({
       where: { status: { in: ["settled", "cancelled"] } },

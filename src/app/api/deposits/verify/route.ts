@@ -5,12 +5,16 @@ import { z } from "zod";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { verifyDepositTx } from "@/lib/solana";
+import { rateLimit } from "@/lib/ratelimit";
 
 const body = z.object({ signature: z.string().min(64).max(120) });
 
 export const POST = handler(async (req: Request) => {
   const session = await requireSession();
   const { signature } = body.parse(await req.json());
+
+  // RPC-lookup guard — same budget as the other chain-verify endpoints.
+  rateLimit(`chain-verify:${session.userId}`, 30, 60_000);
 
   const existing = await prisma.deposit.findUnique({ where: { signature } });
   if (existing) return err("This deposit was already credited", 409);

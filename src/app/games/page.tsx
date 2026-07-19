@@ -141,9 +141,15 @@ export default function GamesPage() {
     setMsg(null);
     const res = canBuy ? await buyCredits(burnAmount) : await burnForCredits(burnAmount);
     if (res.ok) {
+      // The retry/recovery path returns {alreadyRedeemed:true} with no count
+      // (e.g. a dropped first response, then a 409) — don't print "undefined".
+      const granted = res.data.creditsGranted;
       setMsg({
         kind: "ok",
-        text: `${canBuy ? "Purchase" : "Burn"} verified — ${res.data.creditsGranted} credits added.`,
+        text:
+          typeof granted === "number"
+            ? `${canBuy ? "Purchase" : "Burn"} verified — ${granted} credits added.`
+            : "Payment verified — your credits are in your balance.",
       });
       await refresh();
     } else {
@@ -284,6 +290,7 @@ export default function GamesPage() {
                   className="input"
                   min={house.ribbitPerCredit}
                   step={house.ribbitPerCredit}
+                  aria-label="Amount of $RIBBIT to spend on credits"
                   value={burnAmount || ""}
                   onChange={(e) => setBurnAmount(Number(e.target.value))}
                 />
@@ -380,7 +387,8 @@ export default function GamesPage() {
             style={{ borderTop: "1px solid var(--hairline)", color: "var(--text-dim)" }}
           >
             House edge is a flat {Math.round(house.houseEdge * 100)}% on table
-            payouts — it funds the bounty pools every purchase and wager feeds.{" "}
+            payouts. Bounty prizes are funded separately — by the house&apos;s
+            share of every credit purchase.{" "}
             <Link href="/fairness" className="text-neon hover:underline">
               Verify fairness →
             </Link>

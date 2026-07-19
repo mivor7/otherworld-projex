@@ -47,7 +47,10 @@ export default function FlipPage() {
       setResult(data);
       setLanding(false);
       if (data.win) celebrate();
-      if (!sandbox) await refresh();
+      if (!sandbox) {
+        await refresh();
+        window.dispatchEvent(new Event("owp:round")); // live-update the bounty meter
+      }
     }, 1150);
   };
 
@@ -176,6 +179,7 @@ export default function FlipPage() {
             className="input max-w-28 text-center"
             min={house.minWager}
             max={house.maxWager}
+            aria-label="Wager in credits"
             value={wager || ""}
             onChange={(e) => {
               const n = Math.floor(Number(e.target.value));
@@ -190,7 +194,7 @@ export default function FlipPage() {
         <button
           className="btn btn-primary text-lg px-12 py-3"
           onClick={play}
-          disabled={busy || !canPlay || (!sandbox && balance < wager)}
+          disabled={busy || !canPlay || wager < house.minWager || (!sandbox && balance < wager)}
         >
           {busy ? "Flipping…" : sandbox ? "Flip (practice)" : "Flip it"}
         </button>

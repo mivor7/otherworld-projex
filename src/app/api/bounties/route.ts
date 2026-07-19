@@ -16,7 +16,7 @@ export const GET = handler(async () => {
   await autoSettleBounties();
 
   const [open, closed, paidAgg] = await Promise.all([
-    prisma.bounty.findMany({ where: { status: "open" }, orderBy: { endsAt: "asc" } }),
+    prisma.bounty.findMany({ where: { status: "open" }, orderBy: { endsAt: "asc" }, take: 100 }),
     prisma.bounty.findMany({
       where: { status: { in: ["closed", "paid"] } },
       orderBy: { endsAt: "desc" },

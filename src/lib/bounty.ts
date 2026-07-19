@@ -153,13 +153,20 @@ export async function requiredCreditSpend(prizeRaw: bigint): Promise<number> {
   return Math.max(1, Math.ceil(need));
 }
 
-/** Total credits wagered on a game since `since` — the auto-bounty meter. */
+/**
+ * Net credits actually SPENT to the house on a game since `since` = wagers
+ * minus payouts (the summed houseTake). This is "spent, not earned": credits a
+ * player won and re-wagered do not inflate it, so the meter reflects real money
+ * consumed, not raw betting volume. Clamped at 0 (a game where players are
+ * collectively up has funded nothing). Winnings still decide the SPLIT — that's
+ * the ranking by net value, separate from this pool meter.
+ */
 export async function creditSpendForGame(game: string, since: Date): Promise<number> {
   const agg = await prisma.gameRound.aggregate({
-    where: { game, createdAt: { gte: since } },
-    _sum: { wager: true },
+    where: { game, settled: true, createdAt: { gte: since } },
+    _sum: { houseTake: true },
   });
-  return agg._sum.wager ?? 0;
+  return Math.max(0, agg._sum.houseTake ?? 0);
 }
 
 /**
@@ -240,8 +247,11 @@ export type AwardResult = {
 
 /**
  * Pay a bounty's fixed prize pro-rata across ALL eligible winners, weighted by
- * performance (score / net credits). Atomic + idempotent (bounty→paid guard),
- * and hard-capped by the treasury's live balance when it's configured — never
+ * performance (score / net credits). Atomic + idempotent (bounty→paid guard).
+ * Solvency is guaranteed upstream: the caller only fires this once the game's
+ * NET credit-spend (house take) has reached the prize-derived threshold, which
+ * means the house already banked more $RIBBIT than the prize. No treasury-
+ * balance cap — the full prize always pays. Queues withdrawals for the
  * pays out more $RIBBIT than the house actually holds. Queues withdrawals for
  * the off-server worker; never signs.
  */

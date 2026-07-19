@@ -21,11 +21,13 @@ export const GET = handler(async () => {
       where: { status: "pending" },
       orderBy: { createdAt: "asc" },
       include: { user: { select: { wallet: true } } },
+      take: 100,
     }),
     prisma.withdrawal.findMany({
       where: { status: { in: ["pending", "processing"] } },
       orderBy: { createdAt: "asc" },
       include: { user: { select: { wallet: true } } },
+      take: 100,
     }),
     prisma.auction.count({ where: { status: "live" } }),
     prisma.bounty.count({ where: { status: "open" } }),
@@ -39,6 +41,7 @@ export const GET = handler(async () => {
       where: { status: "settled", fulfilled: false },
       orderBy: { endsAt: "desc" },
       include: { _count: { select: { bids: true } } },
+      take: 100,
     }),
     getTreasuryStats(),
   ]);

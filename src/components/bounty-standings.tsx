@@ -50,8 +50,15 @@ export function BountyStandings({ game }: { game: string }) {
   }, [game]);
   useEffect(() => {
     load();
-    const t = setInterval(load, 10_000);
-    return () => clearInterval(t);
+    const t = setInterval(load, 8_000);
+    // Refresh immediately after each round so the player sees the meter and
+    // their rank/projection move as they play — not only every poll tick.
+    const onRound = () => load();
+    window.addEventListener("owp:round", onRound);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("owp:round", onRound);
+    };
   }, [load]);
 
   const b = live?.bounty;

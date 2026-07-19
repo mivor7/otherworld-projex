@@ -142,6 +142,7 @@ export default function BlackjackPage() {
         if (data.phase === "done") {
           if (data.result === "win" || data.result === "blackjack") celebrate();
           await refresh();
+          window.dispatchEvent(new Event("owp:round")); // live-update the bounty meter
         }
         if (body.action === "deal" || body.action === "double") await refresh();
       } else {
@@ -417,6 +418,7 @@ export default function BlackjackPage() {
               className="input max-w-28 text-center"
               min={house.minWager}
               max={house.maxWager}
+              aria-label="Wager in credits"
               value={wager || ""}
               onChange={(e) => {
                 const n = Math.floor(Number(e.target.value));
@@ -426,7 +428,7 @@ export default function BlackjackPage() {
             <button
               className="btn btn-primary btn-lg px-10"
               onClick={dealNew}
-              disabled={busy || (!sandbox && (!me.signedIn || balance < wager))}
+              disabled={busy || wager < house.minWager || (!sandbox && (!me.signedIn || balance < wager))}
             >
               {busy ? "Dealing…" : done ? "Deal again" : sandbox ? "Deal (practice)" : "Deal"}
             </button>

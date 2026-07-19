@@ -77,6 +77,7 @@ export default function DicePage() {
         setResult(data);
         if (data.win) celebrate();
         await refresh();
+        window.dispatchEvent(new Event("owp:round")); // live-update the bounty meter
       }
     } catch {
       setError("Connection hiccup — check your balance before retrying.");
@@ -208,6 +209,7 @@ export default function DicePage() {
             className="input max-w-28 text-center"
             min={house.minWager}
             max={house.maxWager}
+            aria-label="Wager in credits"
             value={wager || ""}
             onChange={(e) => {
               const n = Math.floor(Number(e.target.value));
@@ -230,7 +232,7 @@ export default function DicePage() {
           <button
             className="btn btn-primary text-lg px-12 py-3"
             onClick={play}
-            disabled={rolling || !canPlay || (!sandbox && balance < wager)}
+            disabled={rolling || !canPlay || wager < house.minWager || (!sandbox && balance < wager)}
           >
             {rolling ? "Rolling…" : sandbox ? "Roll (practice)" : "Roll"}
           </button>

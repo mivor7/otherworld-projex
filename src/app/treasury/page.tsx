@@ -139,20 +139,20 @@ export default function TreasuryPage() {
               {(
                 [
                   [
-                    "Every credit purchase",
-                    `${Math.round(data.economy.buyBurnShare * 100)}% burned at the mint · ${Math.round((1 - data.economy.buyBurnShare) * 100)}% to the treasury`,
+                    "Bounty prizes ← credit purchases",
+                    `funded by the treasury's ${Math.round((1 - data.economy.buyBurnShare) * 100)}% share of every credit bought (the other ${Math.round(data.economy.buyBurnShare * 100)}% is burned)`,
                     "var(--color-neon)",
                     1 - data.economy.buyBurnShare,
                   ],
                   [
-                    "Every table round",
-                    `flat ${Math.round(data.houseEdge * 100)}% house edge on payouts`,
+                    "Table house edge (separate)",
+                    `flat ${Math.round(data.houseEdge * 100)}% on table payouts — game fairness, not bounty funding`,
                     "var(--color-portal)",
                     data.houseEdge * 5,
                   ],
                   [
                     "Every bounty pool",
-                    `unlock meter sized to earn the prize +${Math.round(data.economy.bountyHouseMargin * 100)}% before it pays`,
+                    `pays only after enough credits are spent that the house netted the prize +${Math.round(data.economy.bountyHouseMargin * 100)}%`,
                     "var(--color-gold)",
                     data.economy.bountyHouseMargin,
                   ],

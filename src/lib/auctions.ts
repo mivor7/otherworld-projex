@@ -4,6 +4,7 @@
 // extends any auction that receives a bid in its final minutes.
 import { prisma } from "./db";
 import { ApiError } from "./api";
+import { fromRaw } from "./config";
 
 const ANTI_SNIPE_MS = 2 * 60 * 1000;
 
@@ -135,7 +136,11 @@ export async function placeBid(
         ? auction.currentRaw + auction.minIncrement
         : auction.startBidRaw;
     if (amountRaw < minBid) {
-      throw new ApiError(`Bid must be at least ${minBid.toString()} raw units`);
+      throw new ApiError(
+        `Bid must be at least ${fromRaw(minBid).toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+        })} $RIBBIT`
+      );
     }
 
     const prevHigh = await tx.bid.findFirst({

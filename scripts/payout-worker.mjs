@@ -44,9 +44,7 @@ const INTERVAL_MS = Number(process.env.PAYOUT_INTERVAL_MS ?? 15_000);
 // Keep only a working float in it, topped up from the treasury (ideally a
 // cold/multisig). That way the treasury key never lives on this box, and the
 // most this process could ever move is the hot-wallet balance.
-// (TREASURY_KEYPAIR_PATH still accepted for backwards compatibility.)
-const keypairPath =
-  process.env.PAYOUT_KEYPAIR_PATH ?? process.env.TREASURY_KEYPAIR_PATH;
+const keypairPath = process.env.PAYOUT_KEYPAIR_PATH;
 if (!keypairPath) {
   console.error(
     "Set PAYOUT_KEYPAIR_PATH to the payout HOT WALLET keypair JSON file " +

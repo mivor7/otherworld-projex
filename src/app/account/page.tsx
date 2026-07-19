@@ -69,23 +69,28 @@ export default function AccountPage() {
   const withdrawAll = async () => {
     setBusy(true);
     setMsg(null);
-    const res = await fetch("/api/withdrawals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amountRaw: BigInt(me.ribbitAvailable ?? "0").toString() }),
-    });
-    const data = await res.json();
-    setMsg(
-      res.ok
-        ? { kind: "ok", text: "Withdrawal queued — the treasury signer pays out shortly." }
-        : { kind: "err", text: data.error ?? "Withdrawal failed" }
-    );
-    await refresh();
-    if (res.ok) {
-      const r = await fetch("/api/withdrawals");
-      if (r.ok) setWithdrawals(await r.json());
+    try {
+      const res = await fetch("/api/withdrawals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountRaw: BigInt(me.ribbitAvailable ?? "0").toString() }),
+      });
+      const data = await res.json();
+      setMsg(
+        res.ok
+          ? { kind: "ok", text: "Withdrawal queued — the payout worker sends it shortly." }
+          : { kind: "err", text: data.error ?? "Withdrawal failed" }
+      );
+      await refresh();
+      if (res.ok) {
+        const r = await fetch("/api/withdrawals");
+        if (r.ok) setWithdrawals(await r.json());
+      }
+    } catch {
+      setMsg({ kind: "err", text: "Network error — check your balance and try again." });
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   if (!me.signedIn) {

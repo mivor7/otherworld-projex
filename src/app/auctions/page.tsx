@@ -138,20 +138,25 @@ export default function AuctionsPage() {
   const doWithdraw = async () => {
     setBusy(true);
     setMsg(null);
-    const raw = BigInt(me.ribbitAvailable ?? "0");
-    const res = await fetch("/api/withdrawals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amountRaw: raw.toString() }),
-    });
-    const data = await res.json();
-    setMsg(
-      res.ok
-        ? { kind: "ok", text: "Withdrawal queued — the treasury signer pays out shortly." }
-        : { kind: "err", text: data.error ?? "Withdrawal failed" }
-    );
-    await refresh();
-    setBusy(false);
+    try {
+      const raw = BigInt(me.ribbitAvailable ?? "0");
+      const res = await fetch("/api/withdrawals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountRaw: raw.toString() }),
+      });
+      const data = await res.json();
+      setMsg(
+        res.ok
+          ? { kind: "ok", text: "Withdrawal queued — the payout worker sends it shortly." }
+          : { kind: "err", text: data.error ?? "Withdrawal failed" }
+      );
+      await refresh();
+    } catch {
+      setMsg({ kind: "err", text: "Network error — try again in a moment." });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const ending = live.filter(

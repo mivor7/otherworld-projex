@@ -49,6 +49,7 @@ export const GET = handler(async (req: Request) => {
     const open = await prisma.bounty.findMany({
       where: { status: "open", game: { not: null } },
       orderBy: { prizeRibbit: "desc" },
+      take: 100,
     });
     const byGame: Record<string, unknown> = {};
     for (const b of open) {
