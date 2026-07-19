@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/session";
+import { useChain } from "@/components/use-chain";
 import { Notice, SectionTitle, StatCard } from "@/components/ui";
 import { ImageUploadField } from "@/components/image-upload";
 import { CLIENT_CONFIG, fmtRibbit, shortWallet } from "@/lib/client-config";
@@ -155,9 +156,12 @@ function previewShares(prize: number, splits: number[], winners: number): number
 
 export default function AdminPage() {
   const { me } = useSession();
+  const { payRibbit } = useChain();
   const [data, setData] = useState<Overview | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [showSig, setShowSig] = useState<Record<string, boolean>>({});
   const [auctionForm, setAuctionForm] = useState({
     title: "",
     description: "",
@@ -228,6 +232,33 @@ export default function AdminPage() {
       })
       .catch(() => {});
   }, []);
+
+  // One-click payout: send $RIBBIT from the admin's connected wallet to the
+  // recipient, then mark the queue row sent with the resulting signature.
+  const payNow = async (id: string, destination: string, amountRaw: string) => {
+    setPayingId(id);
+    setMsg(null);
+    try {
+      const res = await payRibbit(destination, BigInt(amountRaw));
+      if (!res.ok) {
+        setMsg(res.error);
+        return;
+      }
+      const sig = res.data.signature as string;
+      const marked = await fetch(`/api/admin/withdrawals/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_sent", signature: sig }),
+      });
+      const d = await marked.json();
+      setMsg(marked.ok ? `Paid — sent on-chain (${sig.slice(0, 8)}…).` : (d.error ?? "Paid, but couldn't record it — use the signature field."));
+      load();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Payout failed");
+    } finally {
+      setPayingId(null);
+    }
+  };
 
   // Live house parameters (fall back to build-time values until settings load).
   const liveNum = (key: string, fallback: number): number => {
@@ -563,30 +594,18 @@ export default function AdminPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      className="input !text-xs flex-1"
-                      placeholder="Payout tx signature"
-                      value={sigInputs[w.id] ?? ""}
-                      onChange={(e) =>
-                        setSigInputs((p) => ({ ...p, [w.id]: e.target.value }))
-                      }
-                    />
+                  <div className="flex gap-2 items-center flex-wrap">
                     <button
                       className="btn btn-primary text-xs"
-                      disabled={busy || (sigInputs[w.id] ?? "").length < 64}
-                      onClick={() =>
-                        act(`/api/admin/withdrawals/${w.id}`, {
-                          action: "mark_sent",
-                          signature: sigInputs[w.id],
-                        })
-                      }
+                      disabled={busy || payingId === w.id || w.status === "processing"}
+                      onClick={() => payNow(w.id, w.destination, w.amountRaw)}
+                      title="Send from your connected wallet and mark it sent"
                     >
-                      Mark sent
+                      {payingId === w.id ? "Approve in wallet…" : "Pay now"}
                     </button>
                     <button
                       className="btn btn-ghost text-xs"
-                      disabled={busy}
+                      disabled={busy || payingId === w.id}
                       onClick={() =>
                         act(
                           `/api/admin/withdrawals/${w.id}`,
@@ -597,15 +616,49 @@ export default function AdminPage() {
                     >
                       Reject
                     </button>
+                    <button
+                      className="btn btn-ghost !text-xs !min-h-[1.8rem] ml-auto"
+                      style={{ color: "var(--text-dim)" }}
+                      onClick={() => setShowSig((p) => ({ ...p, [w.id]: !p[w.id] }))}
+                    >
+                      {showSig[w.id] ? "Hide manual" : "Paid elsewhere?"}
+                    </button>
                   </div>
+                  {showSig[w.id] && (
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        className="input !text-xs flex-1 mono"
+                        placeholder="Paste the tx signature you already sent"
+                        value={sigInputs[w.id] ?? ""}
+                        onChange={(e) =>
+                          setSigInputs((p) => ({ ...p, [w.id]: e.target.value }))
+                        }
+                      />
+                      <button
+                        className="btn btn-ghost text-xs"
+                        disabled={busy || (sigInputs[w.id] ?? "").length < 64}
+                        onClick={() =>
+                          act(`/api/admin/withdrawals/${w.id}`, {
+                            action: "mark_sent",
+                            signature: sigInputs[w.id],
+                          })
+                        }
+                      >
+                        Mark sent
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
-          <p className="text-xs text-fog mt-4">
-            Run <code className="text-neon">node scripts/payout-worker.mjs</code> with the
-            payout hot-wallet keypair (separate from the treasury) to pay the
-            whole queue — withdrawals + prizes — automatically.
+          <p className="text-xs text-fog mt-4 leading-relaxed">
+            <span className="text-frost">Pay now</span> sends the $RIBBIT from your
+            connected wallet and records it — approve once in your wallet. Or run{" "}
+            <code className="text-neon">node scripts/payout-worker.mjs</code> with the
+            payout hot-wallet to clear the whole queue automatically.{" "}
+            <span className="opacity-80">“Paid elsewhere?” is for recording a payout you already
+            sent by hand.</span>
           </p>
         </div>
 

@@ -344,5 +344,44 @@ export function useChain() {
     [publicKey, sendTransaction, connection]
   );
 
-  return { burnForCredits, buyCredits, depositForBidding };
+  /**
+   * Admin: pay a queued withdrawal/prize by sending $RIBBIT from the connected
+   * wallet straight to the recipient, then returning the signature so the row
+   * can be marked sent. Lets an operator clear the payout queue with a click +
+   * a Phantom approval — no manual signature copying, no server-side key.
+   */
+  const payRibbit = useCallback(
+    async (destination: string, amountRaw: bigint): Promise<ChainResult> => {
+      if (!publicKey) return { ok: false, error: "Connect your wallet first" };
+      try {
+        const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
+        const dest = new PublicKey(destination);
+        const from = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
+        const to = getAssociatedTokenAddressSync(mint, dest, true, TP);
+        const shortfall = await insufficientFundsReason(connection, publicKey, amountRaw);
+        if (shortfall) return { ok: false, error: shortfall };
+        const tx = new Transaction().add(
+          createAssociatedTokenAccountIdempotentInstruction(publicKey, to, dest, mint, TP),
+          createTransferCheckedInstruction(
+            from,
+            mint,
+            to,
+            publicKey,
+            amountRaw,
+            CLIENT_CONFIG.ribbitDecimals,
+            [],
+            TP
+          )
+        );
+        const signature = await sendTransaction(tx, connection);
+        await connection.confirmTransaction(signature, "confirmed");
+        return { ok: true, data: { signature } };
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "Payout failed" };
+      }
+    },
+    [publicKey, sendTransaction, connection]
+  );
+
+  return { burnForCredits, buyCredits, depositForBidding, payRibbit };
 }

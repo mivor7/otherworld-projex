@@ -154,19 +154,22 @@ export async function requiredCreditSpend(prizeRaw: bigint): Promise<number> {
 }
 
 /**
- * Net credits actually SPENT to the house on a game since `since` = wagers
- * minus payouts (the summed houseTake). This is "spent, not earned": credits a
- * player won and re-wagered do not inflate it, so the meter reflects real money
- * consumed, not raw betting volume. Clamped at 0 (a game where players are
- * collectively up has funded nothing). Winnings still decide the SPLIT — that's
- * the ranking by net value, separate from this pool meter.
+ * Credits SPENT (wagered) on a game since `since` — the sum of every wager.
+ * Owner's design: the pool counts spends, not the source of the credits and
+ * not winnings. A bet counts whether it was funded by bought or previously-won
+ * credits; a payout (what you win) is never added. This makes the meter
+ * MONOTONIC (only ever rises as the game is played — no dips when players win),
+ * which is the whole point. Trade-off the owner explicitly accepted: because
+ * re-wagered winnings count, wagering can outrun real credit purchases, so the
+ * house can in rare cases pay a prize it hasn't fully earned. Fairness and a
+ * clean, always-rising meter were chosen over that edge case.
  */
 export async function creditSpendForGame(game: string, since: Date): Promise<number> {
   const agg = await prisma.gameRound.aggregate({
     where: { game, settled: true, createdAt: { gte: since } },
-    _sum: { houseTake: true },
+    _sum: { wager: true },
   });
-  return Math.max(0, agg._sum.houseTake ?? 0);
+  return agg._sum.wager ?? 0;
 }
 
 /**

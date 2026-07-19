@@ -10,7 +10,8 @@ import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { fromRaw } from "@/lib/config";
-import { autoSettleBounties, bountyProgress, bountyStandings } from "@/lib/bounty";
+import { ARCADE_GAMES, autoSettleBounties, bountyProgress, bountyStandings } from "@/lib/bounty";
+import { eligibleBurners } from "@/lib/ranked";
 
 // Live data — never cache; always read current DB state.
 export const dynamic = "force-dynamic";
@@ -83,12 +84,46 @@ export const GET = handler(async (req: Request) => {
     isYou: session?.userId === e.userId,
   }));
 
-  let you: { eligible: boolean; value: number; projectedRibbit: number } | null = null;
+  // The caller's OWN live situation for this bounty — so they know exactly
+  // where they stand instead of guessing: their net (or best score), whether
+  // they're in the running, their projected share, and what (if anything) is
+  // still missing to qualify.
+  let you:
+    | {
+        inRunning: boolean;
+        value: number; // net credits (tables) or best score (arcade)
+        unit: "net credits" | "best score";
+        projectedRibbit: number;
+        spendEligible: boolean;
+      }
+    | null = null;
   if (session) {
     const mine = standings.find((e) => e.userId === session.userId);
-    you = mine
-      ? { eligible: true, value: mine.value, projectedRibbit: fromRaw(mine.projectedRaw) }
-      : { eligible: false, value: 0, projectedRibbit: 0 };
+    const arcade = ARCADE_GAMES.has(game);
+    let value: number;
+    if (arcade) {
+      const s = await prisma.arcadeScore.aggregate({
+        where: { userId: session.userId, game, createdAt: { gte: bounty.startsAt } },
+        _max: { score: true },
+      });
+      value = s._max.score ?? 0;
+    } else {
+      const r = await prisma.gameRound.aggregate({
+        where: { userId: session.userId, game, settled: true, createdAt: { gte: bounty.startsAt } },
+        _sum: { wager: true, payout: true },
+      });
+      value = (r._sum.payout ?? 0) - (r._sum.wager ?? 0); // signed net credits
+    }
+    const spendEligible = (
+      await eligibleBurners([session.userId], bounty.startsAt)
+    ).has(session.userId);
+    you = {
+      inRunning: !!mine,
+      value,
+      unit: arcade ? "best score" : "net credits",
+      projectedRibbit: mine ? fromRaw(mine.projectedRaw) : 0,
+      spendEligible,
+    };
   }
 
   return ok({

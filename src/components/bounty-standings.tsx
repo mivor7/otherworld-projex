@@ -32,7 +32,13 @@ type Live = {
     progress: Progress;
   } | null;
   entries: Entry[];
-  you: { eligible: boolean; value: number; projectedRibbit: number } | null;
+  you: {
+    inRunning: boolean;
+    value: number;
+    unit: "net credits" | "best score";
+    projectedRibbit: number;
+    spendEligible: boolean;
+  } | null;
 };
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -104,31 +110,54 @@ export function BountyStandings({ game }: { game: string }) {
         </p>
       )}
 
-      {/* Your projected earning */}
-      {me.signedIn && live?.you && (
-        <div
-          className="rounded-lg p-3 mb-4"
-          style={{ background: "oklch(0.78 0.11 150 / 0.08)", border: "1px solid oklch(0.78 0.11 150 / 0.2)" }}
-        >
-          {live.you.eligible && live.you.projectedRibbit > 0 ? (
-            <>
-              <div className="kicker !text-[0.6rem] mb-0.5">You&apos;d earn right now</div>
-              <div className="stat-number text-neon text-xl leading-none">
-                ~{fmt(live.you.projectedRibbit)} <span className="text-sm">$RIBBIT</span>
+      {/* Your live situation — never make the player guess */}
+      {me.signedIn && live?.you && (() => {
+        const you = live.you;
+        const isScore = you.unit === "best score";
+        // Always show where they actually stand this window.
+        const standLine = isScore
+          ? `Your best this bounty: ${you.value.toLocaleString()}`
+          : `Your net this bounty: ${you.value > 0 ? "+" : ""}${you.value.toLocaleString()} credits`;
+        // What's still missing to qualify (net-positive/score + spend).
+        const needsResult = isScore ? you.value <= 0 : you.value <= 0;
+        const missing: string[] = [];
+        if (needsResult) missing.push(isScore ? "post a score above 0" : "finish net-positive (above 0)");
+        if (!you.spendEligible)
+          missing.push(
+            `spend ${house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT on credits lifetime and ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ this window`
+          );
+        return (
+          <div
+            className="rounded-lg p-3 mb-4"
+            style={{ background: "oklch(0.78 0.11 150 / 0.08)", border: "1px solid oklch(0.78 0.11 150 / 0.2)" }}
+          >
+            {you.inRunning && you.projectedRibbit > 0 ? (
+              <>
+                <div className="kicker !text-[0.6rem] mb-0.5">You&apos;d earn right now</div>
+                <div className="stat-number text-neon text-xl leading-none">
+                  ~{fmt(you.projectedRibbit)} <span className="text-sm">$RIBBIT</span>
+                </div>
+                <div className="text-[0.7rem] mt-1" style={{ color: "var(--text-dim)" }}>
+                  {standLine} · estimate shifts as others play, locks when it triggers
+                </div>
+              </>
+            ) : (
+              <div className="text-xs">
+                <div
+                  className={`font-medium ${!isScore && you.value < 0 ? "text-danger" : "text-frost"}`}
+                >
+                  {standLine}
+                </div>
+                <div className="text-fog mt-1">
+                  {missing.length
+                    ? `To qualify: ${missing.join(" · ")}.`
+                    : "You qualify — you'll appear in the standings as the pool fills."}
+                </div>
               </div>
-              <div className="text-[0.7rem] mt-1" style={{ color: "var(--text-dim)" }}>
-                estimate — shifts as others play, locks when it triggers
-              </div>
-            </>
-          ) : (
-            <div className="text-xs text-fog">
-              You&apos;re not in the running yet — {b.unit === "best score" ? "post a top score" : "finish net-positive"}, and
-              spend {house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT on credits (lifetime) and{" "}
-              {house.rankedMinWindowBurnedRibbit.toLocaleString()}+ this window to qualify.
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })()}
       {!me.signedIn && (
         <p className="text-xs text-fog mb-4">
           Sign in and qualify to see your projected share of this pool.
