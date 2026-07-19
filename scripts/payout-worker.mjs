@@ -23,7 +23,12 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
+
+// $RIBBIT is an SPL Token-2022 mint — pass its program id to every ATA
+// derivation and transfer or the payout targets the wrong account/program.
+const TP = TOKEN_2022_PROGRAM_ID;
 
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
 const MINT = new PublicKey(
@@ -55,7 +60,7 @@ const signer = Keypair.fromSecretKey(
 
 const prisma = new PrismaClient();
 const connection = new Connection(RPC, "confirmed");
-const fromAta = getAssociatedTokenAddressSync(MINT, signer.publicKey, true);
+const fromAta = getAssociatedTokenAddressSync(MINT, signer.publicKey, true, TP);
 
 const payoutWallet = signer.publicKey.toBase58();
 console.log(`Payout worker up. Hot wallet: ${payoutWallet}`);
@@ -111,13 +116,13 @@ async function processQueue() {
     }
     try {
       const dest = new PublicKey(wd.destination);
-      const toAta = getAssociatedTokenAddressSync(MINT, dest, true);
+      const toAta = getAssociatedTokenAddressSync(MINT, dest, true, TP);
       const tx = new Transaction().add(
         createAssociatedTokenAccountIdempotentInstruction(
-          signer.publicKey, toAta, dest, MINT
+          signer.publicKey, toAta, dest, MINT, TP
         ),
         createTransferCheckedInstruction(
-          fromAta, MINT, toAta, signer.publicKey, wd.amountRaw, DECIMALS
+          fromAta, MINT, toAta, signer.publicKey, wd.amountRaw, DECIMALS, [], TP
         )
       );
       const signature = await sendAndConfirmTransaction(connection, tx, [signer]);

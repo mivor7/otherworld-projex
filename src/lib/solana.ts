@@ -7,8 +7,16 @@ import {
   ParsedInstruction,
   PublicKey,
 } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import {
+  getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
+} from "@solana/spl-token";
 import { CONFIG } from "./config";
+
+// $RIBBIT is an SPL Token-2022 mint (owner program TokenzQdB…), NOT the
+// classic Token program. Every ATA derivation and instruction MUST specify
+// this program id or it targets the wrong account/program and fails.
+const RIBBIT_TOKEN_PROGRAM = TOKEN_2022_PROGRAM_ID;
 
 let _conn: Connection | null = null;
 export function connection(): Connection {
@@ -81,7 +89,8 @@ export async function verifyDepositTx(
   const treasuryAta = getAssociatedTokenAddressSync(
     new PublicKey(CONFIG.ribbitMint),
     new PublicKey(CONFIG.treasuryWallet),
-    true
+    true,
+    RIBBIT_TOKEN_PROGRAM
   ).toBase58();
 
   const tx = await getVerifiedTx(signature);
@@ -120,7 +129,8 @@ export async function verifyBuyTx(
   const treasuryAta = getAssociatedTokenAddressSync(
     new PublicKey(CONFIG.ribbitMint),
     new PublicKey(CONFIG.treasuryWallet),
-    true
+    true,
+    RIBBIT_TOKEN_PROGRAM
   ).toBase58();
 
   const tx = await getVerifiedTx(signature);

@@ -11,8 +11,15 @@ import {
   createBurnCheckedInstruction,
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 import { CLIENT_CONFIG, toRawClient } from "@/lib/client-config";
+
+// $RIBBIT is an SPL Token-2022 mint. Every ATA derivation and token
+// instruction MUST pass this program id — the spl-token defaults target the
+// classic Token program, which derives the wrong ATA and builds instructions
+// the mint's program can't execute (the transaction just fails).
+const TP = TOKEN_2022_PROGRAM_ID;
 
 export type ChainResult =
   | { ok: true; data: Record<string, unknown> }
@@ -140,14 +147,16 @@ export function useChain() {
       if (!publicKey) return { ok: false, error: "Connect your wallet first" };
       try {
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
-        const ata = getAssociatedTokenAddressSync(mint, publicKey);
+        const ata = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
         const tx = new Transaction().add(
           createBurnCheckedInstruction(
             ata,
             mint,
             publicKey,
             toRawClient(ribbitAmount),
-            CLIENT_CONFIG.ribbitDecimals
+            CLIENT_CONFIG.ribbitDecimals,
+            [],
+            TP
           )
         );
         return await sendAndRedeem(
@@ -186,8 +195,8 @@ export function useChain() {
         }
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
         const treasury = new PublicKey(CLIENT_CONFIG.treasuryWallet);
-        const ata = getAssociatedTokenAddressSync(mint, publicKey);
-        const treasuryAta = getAssociatedTokenAddressSync(mint, treasury, true);
+        const ata = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
+        const treasuryAta = getAssociatedTokenAddressSync(mint, treasury, true, TP);
         // Split the payment; the burned side takes the rounding remainder so
         // burn + house exactly equals what the player intends to pay.
         const total = toRawClient(ribbitAmount);
@@ -201,14 +210,17 @@ export function useChain() {
             publicKey,
             treasuryAta,
             treasury,
-            mint
+            mint,
+            TP
           ),
           createBurnCheckedInstruction(
             ata,
             mint,
             publicKey,
             burnRaw,
-            CLIENT_CONFIG.ribbitDecimals
+            CLIENT_CONFIG.ribbitDecimals,
+            [],
+            TP
           ),
           createTransferCheckedInstruction(
             ata,
@@ -216,7 +228,9 @@ export function useChain() {
             treasuryAta,
             publicKey,
             houseRaw,
-            CLIENT_CONFIG.ribbitDecimals
+            CLIENT_CONFIG.ribbitDecimals,
+            [],
+            TP
           )
         );
         return await sendAndRedeem(
@@ -240,14 +254,15 @@ export function useChain() {
       try {
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
         const treasury = new PublicKey(CLIENT_CONFIG.treasuryWallet);
-        const from = getAssociatedTokenAddressSync(mint, publicKey);
-        const to = getAssociatedTokenAddressSync(mint, treasury, true);
+        const from = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
+        const to = getAssociatedTokenAddressSync(mint, treasury, true, TP);
         const tx = new Transaction().add(
           createAssociatedTokenAccountIdempotentInstruction(
             publicKey,
             to,
             treasury,
-            mint
+            mint,
+            TP
           ),
           createTransferCheckedInstruction(
             from,
@@ -255,7 +270,9 @@ export function useChain() {
             to,
             publicKey,
             toRawClient(ribbitAmount),
-            CLIENT_CONFIG.ribbitDecimals
+            CLIENT_CONFIG.ribbitDecimals,
+            [],
+            TP
           )
         );
         return await sendAndRedeem(
