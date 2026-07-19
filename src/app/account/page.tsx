@@ -19,6 +19,35 @@ type Withdrawal = {
   status: string;
   signature: string | null;
   createdAt: string;
+  kind?: string;
+};
+type BountyWin = {
+  id: string;
+  title: string;
+  game: string | null;
+  rank: number;
+  amountRaw: string;
+  status: string;
+  signature: string | null;
+  createdAt: string;
+};
+type LiveProgress =
+  | { mode: "credit"; spent: number; threshold: number; pct: number }
+  | { mode: "time"; endsAt: string }
+  | null;
+type LivePosition = {
+  id: string;
+  title: string;
+  game: string;
+  prizeRibbit: number;
+  value: number;
+  unit: "net credits" | "best score";
+  inRunning: boolean;
+  projectedRibbit: number;
+  spendEligible: boolean;
+  lifetimeEligible: boolean;
+  windowEligible: boolean;
+  progress: LiveProgress;
 };
 type Application = { id: string; title: string; status: string; askRaw: string };
 type Round = {
@@ -46,6 +75,8 @@ export default function AccountPage() {
   const { me, refresh } = useSession();
   const [bids, setBids] = useState<MyBid[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [bountyWins, setBountyWins] = useState<BountyWin[]>([]);
+  const [livePositions, setLivePositions] = useState<LivePosition[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -61,9 +92,24 @@ export default function AccountPage() {
         .catch(() => {});
     grab<MyBid>("/api/me/bids", setBids);
     grab<Withdrawal>("/api/withdrawals", setWithdrawals);
+    grab<BountyWin>("/api/me/bounties", setBountyWins);
     grab<Application>("/api/listings/apply", setApplications);
     grab<Round>("/api/games/history", setRounds);
     grab<Badge>("/api/me/badges", setBadges);
+  }, [me.signedIn]);
+
+  // Watch live bounty positions in real time — a player who has stopped
+  // playing still has a share riding on the pool, and can see it move here.
+  useEffect(() => {
+    if (!me.signedIn) return;
+    const load = () =>
+      fetch("/api/me/bounties/live")
+        .then((r) => (r.ok ? r.json() : []))
+        .then((rows) => Array.isArray(rows) && setLivePositions(rows))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 8_000);
+    return () => clearInterval(t);
   }, [me.signedIn]);
 
   const withdrawAll = async () => {
@@ -149,6 +195,102 @@ export default function AccountPage() {
         </div>
       )}
 
+      {livePositions.length > 0 && (
+        <div className="panel panel-glow p-5 mb-4">
+          <div className="flex items-baseline justify-between mb-4">
+            <div className="kicker flex items-center gap-1.5">
+              <span className="live-dot" /> Live bounties · your positions
+            </div>
+            <Link href="/bounties" className="text-xs text-neon hover:underline">
+              All bounties →
+            </Link>
+          </div>
+          <div className="grid md:grid-cols-2 gap-3">
+            {livePositions.map((p) => {
+              const isScore = p.unit === "best score";
+              const valLine = isScore
+                ? `Your best: ${p.value.toLocaleString()}`
+                : `Your net: ${p.value > 0 ? "+" : ""}${p.value.toLocaleString()} credits`;
+              return (
+                <div
+                  key={p.id}
+                  className="rounded-lg p-3"
+                  style={{ border: "1px solid var(--hairline)" }}
+                >
+                  <div className="flex items-baseline justify-between mb-2">
+                    <div className="font-medium tracking-tight text-sm">
+                      <span className="capitalize">{p.game}</span>
+                      <span className="text-xs ml-2" style={{ color: "var(--text-dim)" }}>
+                        {p.title}
+                      </span>
+                    </div>
+                    <span className="stat-number text-gold text-xs whitespace-nowrap">
+                      {p.prizeRibbit.toLocaleString()} $RIBBIT
+                    </span>
+                  </div>
+
+                  {p.progress?.mode === "credit" && (
+                    <div className="mb-2">
+                      <div
+                        className="flex justify-between text-[0.6rem] mb-1"
+                        style={{ color: "var(--text-dim)" }}
+                      >
+                        <span>pool fills as it&apos;s played</span>
+                        <span className="mono">{p.progress.pct}%</span>
+                      </div>
+                      <div
+                        className="h-1.5 rounded-full overflow-hidden"
+                        style={{ background: "oklch(0.22 0.01 165)" }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${p.progress.pct}%`,
+                            background:
+                              "linear-gradient(90deg, oklch(0.66 0.1 150), oklch(0.82 0.11 150))",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {p.inRunning && p.projectedRibbit > 0 ? (
+                    <div className="text-xs">
+                      <span className="stat-number text-neon text-base">
+                        ~{Math.round(p.projectedRibbit).toLocaleString()}
+                      </span>
+                      <span className="text-neon"> $RIBBIT waiting</span>
+                      <span style={{ color: "var(--text-dim)" }}> · {valLine}</span>
+                    </div>
+                  ) : !p.spendEligible ? (
+                    <div className="text-xs text-fog">
+                      {valLine} · not in the running yet —{" "}
+                      {!p.lifetimeEligible
+                        ? "spend more $RIBBIT on credits"
+                        : "buy credits during this bounty"}{" "}
+                      to qualify
+                    </div>
+                  ) : (
+                    <div className="text-xs text-fog">
+                      {valLine} ·{" "}
+                      {p.value > 0
+                        ? "in the running as the pool fills"
+                        : isScore
+                        ? "post a score to enter"
+                        : "go net-positive to enter"}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[0.7rem] mt-3" style={{ color: "var(--text-dim)" }}>
+            Your share shifts as others play and locks the moment each pool fills —
+            you&apos;re still paid it even after you stop playing.
+          </p>
+        </div>
+      )}
+
       {badges.length > 0 && (
         <div className="panel p-5 mb-4">
           <div className="kicker mb-4">
@@ -180,6 +322,58 @@ export default function AccountPage() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-4">
+        <div className="panel p-5">
+          <div className="flex items-baseline justify-between mb-4">
+            <div className="kicker">Bounty winnings</div>
+            <Link href="/bounties" className="text-xs text-gold hover:underline">
+              All bounties →
+            </Link>
+          </div>
+          {bountyWins.length === 0 ? (
+            <p className="text-fog text-sm">
+              No bounty prizes yet — qualify and win to see them here.
+            </p>
+          ) : (
+            <table className="w-full text-sm">
+              <tbody>
+                {bountyWins.slice(0, 8).map((w) => (
+                  <tr key={w.id} className="table-row">
+                    <td className="py-2 pr-2">
+                      {w.game && <span className="capitalize">{w.game}</span>}
+                      <span className="text-xs ml-2" style={{ color: "var(--text-dim)" }}>
+                        {w.title}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-2 stat-number text-gold text-right whitespace-nowrap">
+                      {fmtRibbit(w.amountRaw)}
+                    </td>
+                    <td className="py-2 text-right">
+                      {w.signature ? (
+                        <a
+                          className="badge badge-live"
+                          href={`https://solscan.io/tx/${w.signature}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          paid ↗
+                        </a>
+                      ) : (
+                        <span className={`badge ${w.status === "rejected" ? "" : "badge-gold"}`}>
+                          {w.status === "processing"
+                            ? "paying out"
+                            : w.status === "rejected"
+                            ? "on hold"
+                            : "pending"}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
         <div className="panel p-5">
           <div className="flex items-baseline justify-between mb-4">
             <div className="kicker">My bids</div>
@@ -221,14 +415,14 @@ export default function AccountPage() {
 
         <div className="panel p-5">
           <div className="flex items-baseline justify-between mb-4">
-            <div className="kicker">Withdrawals</div>
+            <div className="kicker">Balance withdrawals</div>
           </div>
-          {withdrawals.length === 0 ? (
+          {withdrawals.filter((w) => w.kind !== "bounty").length === 0 ? (
             <p className="text-fog text-sm">Nothing queued or paid yet.</p>
           ) : (
             <table className="w-full text-sm">
               <tbody>
-                {withdrawals.slice(0, 8).map((w) => (
+                {withdrawals.filter((w) => w.kind !== "bounty").slice(0, 8).map((w) => (
                   <tr key={w.id} className="table-row">
                     <td className="py-2 pr-2 stat-number">{fmtRibbit(w.amountRaw)}</td>
                     <td className="py-2 pr-2 text-xs" style={{ color: "var(--text-dim)" }}>

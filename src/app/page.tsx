@@ -45,6 +45,8 @@ const WINGS = [
 const GAME_SLATE: { image: string; title: string; href?: string; game?: string }[] = [
   { image: "/art/owp_frogris.png", title: "Frogris", href: "/games/frogris", game: "frogris" },
   { image: "/art/owp_bj.png", title: "Blackjack", href: "/games/blackjack", game: "blackjack" },
+  { image: "/art/owp_pump.png", title: "Frog Flip", href: "/games/flip", game: "flip" },
+  { image: "/art/art-dice.jpg", title: "Pond Dice", href: "/games/dice", game: "dice" },
   { image: "/art/owp_frogger.png", title: "Hopper", href: "/games/hopper", game: "hopper" },
   { image: "/art/owp_worm.png", title: "Worm Frog", href: "/games/worm", game: "worm" },
   { image: "/art/owp_ff.jpg", title: "Fraud Frog Exterminator" },
@@ -223,7 +225,7 @@ export default async function Home() {
             </div>
 
             {/* the games, each with its live bounty pool */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 px-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-6">
               {GAME_SLATE.map((e, i) => {
                 const poolRaw = e.game ? poolByGame.get(e.game) : undefined;
                 const live = !!e.href;
