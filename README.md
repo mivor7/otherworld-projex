@@ -4,18 +4,24 @@ Decentralized gaming platform on Solana: buy credits with **$RIBBIT** (part
 burned, part to the house), play provably-fair games, bid in community
 auctions, hunt bounties — all backed by one transparent treasury.
 
-- **Games**: Frog Flip (coinflip), Pond Dice (roll-under), Hopper (free arcade).
-  Commit–reveal fairness — every round independently verifiable at `/fairness`.
+> **Taking over the project?** Start with [`ONBOARDING.md`](ONBOARDING.md) — the
+> operator's handoff (gotchas, mental models, deploy + payout runbook).
+
+- **Games**: credit games — Frog Flip (coinflip), Pond Dice (roll-under),
+  Blackjack; free arcade — Hopper, Frogris, Worm Frog. Commit–reveal fairness —
+  every round independently verifiable at `/fairness`.
 - **Buy credits**: one on-chain transaction splits between a verified burn
   (`BUY_BURN_SHARE`, default 50%) and a treasury transfer — deflation plus
   real house revenue. Pure burn-to-play remains as the pre-treasury fallback.
 - **Auction house**: bid deposited $RIBBIT on house or community listings.
   Escrowed bids, instant refunds on outbid, anti-snipe extensions, and a
   community "apply to list" flow with admin review.
-- **Bounties**: fixed $RIBBIT prizes with auto-derived unlock triggers —
-  credit-game pools pay the moment enough credits are wagered on that game
-  (trigger sized so the house nets positive), free arcade pools pay weekly at
-  a lower tier. Every eligible winner is paid pro-rata, automatically.
+- **Bounties**: fixed $RIBBIT prizes with auto-derived unlock triggers — a
+  credit-game pool pays the moment enough credits are *wagered* on that game (the
+  meter counts gross wager, so it only ever rises; the trigger is sized so the
+  house's revenue from selling those credits covers the prize). Free arcade pools
+  pay weekly. One open bounty per game; every eligible winner is paid pro-rata,
+  automatically.
 - **Treasury**: live on-chain balances at `/treasury`; SOL custody via a small
   audited-by-design Anchor program with multisig admin + daily payout cap
   (`program/`).
@@ -111,11 +117,14 @@ Money out (never from the web server):
 ## Repo map
 
 ```
-src/app/            pages (games, auctions, bounties, treasury, fairness, admin)
-src/app/api/        route handlers (auth, burn, games, auctions, admin…)
-src/lib/            config, fairness engine, credits ledger, Solana verification
-src/components/     wallet/session providers, navbar, UI kit
+src/app/            pages (games, auctions, bounties, treasury, fairness,
+                    account, admin)
+src/app/api/        route handlers (auth, burn, games, auctions, bounties,
+                    me, admin…)
+src/lib/            config, fairness engine, credits ledger, bounty engine,
+                    eligibility, Solana verification
+src/components/     wallet/session providers, navbar, UI kit, game hooks
 prisma/             schema, migrations, seed
-scripts/            payout worker
+scripts/            payout worker, prod smoke test, e2e suites, data utilities
 program/            Anchor treasury vault (SOL custody, daily cap, multisig)
 ```

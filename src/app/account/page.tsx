@@ -41,6 +41,8 @@ type LivePosition = {
   game: string;
   prizeRibbit: number;
   value: number;
+  rank: number;
+  players: number;
   unit: "net credits" | "best score";
   inRunning: boolean;
   projectedRibbit: number;
@@ -195,11 +197,41 @@ export default function AccountPage() {
         </div>
       )}
 
+      {badges.length > 0 && (
+        <div className="panel p-5 mb-4">
+          <div className="kicker mb-4">
+            Badges · {badges.filter((b) => b.earned).length}/{badges.length} earned
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            {badges.map((b) => (
+              <div
+                key={b.id}
+                title={b.desc}
+                className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"
+                style={
+                  b.earned
+                    ? { borderColor: "oklch(0.78 0.11 150 / 0.4)", background: "oklch(0.78 0.11 150 / 0.06)" }
+                    : { borderColor: "var(--hairline)", opacity: 0.45 }
+                }
+              >
+                <span>{b.icon}</span>
+                <span className="font-medium tracking-tight">{b.name}</span>
+                {!b.earned && (
+                  <span className="text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
+                    {b.desc}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {livePositions.length > 0 && (
-        <div className="panel panel-glow p-5 mb-4">
+        <div className="panel p-5 mb-4">
           <div className="flex items-baseline justify-between mb-4">
             <div className="kicker flex items-center gap-1.5">
-              <span className="live-dot" /> Live bounties · your positions
+              <span className="live-dot" /> Your live bounty standings
             </div>
             <Link href="/bounties" className="text-xs text-neon hover:underline">
               All bounties →
@@ -209,8 +241,9 @@ export default function AccountPage() {
             {livePositions.map((p) => {
               const isScore = p.unit === "best score";
               const valLine = isScore
-                ? `Your best: ${p.value.toLocaleString()}`
-                : `Your net: ${p.value > 0 ? "+" : ""}${p.value.toLocaleString()} credits`;
+                ? `best ${p.value.toLocaleString()}`
+                : `net ${p.value > 0 ? "+" : ""}${p.value.toLocaleString()}`;
+              const winning = p.inRunning && p.projectedRibbit > 0;
               return (
                 <div
                   key={p.id}
@@ -254,70 +287,44 @@ export default function AccountPage() {
                     </div>
                   )}
 
-                  {p.inRunning && p.projectedRibbit > 0 ? (
-                    <div className="text-xs">
-                      <span className="stat-number text-neon text-base">
-                        ~{Math.round(p.projectedRibbit).toLocaleString()}
+                  {/* Position first — the honest standing, win or lose. A
+                      projected payout is shown ONLY when they're actually in
+                      line to be paid, never as a blanket "reward waiting". */}
+                  <div className="text-xs leading-snug">
+                    <span className="mono" style={{ color: "var(--text-dim)" }}>
+                      #{p.rank} of {p.players}
+                    </span>
+                    <span style={{ color: "var(--text-dim)" }}> · {valLine} · </span>
+                    {winning ? (
+                      <span className="text-neon">
+                        would take ~{Math.round(p.projectedRibbit).toLocaleString()} $RIBBIT
+                        if it pays now
                       </span>
-                      <span className="text-neon"> $RIBBIT waiting</span>
-                      <span style={{ color: "var(--text-dim)" }}> · {valLine}</span>
-                    </div>
-                  ) : !p.spendEligible ? (
-                    <div className="text-xs text-fog">
-                      {valLine} · not in the running yet —{" "}
-                      {!p.lifetimeEligible
-                        ? "spend more $RIBBIT on credits"
-                        : "buy credits during this bounty"}{" "}
-                      to qualify
-                    </div>
-                  ) : (
-                    <div className="text-xs text-fog">
-                      {valLine} ·{" "}
-                      {p.value > 0
-                        ? "in the running as the pool fills"
-                        : isScore
-                        ? "post a score to enter"
-                        : "go net-positive to enter"}
-                    </div>
-                  )}
+                    ) : !p.spendEligible ? (
+                      <span className="text-fog">
+                        not eligible —{" "}
+                        {!p.lifetimeEligible
+                          ? "spend more $RIBBIT on credits"
+                          : "buy credits during this bounty"}
+                      </span>
+                    ) : p.value > 0 ? (
+                      <span className="text-fog">in the running as the pool fills</span>
+                    ) : (
+                      <span className="text-fog">
+                        {isScore ? "post a score to enter" : "not winning yet — go net-positive"}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-          <p className="text-[0.7rem] mt-3" style={{ color: "var(--text-dim)" }}>
-            Your share shifts as others play and locks the moment each pool fills —
-            you&apos;re still paid it even after you stop playing.
-          </p>
-        </div>
-      )}
-
-      {badges.length > 0 && (
-        <div className="panel p-5 mb-4">
-          <div className="kicker mb-4">
-            Badges · {badges.filter((b) => b.earned).length}/{badges.length} earned
-          </div>
-          <div className="flex flex-wrap gap-2.5">
-            {badges.map((b) => (
-              <div
-                key={b.id}
-                title={b.desc}
-                className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"
-                style={
-                  b.earned
-                    ? { borderColor: "oklch(0.78 0.11 150 / 0.4)", background: "oklch(0.78 0.11 150 / 0.06)" }
-                    : { borderColor: "var(--hairline)", opacity: 0.45 }
-                }
-              >
-                <span>{b.icon}</span>
-                <span className="font-medium tracking-tight">{b.name}</span>
-                {!b.earned && (
-                  <span className="text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
-                    {b.desc}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
+          {livePositions.some((p) => p.inRunning && p.projectedRibbit > 0) && (
+            <p className="text-[0.7rem] mt-3" style={{ color: "var(--text-dim)" }}>
+              Projected shares shift as others play and lock when each pool fills —
+              a share you&apos;re in line for stays yours even if you stop playing.
+            </p>
+          )}
         </div>
       )}
 

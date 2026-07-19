@@ -44,27 +44,32 @@ export const GET = handler(async () => {
     const game = b.game!;
     const arcade = ARCADE_GAMES.has(game);
 
-    // The player's value + whether they've actually played this window.
-    let value = 0;
-    let played = false;
+    // Rank the player among EVERYONE who played this bounty's window (by net
+    // credits / best score) so we can show their real standing — win or lose —
+    // not just "you'd earn X". A player absent from this list hasn't played it.
+    let ranking: { userId: string; v: number }[];
     if (arcade) {
-      const s = await prisma.arcadeScore.aggregate({
-        where: { userId: uid, game, createdAt: { gte: b.startsAt } },
+      const rows = await prisma.arcadeScore.groupBy({
+        by: ["userId"],
+        where: { game, createdAt: { gte: b.startsAt } },
         _max: { score: true },
-        _count: true,
       });
-      value = s._max.score ?? 0;
-      played = s._count > 0;
+      ranking = rows.map((r) => ({ userId: r.userId, v: r._max.score ?? 0 }));
     } else {
-      const r = await prisma.gameRound.aggregate({
-        where: { userId: uid, game, settled: true, createdAt: { gte: b.startsAt } },
+      const rows = await prisma.gameRound.groupBy({
+        by: ["userId"],
+        where: { game, settled: true, createdAt: { gte: b.startsAt } },
         _sum: { wager: true, payout: true },
-        _count: true,
       });
-      value = (r._sum.payout ?? 0) - (r._sum.wager ?? 0);
-      played = r._count > 0;
+      ranking = rows.map((r) => ({
+        userId: r.userId,
+        v: (r._sum.payout ?? 0) - (r._sum.wager ?? 0),
+      }));
     }
-    if (!played) continue; // only show bounties the player is actually in
+    ranking.sort((a, c) => c.v - a.v);
+    const idx = ranking.findIndex((r) => r.userId === uid);
+    if (idx === -1) continue; // player hasn't played this bounty
+    const value = ranking[idx].v;
 
     const standings = await bountyStandings(b);
     const mine = standings.find((e) => e.userId === uid);
@@ -80,6 +85,8 @@ export const GET = handler(async () => {
       game,
       prizeRibbit: fromRaw(b.prizeRibbit),
       value,
+      rank: idx + 1,
+      players: ranking.length,
       unit: arcade ? "best score" : "net credits",
       inRunning: !!mine,
       projectedRibbit: mine ? fromRaw(mine.projectedRaw) : 0,

@@ -21,6 +21,7 @@ Set these yourself (Production + Preview):
 | `ADMIN_WALLETS` | comma-separated wallet pubkeys that may open `/admin` |
 | `TREASURY_WALLET` | treasury pubkey — leave empty until the multisig exists |
 | `NEXT_PUBLIC_TREASURY_WALLET` | same value |
+| `PAYOUT_WALLET` | payout hot-wallet **public** address (never the secret key) — lets `/admin` display the float that pays out |
 
 Never set `DEV_FAUCET` in production (the faucet route also hard-refuses when
 `NODE_ENV=production`).
