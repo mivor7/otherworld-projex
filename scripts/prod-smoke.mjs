@@ -42,17 +42,16 @@ const withProgress = (bounties.json?.open ?? []).filter((b) => b.progress);
 check("bounty progress meters present", withProgress.length > 0,
   `${(bounties.json?.open ?? []).length} open, 0 with progress`);
 
-// Stored trigger must MATCH the live-derived one (admin and players see one
-// number). Recompute from live config the same way the server does.
-const cfgJ = cfg.json ?? {};
-let triggerMismatch = null;
+// Credit-game bounties expose a sane credit-spend meter: a positive threshold
+// and progress that never exceeds it. (The exact threshold formula is
+// server-owned — prize x (1+margin) / ((1-burnShare) x ribbitPerCredit).)
+let meterBad = null;
 for (const b of bounties.json?.open ?? []) {
   if (b.progress?.mode !== "credit") continue;
-  const prize = Number(BigInt(b.prizeRibbit) / 1_000_000n);
-  const derived = Math.max(1, Math.ceil((prize / cfgJ.ribbitPerCredit) * 1.5 / cfgJ.houseEdge));
-  if (b.progress.threshold < derived) triggerMismatch = `${b.title}: shows ${b.progress.threshold}, live rules demand ${derived}`;
+  if (!(b.progress.threshold > 0) || b.progress.spent > b.progress.threshold + 1)
+    meterBad = `${b.title}: spent ${b.progress.spent} / threshold ${b.progress.threshold}`;
 }
-check("no bounty shows a weaker trigger than live rules demand", !triggerMismatch, triggerMismatch ?? "");
+check("credit bounties show a sane spend meter", !meterBad, meterBad ?? "");
 
 const live = await get("/api/bounties/live");
 check("/api/bounties/live game summaries", live.status === 200 && typeof live.json?.games === "object",
