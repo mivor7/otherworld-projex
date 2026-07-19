@@ -38,6 +38,8 @@ type Live = {
     unit: "net credits" | "best score";
     projectedRibbit: number;
     spendEligible: boolean;
+    lifetimeEligible: boolean;
+    windowEligible: boolean;
   } | null;
 };
 
@@ -110,22 +112,43 @@ export function BountyStandings({ game }: { game: string }) {
         </p>
       )}
 
-      {/* Your live situation — never make the player guess */}
-      {me.signedIn && live?.you && (() => {
+      {/* Eligibility — shown UP FRONT (amber) so a player never grinds a bounty
+          they can't win. Names exactly which rule is unmet. */}
+      {me.signedIn && live?.you && !live.you.spendEligible && (() => {
+        const you = live.you;
+        const reasons: string[] = [];
+        if (!you.lifetimeEligible)
+          reasons.push(`spend ${house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT on credits in total`);
+        if (!you.windowEligible)
+          reasons.push(`buy ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ $RIBBIT of credits during this bounty`);
+        return (
+          <div
+            className="rounded-lg p-3 mb-4"
+            style={{ background: "oklch(0.75 0.14 70 / 0.1)", border: "1px solid oklch(0.75 0.14 70 / 0.4)" }}
+          >
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-sm">⚠</span>
+              <span className="font-medium text-sm" style={{ color: "oklch(0.85 0.13 80)" }}>
+                You&apos;re not in the running yet
+              </span>
+            </div>
+            <p className="text-[0.72rem] leading-snug" style={{ color: "var(--text-dim)" }}>
+              Playing now won&apos;t win you any of the {prize} prize. To qualify: {reasons.join(" and ")}.
+            </p>
+            <Link href="/games" className="text-xs text-neon hover:underline inline-block mt-1.5">
+              Buy credits →
+            </Link>
+          </div>
+        );
+      })()}
+
+      {/* Your live situation once you qualify — never make the player guess. */}
+      {me.signedIn && live?.you && live.you.spendEligible && (() => {
         const you = live.you;
         const isScore = you.unit === "best score";
-        // Always show where they actually stand this window.
         const standLine = isScore
           ? `Your best this bounty: ${you.value.toLocaleString()}`
           : `Your net this bounty: ${you.value > 0 ? "+" : ""}${you.value.toLocaleString()} credits`;
-        // What's still missing to qualify (net-positive/score + spend).
-        const needsResult = isScore ? you.value <= 0 : you.value <= 0;
-        const missing: string[] = [];
-        if (needsResult) missing.push(isScore ? "post a score above 0" : "finish net-positive (above 0)");
-        if (!you.spendEligible)
-          missing.push(
-            `spend ${house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT on credits lifetime and ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ this window`
-          );
         return (
           <div
             className="rounded-lg p-3 mb-4"
@@ -149,9 +172,11 @@ export function BountyStandings({ game }: { game: string }) {
                   {standLine}
                 </div>
                 <div className="text-fog mt-1">
-                  {missing.length
-                    ? `To qualify: ${missing.join(" · ")}.`
-                    : "You qualify — you'll appear in the standings as the pool fills."}
+                  {you.value > 0
+                    ? "You qualify — you're in the standings as the pool fills."
+                    : isScore
+                    ? "You qualify — post a score above 0 to enter the standings."
+                    : "You qualify — finish net-positive (above 0) to enter the standings."}
                 </div>
               </div>
             )}

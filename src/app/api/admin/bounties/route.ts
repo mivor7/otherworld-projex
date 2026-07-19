@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { handler, ok, requireAdmin } from "@/lib/api";
+import { err, handler, ok, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { toRaw } from "@/lib/config";
 import { ARCADE_GAMES, requiredCreditSpend } from "@/lib/bounty";
@@ -47,6 +47,23 @@ export const GET = handler(async () => {
 export const POST = handler(async (req: Request) => {
   await requireAdmin();
   const data = body.parse(await req.json());
+
+  // One open bounty per game. Two at once break the UX (a game page shows only
+  // one meter) and the economy (both fill from the same play and both pay), so
+  // require the existing one to be closed/paid first.
+  if (data.game) {
+    const existing = await prisma.bounty.findFirst({
+      where: { game: data.game, status: "open" },
+      select: { title: true },
+    });
+    if (existing) {
+      return err(
+        `${data.game} already has an open bounty ("${existing.title}"). Close or cancel it before creating another.`,
+        409
+      );
+    }
+  }
+
   const prizeRaw = toRaw(data.prizeRibbit);
   // Credit-game auto-bounties get their spend threshold derived from the
   // prize (server-authoritative) so the play that unlocks it always earns

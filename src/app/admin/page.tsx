@@ -267,6 +267,10 @@ export default function AdminPage() {
   };
   // Mirror of the server's requiredCreditSpend: credits that must be wagered
   // on the game before the bounty pays, derived from the prize (no house edge).
+  // One open bounty per game — flag if the selected game already has one.
+  const openForGame = manage.find(
+    (b) => b.game === bountyForm.game && b.status === "open"
+  );
   const requiredCredits = Math.max(
     1,
     Math.ceil(
@@ -755,6 +759,12 @@ export default function AdminPage() {
                   onChange={(e) => setBountyForm({ ...bountyForm, durationDays: Number(e.target.value) })} />
               </div>
             </div>
+            {openForGame && (
+              <p className="text-xs" style={{ color: "var(--color-danger)" }}>
+                {bountyForm.game} already has an open bounty (“{openForGame.title}”). Only one per
+                game — close or cancel it below before creating another.
+              </p>
+            )}
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -817,6 +827,7 @@ export default function AdminPage() {
                 !(bountyForm.prizeRibbit > 0) && "prize must be above 0",
                 !(bountyForm.durationDays >= 1 && bountyForm.durationDays <= 90) &&
                   "days must be 1–90",
+                openForGame && `${bountyForm.game} already has an open bounty`,
               ].filter(Boolean) as string[];
               return (
                 <>

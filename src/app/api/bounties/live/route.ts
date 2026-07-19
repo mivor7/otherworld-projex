@@ -9,9 +9,10 @@
 import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { fromRaw } from "@/lib/config";
+import { fromRaw, toRaw } from "@/lib/config";
 import { ARCADE_GAMES, autoSettleBounties, bountyProgress, bountyStandings } from "@/lib/bounty";
-import { eligibleBurners } from "@/lib/ranked";
+import { burnTotals } from "@/lib/ranked";
+import { houseConfig } from "@/lib/settings";
 
 // Live data — never cache; always read current DB state.
 export const dynamic = "force-dynamic";
@@ -95,6 +96,8 @@ export const GET = handler(async (req: Request) => {
         unit: "net credits" | "best score";
         projectedRibbit: number;
         spendEligible: boolean;
+        lifetimeEligible: boolean;
+        windowEligible: boolean;
       }
     | null = null;
   if (session) {
@@ -114,15 +117,28 @@ export const GET = handler(async (req: Request) => {
       });
       value = (r._sum.payout ?? 0) - (r._sum.wager ?? 0); // signed net credits
     }
-    const spendEligible = (
-      await eligibleBurners([session.userId], bounty.startsAt)
-    ).has(session.userId);
+    // Break eligibility into its two rules so the player is told EXACTLY what's
+    // missing — they may satisfy lifetime spend yet still owe fresh spend this
+    // window (the anti-sybil rule), or vice-versa.
+    const cfg = await houseConfig();
+    const [lifeTotals, winTotals] = await Promise.all([
+      burnTotals([session.userId]),
+      burnTotals([session.userId], bounty.startsAt),
+    ]);
+    const lifetimeEligible =
+      cfg.rankedMinBurnedRibbit <= 0 ||
+      (lifeTotals.get(session.userId) ?? 0n) >= toRaw(cfg.rankedMinBurnedRibbit);
+    const windowEligible =
+      cfg.rankedMinWindowBurnedRibbit <= 0 ||
+      (winTotals.get(session.userId) ?? 0n) >= toRaw(cfg.rankedMinWindowBurnedRibbit);
     you = {
       inRunning: !!mine,
       value,
       unit: arcade ? "best score" : "net credits",
       projectedRibbit: mine ? fromRaw(mine.projectedRaw) : 0,
-      spendEligible,
+      spendEligible: lifetimeEligible && windowEligible,
+      lifetimeEligible,
+      windowEligible,
     };
   }
 
