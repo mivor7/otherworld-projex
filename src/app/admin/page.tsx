@@ -90,6 +90,23 @@ type LiveAuction = {
   _count: { bids: number };
 };
 
+type HouseSettingRow = {
+  key: string;
+  label: string;
+  desc: string;
+  group: "Economy" | "Limits" | "Eligibility" | "Switches";
+  kind: "number" | "share" | "bool";
+  min: number | null;
+  max: number | null;
+  integer: boolean;
+  danger: boolean;
+  envDefault: number | boolean;
+  effective: number | boolean;
+  overridden: boolean;
+  updatedBy: string | null;
+  updatedAt: string | null;
+};
+
 type ManagedBounty = {
   id: string;
   title: string;
@@ -153,16 +170,6 @@ export default function AdminPage() {
     autoPay: false,
   });
   const bountyIsFree = ["hopper", "frogris", "worm"].includes(bountyForm.game);
-  // Mirror of the server's auto-derivation (lib/bounty.computeTriggerCreditVolume)
-  // so the admin sees the threshold this prize will produce before creating it.
-  const computedTrigger = Math.max(
-    1,
-    Math.ceil(
-      ((bountyForm.prizeRibbit / CLIENT_CONFIG.ribbitPerCredit) *
-        (1 + CLIENT_CONFIG.bountyHouseMargin)) /
-        CLIENT_CONFIG.houseEdge
-    )
-  );
 
   const [manage, setManage] = useState<ManagedBounty[]>([]);
   const [editBounty, setEditBounty] = useState<string | null>(null);
@@ -180,6 +187,8 @@ export default function AdminPage() {
   const [liveAuctions, setLiveAuctions] = useState<LiveAuction[]>([]);
   const [sigInputs, setSigInputs] = useState<Record<string, string>>({});
   const [splitChoice, setSplitChoice] = useState<Record<string, string>>({});
+  const [settings, setSettings] = useState<HouseSettingRow[]>([]);
+  const [settingDrafts, setSettingDrafts] = useState<Record<string, string>>({});
 
   const load = useCallback(() => {
     fetch("/api/admin/overview")
@@ -204,7 +213,54 @@ export default function AdminPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((rows) => Array.isArray(rows) && setManage(rows))
       .catch(() => {});
+    fetch("/api/admin/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d || !Array.isArray(d.settings)) return;
+        setSettings(d.settings);
+        setSettingDrafts({}); // fresh values win over stale drafts
+      })
+      .catch(() => {});
   }, []);
+
+  // Live house parameters (fall back to build-time values until settings load).
+  const liveNum = (key: string, fallback: number): number => {
+    const row = settings.find((x) => x.key === key);
+    return row && typeof row.effective === "number" ? row.effective : fallback;
+  };
+  // Mirror of the server's auto-derivation (lib/bounty.computeTriggerCreditVolume)
+  // so the admin sees the threshold this prize will produce before creating it.
+  const computedTrigger = Math.max(
+    1,
+    Math.ceil(
+      ((bountyForm.prizeRibbit / liveNum("ribbitPerCredit", CLIENT_CONFIG.ribbitPerCredit)) *
+        (1 + liveNum("bountyHouseMargin", CLIENT_CONFIG.bountyHouseMargin))) /
+        liveNum("houseEdge", CLIENT_CONFIG.houseEdge)
+    )
+  );
+
+  const setSetting = async (row: HouseSettingRow, value: number | boolean | "reset") => {
+    const danger = row.danger
+      ? `${row.label}: this changes live house behaviour immediately. Continue?`
+      : undefined;
+    if (danger && !confirm(danger)) return;
+    setBusy(true);
+    const res = await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        value === "reset" ? { key: row.key, action: "reset" } : { key: row.key, value }
+      ),
+    });
+    const d = await res.json();
+    setMsg(
+      res.ok
+        ? `${row.label} → ${String(d.effective)}${value === "reset" ? " (env default)" : ""}`
+        : (d.error ?? "Failed")
+    );
+    setBusy(false);
+    load();
+  };
 
   const lookupPlayer = async (wallet: string) => {
     setPlayerErr(null);
@@ -296,6 +352,114 @@ export default function AdminPage() {
               : "—"
           }
         />
+      </div>
+
+      {/* House controls — live, admin-tunable parameters */}
+      <div className="mb-8">
+        <div className="kicker mb-3">House controls</div>
+        <div className="panel p-5">
+          <p className="text-xs mb-5 leading-relaxed max-w-2xl" style={{ color: "var(--text-dim)" }}>
+            These override the deployment defaults <em>live</em> — no redeploy.
+            Every change is validated, applied within seconds, and published to
+            the treasury ledger with your wallet on it. Reset returns a value
+            to its env default.
+          </p>
+          {settings.length === 0 ? (
+            <p className="text-fog text-sm">Loading controls…</p>
+          ) : (
+            (["Economy", "Limits", "Eligibility", "Switches"] as const).map((group) => (
+              <div key={group} className="mb-5 last:mb-0">
+                <div className="kicker !text-[0.6rem] mb-2">{group}</div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {settings
+                    .filter((row) => row.group === group)
+                    .map((row) => (
+                      <div key={row.key} className="panel p-4">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <span className="font-medium tracking-tight text-sm">{row.label}</span>
+                          <span className="flex gap-1.5 shrink-0">
+                            {row.overridden && (
+                              <span className="badge badge-gold" title={`Set by ${row.updatedBy ?? "?"}`}>
+                                override
+                              </span>
+                            )}
+                            {row.danger && row.kind === "bool" && row.effective === true && (
+                              <span className="badge badge-urgent">active</span>
+                            )}
+                          </span>
+                        </div>
+                        <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                          {row.desc}
+                        </p>
+                        {row.kind === "bool" ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              className={`btn text-xs ${row.effective ? "btn-ghost !text-danger" : "btn-primary"}`}
+                              disabled={busy}
+                              onClick={() => setSetting(row, !row.effective)}
+                            >
+                              {row.effective ? "Switch OFF" : "Switch ON"}
+                            </button>
+                            <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
+                              now: {String(row.effective)} · default: {String(row.envDefault)}
+                            </span>
+                            {row.overridden && (
+                              <button
+                                className="btn btn-ghost !text-xs !min-h-[1.8rem]"
+                                disabled={busy}
+                                onClick={() => setSetting(row, "reset")}
+                              >
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <input
+                              className="input !text-xs mono max-w-[8.5rem]"
+                              type="number"
+                              step={row.integer ? 1 : 0.01}
+                              min={row.min ?? undefined}
+                              max={row.max ?? undefined}
+                              value={settingDrafts[row.key] ?? String(row.effective)}
+                              onChange={(e) =>
+                                setSettingDrafts((p) => ({ ...p, [row.key]: e.target.value }))
+                              }
+                            />
+                            <button
+                              className="btn btn-primary !text-xs"
+                              disabled={
+                                busy ||
+                                settingDrafts[row.key] === undefined ||
+                                settingDrafts[row.key] === String(row.effective) ||
+                                settingDrafts[row.key] === ""
+                              }
+                              onClick={() => setSetting(row, Number(settingDrafts[row.key]))}
+                            >
+                              Apply
+                            </button>
+                            {row.overridden && (
+                              <button
+                                className="btn btn-ghost !text-xs"
+                                disabled={busy}
+                                onClick={() => setSetting(row, "reset")}
+                              >
+                                Reset
+                              </button>
+                            )}
+                            <span className="mono text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
+                              default {String(row.envDefault)}
+                              {row.min !== null && row.max !== null && ` · ${row.min}–${row.max}`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

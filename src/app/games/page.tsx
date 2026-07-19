@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { useChain } from "@/components/use-chain";
+import { useHouseConfig } from "@/components/use-house-config";
 import { PageHero } from "@/components/hero";
 import { MatteMedia } from "@/components/matte-media";
 import { Notice } from "@/components/ui";
@@ -74,6 +75,7 @@ export default function GamesPage() {
   // burn is only the pre-treasury / dev fallback so credits are still
   // obtainable before the treasury is configured.
   const canBuy = !!CLIENT_CONFIG.treasuryWallet;
+  const house = useHouseConfig(); // live, admin-tunable price/split/switches
   const [burnAmount, setBurnAmount] = useState(CLIENT_CONFIG.ribbitPerCredit * 10);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -98,8 +100,8 @@ export default function GamesPage() {
   }, []);
 
   const burnValid =
-    Number.isFinite(burnAmount) && burnAmount >= CLIENT_CONFIG.ribbitPerCredit;
-  const burnRemainder = burnValid ? burnAmount % CLIENT_CONFIG.ribbitPerCredit : 0;
+    Number.isFinite(burnAmount) && burnAmount >= house.ribbitPerCredit;
+  const burnRemainder = burnValid ? burnAmount % house.ribbitPerCredit : 0;
 
   const doBurn = async () => {
     // Guard hard: a burn/buy below the credit price would spend tokens for
@@ -233,23 +235,30 @@ export default function GamesPage() {
               <label className="kicker !text-[0.6rem]">
                 {canBuy ? "Buy credits with $RIBBIT" : "Burn $RIBBIT → credits"}
               </label>
+              {house.creditSalesPaused && (
+                <div className="mt-1.5">
+                  <Notice kind="info">
+                    Credit sales are paused by the house — back shortly.
+                  </Notice>
+                </div>
+              )}
               <div className="flex gap-2 mt-1.5 mb-2">
                 <input
                   type="number"
                   className="input"
-                  min={CLIENT_CONFIG.ribbitPerCredit}
-                  step={CLIENT_CONFIG.ribbitPerCredit}
+                  min={house.ribbitPerCredit}
+                  step={house.ribbitPerCredit}
                   value={burnAmount}
                   onChange={(e) => setBurnAmount(Number(e.target.value))}
                 />
                 <button
                   className="btn btn-primary"
                   onClick={doBurn}
-                  disabled={busy || !burnValid}
+                  disabled={busy || !burnValid || house.creditSalesPaused}
                   title={
                     burnValid
                       ? undefined
-                      : `Minimum ${CLIENT_CONFIG.ribbitPerCredit.toLocaleString()} $RIBBIT`
+                      : `Minimum ${house.ribbitPerCredit.toLocaleString()} $RIBBIT`
                   }
                 >
                   {busy ? "…" : canBuy ? "Buy" : "Burn"}
@@ -267,11 +276,11 @@ export default function GamesPage() {
                 ))}
               </div>
               <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                {CLIENT_CONFIG.ribbitPerCredit.toLocaleString()} $RIBBIT = 1 credit —
+                {house.ribbitPerCredit.toLocaleString()} $RIBBIT = 1 credit —
                 you’ll receive{" "}
                 <span className="text-neon">
                   {burnValid
-                    ? Math.floor(burnAmount / CLIENT_CONFIG.ribbitPerCredit)
+                    ? Math.floor(burnAmount / house.ribbitPerCredit)
                     : 0}
                 </span>
                 .{" "}
@@ -279,13 +288,13 @@ export default function GamesPage() {
                   <span className="text-gold">
                     {burnRemainder.toLocaleString()} $RIBBIT of that {canBuy ? "spends" : "burns"} without
                     granting a credit — use a multiple of{" "}
-                    {CLIENT_CONFIG.ribbitPerCredit.toLocaleString()}.{" "}
+                    {house.ribbitPerCredit.toLocaleString()}.{" "}
                   </span>
                 )}
                 {canBuy ? (
                   <>
-                    {Math.round(CLIENT_CONFIG.buyBurnShare * 100)}% is burned,{" "}
-                    {Math.round((1 - CLIENT_CONFIG.buyBurnShare) * 100)}% funds the
+                    {Math.round(house.buyBurnShare * 100)}% is burned,{" "}
+                    {Math.round((1 - house.buyBurnShare) * 100)}% funds the
                     house — which pays the bounty rewards. Verified on-chain.
                   </>
                 ) : (

@@ -2,6 +2,7 @@ import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { getTreasuryStats } from "@/lib/solana";
 import { CONFIG } from "@/lib/config";
+import { houseConfig } from "@/lib/settings";
 
 export const GET = handler(async () => {
   const [chain, burnAgg, buyAgg, takeAgg, roundCount, paidAgg, recent] =
@@ -15,17 +16,18 @@ export const GET = handler(async () => {
       prisma.treasuryEvent.findMany({ orderBy: { createdAt: "desc" }, take: 15 }),
     ]);
 
+  const cfg = await houseConfig();
   return ok({
     chain,
     ribbitMint: CONFIG.ribbitMint,
-    houseEdge: CONFIG.houseEdge,
+    houseEdge: cfg.houseEdge,
     // How the reward economy is parameterized — every credit purchase splits
     // between the burn and the treasury, and auto-bounty triggers are sized
     // from the prize so a pool that pays has already earned its keep.
     economy: {
-      buyBurnShare: CONFIG.buyBurnShare,
-      bountyHouseMargin: CONFIG.bountyHouseMargin,
-      ribbitPerCredit: CONFIG.ribbitPerCredit,
+      buyBurnShare: cfg.buyBurnShare,
+      bountyHouseMargin: cfg.bountyHouseMargin,
+      ribbitPerCredit: cfg.ribbitPerCredit,
     },
     totals: {
       ribbitBurnedRaw: burnAgg._sum.amountRaw ?? 0n,

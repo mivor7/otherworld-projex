@@ -8,6 +8,7 @@
 // fresh spend every window. Either threshold set to 0 disables that rule.
 import { prisma } from "./db";
 import { CONFIG, toRaw } from "./config";
+import { houseConfig } from "./settings";
 
 /**
  * Total $RIBBIT a user has committed to credits (burns + buys), optionally
@@ -48,18 +49,19 @@ export async function eligibleBurners(
   windowStart?: Date
 ): Promise<Set<string>> {
   if (userIds.length === 0) return new Set();
+  const cfg = await houseConfig();
   let eligible = new Set(userIds);
 
-  if (CONFIG.rankedMinBurnedRibbit > 0) {
-    const threshold = toRaw(CONFIG.rankedMinBurnedRibbit);
+  if (cfg.rankedMinBurnedRibbit > 0) {
+    const threshold = toRaw(cfg.rankedMinBurnedRibbit);
     const totals = await burnTotals(userIds);
     eligible = new Set(
       [...eligible].filter((id) => (totals.get(id) ?? 0n) >= threshold)
     );
   }
 
-  if (windowStart && CONFIG.rankedMinWindowBurnedRibbit > 0 && eligible.size > 0) {
-    const threshold = toRaw(CONFIG.rankedMinWindowBurnedRibbit);
+  if (windowStart && cfg.rankedMinWindowBurnedRibbit > 0 && eligible.size > 0) {
+    const threshold = toRaw(cfg.rankedMinWindowBurnedRibbit);
     const windowTotals = await burnTotals([...eligible], windowStart);
     eligible = new Set(
       [...eligible].filter((id) => (windowTotals.get(id) ?? 0n) >= threshold)

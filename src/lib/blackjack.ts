@@ -12,12 +12,14 @@ import { z } from "zod";
 import { prisma } from "./db";
 import { adjustCredits } from "./credits";
 import { getActiveSeed } from "./fairness";
-import { CONFIG } from "./config";
 import { ApiError } from "./api";
+import { houseConfig } from "./settings";
+import { assertWagerAllowed } from "./games";
 
 export const dealParams = z.object({
   action: z.literal("deal"),
-  wager: z.number().int().min(CONFIG.minWager).max(CONFIG.maxWager),
+  // Live bounds enforced in deal() via assertWagerAllowed.
+  wager: z.number().int().min(1).max(100_000_000),
   clientSeed: z.string().min(1).max(64),
 });
 
@@ -168,6 +170,9 @@ export async function currentRound(userId: string) {
 }
 
 export async function deal(userId: string, wager: number, clientSeed: string) {
+  // New hands respect the live table rules; open hands (hit/stand/double)
+  // are never blocked — a pause can't strand a player mid-hand.
+  assertWagerAllowed(await houseConfig(), wager);
   const open = await prisma.gameRound.count({
     where: { userId, game: "blackjack", settled: false },
   });

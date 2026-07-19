@@ -6,8 +6,9 @@
 // human-gated payout infrastructure applies unchanged.
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
-import { CONFIG, fromRaw } from "./config";
+import { fromRaw } from "./config";
 import { burnTotals, eligibleBurners } from "./ranked";
+import { houseConfig } from "./settings";
 import { getTreasuryStats } from "./solana";
 import { ApiError } from "./api";
 
@@ -79,7 +80,7 @@ export async function rankBountyEntries(
   }
 
   const ids = rows.map((r) => r.userId);
-  const [eligible, burns, windowBurns, users] = await Promise.all([
+  const [eligible, burns, windowBurns, users, cfg] = await Promise.all([
     eligibleBurners(ids, bounty.startsAt),
     burnTotals(ids),
     burnTotals(ids, bounty.startsAt),
@@ -87,13 +88,14 @@ export async function rankBountyEntries(
       where: { id: { in: ids } },
       select: { id: true, wallet: true, createdAt: true },
     }),
+    houseConfig(),
   ]);
   const userById = new Map(users.map((u) => [u.id, u]));
 
   return rows
     .filter((r) => eligible.has(r.userId))
     .filter((r) =>
-      ARCADE_GAMES.has(game) ? true : (r.volume ?? 0) >= CONFIG.rankedMinTableVolume
+      ARCADE_GAMES.has(game) ? true : (r.volume ?? 0) >= cfg.rankedMinTableVolume
     )
     // A prize only pays a positive result — a table bounty with everyone
     // net-negative pays nobody.
@@ -134,10 +136,11 @@ export function splitPrize(prizeRaw: bigint, splits: number[]): bigint[] {
  * margin. trigger = (prizeCredits × (1 + margin)) / edge. This guarantees a
  * bounty that pays out has already earned the house more than it costs.
  */
-export function computeTriggerCreditVolume(prizeRaw: bigint): number {
-  const prizeCredits = fromRaw(prizeRaw) / CONFIG.ribbitPerCredit;
+export async function computeTriggerCreditVolume(prizeRaw: bigint): Promise<number> {
+  const cfg = await houseConfig();
+  const prizeCredits = fromRaw(prizeRaw) / cfg.ribbitPerCredit;
   const vol = Math.ceil(
-    (prizeCredits * (1 + CONFIG.bountyHouseMargin)) / CONFIG.houseEdge
+    (prizeCredits * (1 + cfg.bountyHouseMargin)) / cfg.houseEdge
   );
   return Math.max(1, vol);
 }
@@ -316,7 +319,7 @@ export async function awardBountyProRata(bountyId: string): Promise<AwardResult 
  * Gated by BOUNTY_AUTO_PAY so nothing pays until the owner switches it on.
  */
 export async function autoSettleBounties(): Promise<void> {
-  if (!CONFIG.bountyAutoPayEnabled) return;
+  if (!(await houseConfig()).bountyAutoPay) return;
   const now = new Date();
   const candidates = await prisma.bounty.findMany({
     where: { status: { in: ["open", "closed"] }, autoPay: true, game: { not: null } },

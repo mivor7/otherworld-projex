@@ -1,13 +1,15 @@
 // Earned badges, computed live from the ledger — no extra state to maintain.
 import { handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { CONFIG, toRaw } from "@/lib/config";
+import { toRaw } from "@/lib/config";
+import { burnTotals } from "@/lib/ranked";
+import { houseConfig } from "@/lib/settings";
 
 export const GET = handler(async () => {
   const session = await requireSession();
   const userId = session.userId;
 
-  const [rounds, maxPayout, bj, burns, arcadeBest, auctionsWon] =
+  const [rounds, maxPayout, bj, spendTotals, arcadeBest, auctionsWon, cfg] =
     await Promise.all([
       prisma.gameRound.count({ where: { userId, settled: true } }),
       prisma.gameRound.aggregate({ where: { userId }, _max: { payout: true } }),
@@ -15,10 +17,12 @@ export const GET = handler(async () => {
         where: { userId, game: "blackjack", settled: true },
         _sum: { payout: true, wager: true },
       }),
-      prisma.burnEvent.aggregate({ where: { userId }, _sum: { amountRaw: true } }),
+      burnTotals([userId]), // burns + buys — same spend rule the boards use
       prisma.arcadeScore.aggregate({ where: { userId }, _max: { score: true } }),
       prisma.auction.count({ where: { winnerUserId: userId } }),
+      houseConfig(),
     ]);
+  const spentRaw = spendTotals.get(userId) ?? 0n;
 
   const bjNet = (bj._sum.payout ?? 0) - (bj._sum.wager ?? 0);
   const badges = [
@@ -54,15 +58,15 @@ export const GET = handler(async () => {
       id: "skin-in-the-game",
       icon: "🎖️",
       name: "Ranked Hunter",
-      desc: `Burn ${CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT lifetime — unlocks prize boards`,
-      earned: (burns._sum.amountRaw ?? 0n) >= toRaw(CONFIG.rankedMinBurnedRibbit),
+      desc: `Spend ${cfg.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT on credits lifetime — unlocks prize boards`,
+      earned: spentRaw >= toRaw(cfg.rankedMinBurnedRibbit),
     },
     {
       id: "torch-bearer",
       icon: "🔥",
       name: "Torch Bearer",
-      desc: "Burn 10,000+ $RIBBIT for credits",
-      earned: (burns._sum.amountRaw ?? 0n) >= toRaw(10_000),
+      desc: "Spend 10,000+ $RIBBIT on credits",
+      earned: spentRaw >= toRaw(10_000),
     },
     {
       id: "gavel-hand",

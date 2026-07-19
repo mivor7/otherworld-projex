@@ -7,6 +7,7 @@ import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
 import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
+import { useHouseConfig } from "@/components/use-house-config";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 
@@ -29,8 +30,9 @@ export default function DicePage() {
   const [sandbox, setSandbox] = useState(false);
   const practice = usePractice();
   const { seed: clientSeed } = useClientSeed();
+  const house = useHouseConfig();
 
-  const multiplier = (100 / target) * 0.96;
+  const multiplier = (100 / target) * (1 - house.houseEdge); // live edge
   const balance = sandbox ? practice.credits : (me.credits ?? 0);
   const canPlay = sandbox || me.signedIn;
 

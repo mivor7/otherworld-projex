@@ -6,7 +6,8 @@ import { PageHero } from "@/components/hero";
 import { Countdown } from "@/components/ui";
 import { RowSkeleton } from "@/components/skeletons";
 import { EmptyState } from "@/components/empty-state";
-import { CLIENT_CONFIG, fmtRibbit } from "@/lib/client-config";
+import { fmtRibbit } from "@/lib/client-config";
+import { useHouseConfig } from "@/components/use-house-config";
 
 type Bounty = {
   id: string;
@@ -53,6 +54,7 @@ export default function BountiesPage() {
   const [loaded, setLoaded] = useState(false);
   const [boardGame, setBoardGame] = useState("hopper");
   const [board, setBoard] = useState<BoardRow[]>([]);
+  const house = useHouseConfig();
 
   useEffect(() => {
     fetch("/api/bounties")
@@ -302,9 +304,9 @@ export default function BountiesPage() {
             Arcade boards rank best score; the tables rank net credits won.
             Pools pay in $RIBBIT the moment a bounty triggers.{" "}
             <span className="text-neon">Prize boards rank active spenders only</span> —{" "}
-            {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT
+            {house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT
             spent on credits lifetime and{" "}
-            {CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside
+            {house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside
             the board week. Anyone can play free; only spenders collect.
           </p>
         </aside>

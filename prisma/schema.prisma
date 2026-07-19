@@ -299,3 +299,13 @@ model TreasuryEvent {
 
   @@index([createdAt])
 }
+
+// Admin-tunable house parameters. Each row overrides the env default for one
+// key (see src/lib/settings.ts for the registry, validation and caching).
+// Changes are audited as TreasuryEvent kind "config".
+model HouseSetting {
+  key       String   @id
+  value     String
+  updatedBy String? // admin wallet that last changed it
+  updatedAt DateTime @updatedAt
+}

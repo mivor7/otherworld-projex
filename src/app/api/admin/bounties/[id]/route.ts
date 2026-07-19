@@ -52,7 +52,7 @@ export const POST = handler(
       // credit-game bounty — never trust a client-supplied threshold.
       const isCreditGame = !!bounty.game && !ARCADE_GAMES.has(bounty.game);
       const triggerCreditVolume =
-        autoPay && isCreditGame ? computeTriggerCreditVolume(prizeRaw) : null;
+        autoPay && isCreditGame ? await computeTriggerCreditVolume(prizeRaw) : null;
 
       const updated = await prisma.bounty.update({
         where: { id },

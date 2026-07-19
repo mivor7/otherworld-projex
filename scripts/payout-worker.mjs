@@ -77,6 +77,15 @@ for (const wd of limbo) {
 }
 
 async function processQueue() {
+  // Admin kill switch: the queue keeps accepting requests, but nothing is
+  // claimed or sent while payouts are paused from the House controls panel.
+  const paused = await prisma.houseSetting.findUnique({
+    where: { key: "payoutsPaused" },
+  });
+  if (paused?.value === "true") {
+    console.log("⏸ payouts paused from the admin panel — skipping this pass");
+    return;
+  }
   const pending = await prisma.withdrawal.findMany({
     where: { status: "pending" },
     orderBy: { createdAt: "asc" },

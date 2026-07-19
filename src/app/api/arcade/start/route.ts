@@ -5,14 +5,19 @@
 // luckiest run buys nothing.
 import { z } from "zod";
 import { SignJWT } from "jose";
-import { handler, ok, requireSession } from "@/lib/api";
+import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireSessionSecret } from "@/lib/config";
+import { houseConfig } from "@/lib/settings";
 
 const body = z.object({ game: z.enum(["hopper", "frogris", "worm"]).default("hopper") });
 
 export const POST = handler(async (req: Request) => {
   const session = await requireSession();
+  // New runs respect the emergency brake; in-flight runs may still submit.
+  if ((await houseConfig()).gamesPaused) {
+    return err("The arcade is paused — back shortly", 423);
+  }
   const { game } = body.parse(await req.json().catch(() => ({})));
 
   const jti = crypto.randomUUID();

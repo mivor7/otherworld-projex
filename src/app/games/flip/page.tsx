@@ -7,6 +7,7 @@ import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
 import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
+import { useHouseConfig } from "@/components/use-house-config";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 
@@ -32,6 +33,8 @@ export default function FlipPage() {
   const [sandbox, setSandbox] = useState(false);
   const practice = usePractice();
   const { seed: clientSeed } = useClientSeed();
+  const house = useHouseConfig();
+  const flipMult = 2 * (1 - house.houseEdge); // live house edge
 
   const land = (data: FlipResult) => {
     // Hand off from the fast spin to a decelerating landing on the result
@@ -59,7 +62,7 @@ export default function FlipPage() {
       practice.ensure(wager);
       const landed = Math.random() < 0.5 ? "frog" : "fly";
       const win = landed === side;
-      const payout = win ? Math.floor(wager * 1.92) : 0;
+      const payout = win ? Math.floor(wager * flipMult) : 0;
       practice.adjust(-wager + payout);
       setTimeout(
         () => land({ outcome: { landed }, payout, win, credits: 0, nonce: 0, seedHash: "" }),
@@ -93,7 +96,7 @@ export default function FlipPage() {
       <SectionTitle
         kicker="Wing I — table 01"
         title="Frog Flip"
-        desc="Frog or fly, even odds, 1.92× payout on a win — 4% published edge."
+        desc={`Frog or fly, even odds, ${flipMult.toFixed(2)}× payout on a win — ${Math.round(house.houseEdge * 100)}% published edge.`}
       />
 
       <div className="panel panel-glow p-8 text-center">
@@ -170,7 +173,7 @@ export default function FlipPage() {
             onChange={(e) => setWager(Math.max(1, Math.floor(Number(e.target.value))))}
           />
           <span className="text-sm text-fog">
-            credits → win <span className="text-neon">{Math.floor(wager * 1.92)}</span>
+            credits → win <span className="text-neon">{Math.floor(wager * flipMult)}</span>
           </span>
         </div>
 

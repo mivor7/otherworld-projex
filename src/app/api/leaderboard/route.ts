@@ -1,7 +1,7 @@
 import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { CONFIG } from "@/lib/config";
 import { eligibleBurners } from "@/lib/ranked";
+import { houseConfig } from "@/lib/settings";
 
 function short(wallet: string) {
   return `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
@@ -53,8 +53,9 @@ export const GET = handler(async (req: Request) => {
     orderBy: { _sum: { payout: "desc" } },
     take: 200,
   });
+  const cfg = await houseConfig();
   const qualified = rounds.filter(
-    (r) => (r._sum.wager ?? 0) >= CONFIG.rankedMinTableVolume
+    (r) => (r._sum.wager ?? 0) >= cfg.rankedMinTableVolume
   );
   const eligible = await eligibleBurners(qualified.map((r) => r.userId), sinceDate);
   const ranked = qualified

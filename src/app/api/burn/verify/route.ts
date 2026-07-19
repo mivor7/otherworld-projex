@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { verifyBurnTx } from "@/lib/solana";
 import { CONFIG, toRaw } from "@/lib/config";
 import { adjustCredits } from "@/lib/credits";
+import { houseConfig } from "@/lib/settings";
 
 const body = z.object({ signature: z.string().min(64).max(120) });
 
@@ -20,6 +21,10 @@ export const POST = handler(async (req: Request) => {
   // endpoint directly.
   if (CONFIG.treasuryWallet) {
     return err("Buy credits instead — burning-only is disabled", 400);
+  }
+  const cfg = await houseConfig();
+  if (cfg.creditSalesPaused) {
+    return err("Credit sales are paused — back shortly", 423);
   }
   const { signature } = body.parse(await req.json());
 
@@ -34,10 +39,10 @@ export const POST = handler(async (req: Request) => {
     );
   }
 
-  const credits = Number(amountRaw / toRaw(CONFIG.ribbitPerCredit));
+  const credits = Number(amountRaw / toRaw(cfg.ribbitPerCredit));
   if (credits < 1) {
     return err(
-      `Burn at least ${CONFIG.ribbitPerCredit} $RIBBIT for 1 credit`,
+      `Burn at least ${cfg.ribbitPerCredit} $RIBBIT for 1 credit`,
       422
     );
   }

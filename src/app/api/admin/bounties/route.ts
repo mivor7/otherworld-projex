@@ -53,7 +53,7 @@ export const POST = handler(async (req: Request) => {
   // the house more than it pays. Free games are time-based (weekly).
   const isCreditGame = !!data.game && !ARCADE_GAMES.has(data.game);
   const triggerCreditVolume =
-    data.autoPay && isCreditGame ? computeTriggerCreditVolume(prizeRaw) : null;
+    data.autoPay && isCreditGame ? await computeTriggerCreditVolume(prizeRaw) : null;
 
   const bounty = await prisma.bounty.create({
     data: {

@@ -62,7 +62,9 @@ export function useChain() {
   /**
    * Buy credits: one signed tx that burns part of the $RIBBIT and transfers
    * the rest to the treasury (real house revenue). Both legs are verified
-   * server-side. The burn/house split comes from CLIENT_CONFIG.buyBurnShare.
+   * server-side. The burn/house split is a LIVE house setting, so it's
+   * fetched just-in-time — building against a stale build-time ratio could
+   * strand the payment at verification.
    */
   const buyCredits = useCallback(
     async (ribbitAmount: number): Promise<ChainResult> => {
@@ -70,6 +72,15 @@ export function useChain() {
       if (!CLIENT_CONFIG.treasuryWallet)
         return { ok: false, error: "Buying credits isn't available yet" };
       try {
+        let buyBurnShare = CLIENT_CONFIG.buyBurnShare;
+        try {
+          const live = await (await fetch("/api/config")).json();
+          if (live.creditSalesPaused)
+            return { ok: false, error: "Credit sales are paused — back shortly" };
+          if (typeof live.buyBurnShare === "number") buyBurnShare = live.buyBurnShare;
+        } catch {
+          // fall back to the build-time split; the server re-verifies anyway
+        }
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
         const treasury = new PublicKey(CLIENT_CONFIG.treasuryWallet);
         const ata = getAssociatedTokenAddressSync(mint, publicKey);
@@ -78,7 +89,7 @@ export function useChain() {
         // burn + house exactly equals what the player intends to pay.
         const total = toRawClient(ribbitAmount);
         const houseRaw =
-          (total * BigInt(Math.round((1 - CLIENT_CONFIG.buyBurnShare) * 1000))) / 1000n;
+          (total * BigInt(Math.round((1 - buyBurnShare) * 1000))) / 1000n;
         const burnRaw = total - houseRaw;
         if (burnRaw <= 0n || houseRaw <= 0n)
           return { ok: false, error: "Amount too small to split" };

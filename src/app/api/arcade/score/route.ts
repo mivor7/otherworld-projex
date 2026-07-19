@@ -2,7 +2,8 @@ import { z } from "zod";
 import { jwtVerify } from "jose";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { CONFIG, requireSessionSecret } from "@/lib/config";
+import { requireSessionSecret } from "@/lib/config";
+import { houseConfig } from "@/lib/settings";
 import { replay as replayWorm, seedFromToken } from "@/lib/worm-sim";
 import { replayFrogris, FRAME_MS } from "@/lib/frogris-sim";
 import { replayHopper } from "@/lib/hopper-sim";
@@ -58,7 +59,7 @@ export const POST = handler(async (req: Request) => {
   const today = await prisma.arcadeScore.count({
     where: { userId: session.userId, game, createdAt: { gte: dayStart } },
   });
-  if (today >= CONFIG.arcadeDailySubmissions) {
+  if (today >= (await houseConfig()).arcadeDailySubmissions) {
     return err("Daily ranked-run limit reached — back tomorrow, hunter", 429);
   }
 

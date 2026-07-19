@@ -431,6 +431,102 @@ try {
   const profile = await admin.api(`/api/admin/users?wallet=${banned.wallet}`);
   check("player lookup returns profile", profile.status === 200 && profile.data.credits === 50);
 
+  // ---------------- HOUSE CONTROLS (live settings) ----------------
+  console.log("— House controls: live overrides, validation, kill switches, audit");
+  const sList = await admin.api("/api/admin/settings");
+  check("settings registry lists the burn/buy rate",
+    sList.status === 200 && sList.data.settings.some((x) => x.key === "buyBurnShare"));
+  const sForbidden = await banned.api("/api/admin/settings");
+  check("non-admin settings access refused (403)", sForbidden.status === 403);
+
+  const setEdge = await admin.api("/api/admin/settings", {
+    method: "POST", body: JSON.stringify({ key: "houseEdge", value: 0.06 }),
+  });
+  check("house edge override applies", setEdge.status === 200 && setEdge.data.effective === 0.06);
+  const pubCfg = await admin.api("/api/config");
+  check("public /api/config serves the LIVE edge", pubCfg.data.houseEdge === 0.06);
+
+  // the edge must bite actual gameplay: dice multiplier = (100/target)·(1−edge)
+  await prisma.user.update({
+    where: { wallet: banned.wallet }, data: { credits: 50 },
+  });
+  const diceRound = await banned.api("/api/games/dice", {
+    method: "POST",
+    body: JSON.stringify({ target: 50, wager: 5, clientSeed: "e2e-edge" }),
+  });
+  check("dice round pays at the LIVE edge (2×0.94 = 1.88)",
+    diceRound.status === 200 && diceRound.data.outcome.multiplier === 1.88,
+    JSON.stringify(diceRound.data.outcome ?? diceRound.data));
+
+  const badEdge = await admin.api("/api/admin/settings", {
+    method: "POST", body: JSON.stringify({ key: "houseEdge", value: 0.5 }),
+  });
+  check("out-of-range edge rejected (422)", badEdge.status === 422, `got ${badEdge.status}`);
+
+  const setMin = await admin.api("/api/admin/settings", {
+    method: "POST", body: JSON.stringify({ key: "minWager", value: 10 }),
+  });
+  check("min wager raised live", setMin.status === 200 && setMin.data.effective === 10);
+  const tooSmall = await banned.api("/api/games/dice", {
+    method: "POST",
+    body: JSON.stringify({ target: 50, wager: 5, clientSeed: "e2e-min" }),
+  });
+  check("wager under the live minimum refused (422)", tooSmall.status === 422,
+    `got ${tooSmall.status}`);
+  await admin.api("/api/admin/settings", {
+    method: "POST", body: JSON.stringify({ key: "minWager", action: "reset" }),
+  });
+
+  const pause = await admin.api("/api/admin/settings", {
+    method: "POST", body: JSON.stringify({ key: "gamesPaused", value: true }),
+  });
+  check("tables pause switch flips", pause.status === 200 && pause.data.effective === true);
+  const pausedPlay = await banned.api("/api/games/flip", {
+    method: "POST",
+    body: JSON.stringify({ side: "frog", wager: 5, clientSeed: "e2e-pause" }),
+  });
+  check("paused table refuses new rounds (423)", pausedPlay.status === 423,
+    `got ${pausedPlay.status}`);
+  const pausedStart = await banned.api("/api/arcade/start", {
+    method: "POST", body: JSON.stringify({ game: "worm" }),
+  });
+  check("paused arcade refuses new runs (423)", pausedStart.status === 423);
+  await admin.api("/api/admin/settings", {
+    method: "POST", body: JSON.stringify({ key: "gamesPaused", value: false }),
+  });
+  const resumedPlay = await banned.api("/api/games/flip", {
+    method: "POST",
+    body: JSON.stringify({ side: "frog", wager: 5, clientSeed: "e2e-resume" }),
+  });
+  check("unpaused table deals again", resumedPlay.status === 200, `got ${resumedPlay.status}`);
+
+  const setSplit = await admin.api("/api/admin/settings", {
+    method: "POST", body: JSON.stringify({ key: "buyBurnShare", value: 0.6 }),
+  });
+  check("burn/buy rate arranged live (0.5 → 0.6)",
+    setSplit.status === 200 && setSplit.data.effective === 0.6);
+  const cfg2 = await admin.api("/api/config");
+  check("clients see the new split before building the buy tx",
+    cfg2.data.buyBurnShare === 0.6);
+
+  const audit = await prisma.treasuryEvent.findFirst({
+    where: { kind: "config", ref: "houseEdge" }, orderBy: { createdAt: "desc" },
+  });
+  check("config changes audited on the treasury ledger",
+    !!audit && audit.note.includes("0.06") && audit.note.includes(admin.wallet.slice(0, 8)));
+
+  const resetEdge = await admin.api("/api/admin/settings", {
+    method: "POST", body: JSON.stringify({ key: "houseEdge", action: "reset" }),
+  });
+  check("reset returns edge to the env default",
+    resetEdge.status === 200 && resetEdge.data.effective === 0.04 &&
+      resetEdge.data.overridden === false);
+  await admin.api("/api/admin/settings", {
+    method: "POST", body: JSON.stringify({ key: "buyBurnShare", action: "reset" }),
+  });
+  const cfg3 = await admin.api("/api/config");
+  check("all knobs back at defaults", cfg3.data.houseEdge === 0.04 && cfg3.data.buyBurnShare === 0.5);
+
   // overview stats present
   const ov = await admin.api("/api/admin/overview");
   check("overview exposes house stats", ov.status === 200 &&
@@ -438,6 +534,13 @@ try {
     typeof ov.data.stats?.creditsOutstanding === "number");
 } finally {
   console.log("\ncleaning test data…");
+  // Settings overrides touched by this suite go back to env defaults even on
+  // a crash — they'd otherwise change live house behaviour in prod.
+  const touchedSettings = ["houseEdge", "minWager", "gamesPaused", "buyBurnShare"];
+  await prisma.houseSetting.deleteMany({ where: { key: { in: touchedSettings } } });
+  await prisma.treasuryEvent.deleteMany({
+    where: { kind: "config", ref: { in: touchedSettings } },
+  });
   // A transient failure can leave an undefined id in these arrays — filter it
   // so cleanup itself never crashes and always runs to completion.
   const bIds = bountyIds.filter(Boolean);
@@ -456,6 +559,8 @@ try {
     await prisma.burnEvent.deleteMany({ where: { userId: u.id } });
     await prisma.withdrawal.deleteMany({ where: { userId: u.id } });
     await prisma.bid.deleteMany({ where: { userId: u.id } });
+    await prisma.gameRound.deleteMany({ where: { userId: u.id } });
+    await prisma.serverSeed.deleteMany({ where: { userId: u.id } });
     await prisma.ledgerEntry.deleteMany({ where: { userId: u.id } });
     await prisma.user.deleteMany({ where: { id: u.id } });
   }

@@ -9,12 +9,17 @@ import { prisma } from "@/lib/db";
 import { verifyBuyTx } from "@/lib/solana";
 import { CONFIG, toRaw } from "@/lib/config";
 import { adjustCredits } from "@/lib/credits";
+import { houseConfig } from "@/lib/settings";
 
 const body = z.object({ signature: z.string().min(64).max(120) });
 
 export const POST = handler(async (req: Request) => {
   const session = await requireSession();
   if (!CONFIG.treasuryWallet) return err("Buying credits isn't available yet", 400);
+  const cfg = await houseConfig();
+  if (cfg.creditSalesPaused) {
+    return err("Credit sales are paused — back shortly", 423);
+  }
   const { signature } = body.parse(await req.json());
 
   const existing = await prisma.creditPurchase.findUnique({ where: { signature } });
@@ -34,14 +39,14 @@ export const POST = handler(async (req: Request) => {
   // can't buy credits while routing everything to the burn (or nothing to the
   // treasury). Small rounding tolerance.
   const minHouse =
-    (ribbitRaw * BigInt(Math.round((1 - CONFIG.buyBurnShare) * 1000))) / 1000n;
+    (ribbitRaw * BigInt(Math.round((1 - cfg.buyBurnShare) * 1000))) / 1000n;
   if (houseRaw + houseRaw / 100n < minHouse) {
     return err("Treasury share is below the required split", 422);
   }
 
-  const credits = Number(ribbitRaw / toRaw(CONFIG.ribbitPerCredit));
+  const credits = Number(ribbitRaw / toRaw(cfg.ribbitPerCredit));
   if (credits < 1) {
-    return err(`Buy at least ${CONFIG.ribbitPerCredit} $RIBBIT for 1 credit`, 422);
+    return err(`Buy at least ${cfg.ribbitPerCredit} $RIBBIT for 1 credit`, 422);
   }
 
   const balance = await prisma.$transaction(async (tx) => {

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHero } from "@/components/hero";
 import { EmptyState } from "@/components/empty-state";
-import { CLIENT_CONFIG } from "@/lib/client-config";
+import { useHouseConfig } from "@/components/use-house-config";
 
 type Row = { rank: number; player: string; score: number; volume?: number };
 
@@ -20,6 +20,7 @@ const GAMES: { id: string; label: string; unit: string; kind: "arcade" | "table"
 ];
 
 export default function LeaderboardPage() {
+  const house = useHouseConfig();
   const [game, setGame] = useState("hopper");
   const [window_, setWindow] = useState<"week" | "all">("week");
   const [rows, setRows] = useState<Row[]>([]);
@@ -150,8 +151,8 @@ export default function LeaderboardPage() {
       <p className="text-xs mt-4 leading-relaxed max-w-lg" style={{ color: "var(--text-dim)" }}>
         <span className="text-neon">Skin in the game:</span> prize boards rank
         wallets with {""}
-        {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT spent on
-        credits lifetime and {CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+
+        {house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT spent on
+        credits lifetime and {house.rankedMinWindowBurnedRibbit.toLocaleString()}+
         spent inside the board week (table boards also need in-window wagering
         volume). Anyone can play; buying credits mid-week ranks your best score
         retroactively. Every arcade run is replayed move-by-move and verified

@@ -3,23 +3,39 @@
 // the payout multiplier, never to the roll itself — odds are exactly what the
 // fairness page says they are.
 import { z } from "zod";
-import { CONFIG } from "./config";
 import { getActiveSeed, roll } from "./fairness";
 import { adjustCredits, InsufficientCredits } from "./credits";
 import { prisma } from "./db";
+import { houseConfig, type HouseConfig } from "./settings";
+import { ApiError } from "./api";
 
+// Wager bounds are LIVE settings (admin-tunable), so the schemas only shape-
+// check; assertWagerAllowed() enforces the effective bounds per round.
 export const flipParams = z.object({
   side: z.enum(["frog", "fly"]),
-  wager: z.number().int().min(CONFIG.minWager).max(CONFIG.maxWager),
+  wager: z.number().int().min(1).max(100_000_000),
   clientSeed: z.string().min(1).max(64),
 });
 
 export const diceParams = z.object({
   // Win if roll*100 < target. target 2..98 keeps multipliers sane.
   target: z.number().int().min(2).max(98),
-  wager: z.number().int().min(CONFIG.minWager).max(CONFIG.maxWager),
+  wager: z.number().int().min(1).max(100_000_000),
   clientSeed: z.string().min(1).max(64),
 });
+
+/** Enforce the live table rules before any round is dealt. */
+export function assertWagerAllowed(cfg: HouseConfig, wager: number): void {
+  if (cfg.gamesPaused) {
+    throw new ApiError("The tables are paused — back shortly", 423);
+  }
+  if (wager < cfg.minWager || wager > cfg.maxWager) {
+    throw new ApiError(
+      `Wager must be between ${cfg.minWager} and ${cfg.maxWager} credits`,
+      422
+    );
+  }
+}
 
 export type RoundResult = {
   roundId: string;
@@ -33,18 +49,18 @@ export type RoundResult = {
   credits: number; // balance after the round
 };
 
-function flipResolve(r: number, side: "frog" | "fly", wager: number) {
+function flipResolve(r: number, side: "frog" | "fly", wager: number, edge: number) {
   const landed = r < 0.5 ? "frog" : "fly";
   const win = landed === side;
-  const multiplier = 2 * (1 - CONFIG.houseEdge);
+  const multiplier = 2 * (1 - edge);
   const payout = win ? Math.floor(wager * multiplier) : 0;
   return { outcome: { landed, roll: r }, payout, win };
 }
 
-function diceResolve(r: number, target: number, wager: number) {
+function diceResolve(r: number, target: number, wager: number, edge: number) {
   const rolled = Math.floor(r * 100 * 100) / 100; // 0.00 – 99.99
   const win = rolled < target;
-  const multiplier = (100 / target) * (1 - CONFIG.houseEdge);
+  const multiplier = (100 / target) * (1 - edge);
   const payout = win ? Math.floor(wager * multiplier) : 0;
   return { outcome: { rolled, target, multiplier: Number(multiplier.toFixed(4)) }, payout, win };
 }
@@ -61,6 +77,8 @@ export async function playRound(
   game: "flip" | "dice",
   params: { wager: number; clientSeed: string; side?: "frog" | "fly"; target?: number }
 ): Promise<RoundResult> {
+  const cfg = await houseConfig();
+  assertWagerAllowed(cfg, params.wager);
   const seed = await getActiveSeed(userId);
 
   return prisma.$transaction(async (tx) => {
@@ -77,8 +95,8 @@ export async function playRound(
     const r = roll(seed.seed, params.clientSeed, nonce);
     const resolved =
       game === "flip"
-        ? flipResolve(r, params.side!, params.wager)
-        : diceResolve(r, params.target!, params.wager);
+        ? flipResolve(r, params.side!, params.wager, cfg.houseEdge)
+        : diceResolve(r, params.target!, params.wager, cfg.houseEdge);
 
     const round = await tx.gameRound.create({
       data: {
