@@ -598,17 +598,17 @@ export default function AdminPage() {
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="text-xs text-fog">Start bid</label>
-                <input className="input" type="number" value={auctionForm.startBidRibbit}
+                <input className="input" type="number" value={auctionForm.startBidRibbit || ""}
                   onChange={(e) => setAuctionForm({ ...auctionForm, startBidRibbit: Number(e.target.value) })} />
               </div>
               <div>
                 <label className="text-xs text-fog">Min step</label>
-                <input className="input" type="number" value={auctionForm.minIncrementRibbit}
+                <input className="input" type="number" value={auctionForm.minIncrementRibbit || ""}
                   onChange={(e) => setAuctionForm({ ...auctionForm, minIncrementRibbit: Number(e.target.value) })} />
               </div>
               <div>
                 <label className="text-xs text-fog">Hours</label>
-                <input className="input" type="number" value={auctionForm.durationHours}
+                <input className="input" type="number" value={auctionForm.durationHours || ""}
                   onChange={(e) => setAuctionForm({ ...auctionForm, durationHours: Number(e.target.value) })} />
               </div>
             </div>
@@ -668,12 +668,12 @@ export default function AdminPage() {
               </div>
               <div>
                 <label className="text-xs text-fog">Prize RIBBIT</label>
-                <input className="input" type="number" value={bountyForm.prizeRibbit}
+                <input className="input" type="number" value={bountyForm.prizeRibbit || ""}
                   onChange={(e) => setBountyForm({ ...bountyForm, prizeRibbit: Number(e.target.value) })} />
               </div>
               <div>
                 <label className="text-xs text-fog">Days</label>
-                <input className="input" type="number" value={bountyForm.durationDays}
+                <input className="input" type="number" value={bountyForm.durationDays || ""}
                   onChange={(e) => setBountyForm({ ...bountyForm, durationDays: Number(e.target.value) })} />
               </div>
             </div>
@@ -860,7 +860,7 @@ export default function AdminPage() {
                               Start bid {a._count.bids > 0 && "(locked — has bids)"}
                             </label>
                             <input className="input !text-xs" type="number" disabled={a._count.bids > 0}
-                              value={auctionEditForm.startBidRibbit}
+                              value={auctionEditForm.startBidRibbit || ""}
                               onChange={(e) => setAuctionEditForm({ ...auctionEditForm, startBidRibbit: Number(e.target.value) })} />
                           </div>
                           <div>
@@ -875,7 +875,7 @@ export default function AdminPage() {
                           <div>
                             <label className="text-[0.65rem] text-fog">Extend hours</label>
                             <input className="input !text-xs" type="number"
-                              value={auctionEditForm.extendHours}
+                              value={auctionEditForm.extendHours || ""}
                               onChange={(e) => setAuctionEditForm({ ...auctionEditForm, extendHours: Number(e.target.value) })} />
                           </div>
                         </div>
@@ -1064,12 +1064,12 @@ export default function AdminPage() {
                     <div className="grid grid-cols-3 gap-2 items-end">
                       <div>
                         <label className="text-[0.65rem] text-fog">Prize $RIBBIT</label>
-                        <input className="input !text-xs" type="number" value={editForm.prizeRibbit}
+                        <input className="input !text-xs" type="number" value={editForm.prizeRibbit || ""}
                           onChange={(e) => setEditForm({ ...editForm, prizeRibbit: Number(e.target.value) })} />
                       </div>
                       <div>
                         <label className="text-[0.65rem] text-fog">Extend days (±)</label>
-                        <input className="input !text-xs" type="number" value={editForm.extendDays}
+                        <input className="input !text-xs" type="number" value={editForm.extendDays || ""}
                           onChange={(e) => setEditForm({ ...editForm, extendDays: Number(e.target.value) })} />
                       </div>
                       <label className="flex items-center gap-2 text-xs text-fog cursor-pointer pb-2">

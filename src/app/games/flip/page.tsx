@@ -176,12 +176,11 @@ export default function FlipPage() {
             className="input max-w-28 text-center"
             min={house.minWager}
             max={house.maxWager}
-            value={wager}
-            onChange={(e) =>
-              setWager(
-                Math.min(house.maxWager, Math.max(house.minWager, Math.floor(Number(e.target.value)) || house.minWager))
-              )
-            }
+            value={wager || ""}
+            onChange={(e) => {
+              const n = Math.floor(Number(e.target.value));
+              setWager(Number.isFinite(n) && n > 0 ? Math.min(house.maxWager, n) : 0);
+            }}
           />
           <span className="text-sm text-fog">
             credits → win <span className="text-neon">{Math.floor(wager * flipMult)}</span>

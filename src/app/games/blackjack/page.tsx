@@ -417,12 +417,11 @@ export default function BlackjackPage() {
               className="input max-w-28 text-center"
               min={house.minWager}
               max={house.maxWager}
-              value={wager}
-              onChange={(e) =>
-                setWager(
-                  Math.min(house.maxWager, Math.max(house.minWager, Math.floor(Number(e.target.value)) || house.minWager))
-                )
-              }
+              value={wager || ""}
+              onChange={(e) => {
+                const n = Math.floor(Number(e.target.value));
+                setWager(Number.isFinite(n) && n > 0 ? Math.min(house.maxWager, n) : 0);
+              }}
             />
             <button
               className="btn btn-primary btn-lg px-10"

@@ -284,7 +284,7 @@ export default function GamesPage() {
                   className="input"
                   min={house.ribbitPerCredit}
                   step={house.ribbitPerCredit}
-                  value={burnAmount}
+                  value={burnAmount || ""}
                   onChange={(e) => setBurnAmount(Number(e.target.value))}
                 />
                 <button
