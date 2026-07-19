@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
-import { useChain } from "@/components/use-chain";
+import { useChain, redeemPendingPayments, redeemSignature } from "@/components/use-chain";
 import { useHouseConfig } from "@/components/use-house-config";
 import { PageHero } from "@/components/hero";
 import { MatteMedia } from "@/components/matte-media";
@@ -80,6 +80,7 @@ export default function GamesPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [rescueSig, setRescueSig] = useState("");
   const [liveBounties, setLiveBounties] = useState<
     Record<string, { prizeRibbit: number; prizeText: string | null }>
   >({});
@@ -90,7 +91,36 @@ export default function GamesPage() {
       .then((r) => r.json())
       .then((rows) => Array.isArray(rows) && setHistory(rows))
       .catch(() => {});
+    // A payment whose browser-side confirmation timed out is stored locally —
+    // replay it now that we're back: the server verifies on-chain itself.
+    redeemPendingPayments()
+      .then(async (results) => {
+        const won = results.filter((r) => r.ok);
+        if (won.length > 0) {
+          setMsg({ kind: "ok", text: "Recovered a pending payment — credits added." });
+          await refresh();
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me.signedIn]);
+
+  const doRescue = async () => {
+    if (rescueSig.trim().length < 64) return;
+    setBusy(true);
+    setMsg(null);
+    const res = await redeemSignature(canBuy ? "/api/credits/buy" : "/api/burn/verify", rescueSig);
+    setMsg(
+      res.ok
+        ? { kind: "ok", text: "Payment verified on-chain — credits added." }
+        : { kind: "err", text: res.error }
+    );
+    if (res.ok) {
+      setRescueSig("");
+      await refresh();
+    }
+    setBusy(false);
+  };
 
   useEffect(() => {
     fetch("/api/bounties/live")
@@ -307,6 +337,30 @@ export default function GamesPage() {
                   <>Burns are permanent, 100% destroyed, and verified on-chain.</>
                 )}
               </p>
+              <details className="mb-3">
+                <summary className="text-xs cursor-pointer" style={{ color: "var(--text-dim)" }}>
+                  Paid but credits didn&apos;t arrive?
+                </summary>
+                <div className="flex gap-2 mt-2">
+                  <input
+                    className="input !text-xs mono flex-1"
+                    placeholder="Paste the transaction signature"
+                    value={rescueSig}
+                    onChange={(e) => setRescueSig(e.target.value)}
+                  />
+                  <button
+                    className="btn btn-ghost !text-xs"
+                    disabled={busy || rescueSig.trim().length < 64}
+                    onClick={doRescue}
+                  >
+                    Redeem
+                  </button>
+                </div>
+                <p className="text-[0.65rem] mt-1.5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                  We verify the payment on-chain and credit it — each transaction
+                  can only ever be redeemed once, so this is always safe to try.
+                </p>
+              </details>
               {CLIENT_CONFIG.devFaucet && (
                 <button className="btn btn-ghost w-full mb-3" onClick={doFaucet} disabled={busy}>
                   Dev faucet · +100 credits

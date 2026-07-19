@@ -29,6 +29,107 @@ async function postJson(url: string, body: unknown): Promise<ChainResult> {
   return { ok: true, data };
 }
 
+// ——— payment-can-never-be-lost machinery ———
+// The moment the wallet SENDS a transaction, the payment exists on-chain.
+// From then on a flaky browser RPC (confirmation timeout, 403) must never
+// cost the player their redemption: the signature is stored BEFORE we wait
+// for confirmation, redemption is retried against the server (which verifies
+// on-chain with its own RPC), and anything still unredeemed stays stored so
+// it can be replayed on the next visit or pasted in by hand.
+const PENDING_KEY = "owp-pending-redemptions";
+type PendingRedemption = { url: string; signature: string; at: number };
+
+function pendingList(): PendingRedemption[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+function savePending(list: PendingRedemption[]) {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list.slice(-20)));
+  } catch {}
+}
+function addPending(url: string, signature: string) {
+  savePending([...pendingList().filter((p) => p.signature !== signature), { url, signature, at: Date.now() }]);
+}
+function removePending(signature: string) {
+  savePending(pendingList().filter((p) => p.signature !== signature));
+}
+
+/** "Already redeemed" (409) means the credits landed earlier — success. */
+const isAlreadyRedeemed = (e: string) => /already/i.test(e);
+/** Not-found-yet on chain — worth retrying, the tx may still be propagating. */
+const isNotYetVisible = (e: string) => /could not verify/i.test(e);
+
+async function redeemWithRetry(url: string, signature: string): Promise<ChainResult> {
+  let last: ChainResult = { ok: false, error: "Redemption failed" };
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 4000));
+    try {
+      last = await postJson(url, { signature });
+    } catch {
+      last = { ok: false, error: "Network error while redeeming — will retry" };
+      continue;
+    }
+    if (last.ok) {
+      removePending(signature);
+      return last;
+    }
+    if (isAlreadyRedeemed(last.error)) {
+      removePending(signature);
+      return { ok: true, data: { alreadyRedeemed: true } };
+    }
+    if (!isNotYetVisible(last.error)) return last; // terminal (e.g. wrong wallet)
+  }
+  return {
+    ok: false,
+    error:
+      `${last.ok ? "" : last.error}. Your payment is safe — the signature is saved ` +
+      "and will be redeemed automatically on your next visit, or paste it below.",
+  };
+}
+
+/**
+ * Send → persist signature → best-effort confirm → redeem with retries.
+ * The confirmation step is cosmetic (the server re-verifies on-chain);
+ * its failure must never abort the redemption.
+ */
+async function sendAndRedeem(
+  sendTx: () => Promise<string>,
+  confirm: (sig: string) => Promise<unknown>,
+  url: string
+): Promise<ChainResult> {
+  const signature = await sendTx();
+  addPending(url, signature);
+  try {
+    await confirm(signature);
+  } catch {
+    // Timeout / RPC hiccup — the tx may well have landed. Redeem anyway.
+  }
+  return redeemWithRetry(url, signature);
+}
+
+/** Replay any stored, unredeemed payment signatures (call on page load). */
+export async function redeemPendingPayments(): Promise<ChainResult[]> {
+  const results: ChainResult[] = [];
+  for (const p of pendingList()) {
+    if (Date.now() - p.at > 7 * 24 * 3600 * 1000) {
+      removePending(p.signature); // stale beyond any retry usefulness
+      continue;
+    }
+    results.push(await redeemWithRetry(p.url, p.signature));
+  }
+  return results;
+}
+
+/** Manual recovery: redeem a pasted transaction signature. */
+export async function redeemSignature(url: string, signature: string): Promise<ChainResult> {
+  return redeemWithRetry(url, signature.trim());
+}
+
 export function useChain() {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
@@ -49,9 +150,11 @@ export function useChain() {
             CLIENT_CONFIG.ribbitDecimals
           )
         );
-        const signature = await sendTransaction(tx, connection);
-        await connection.confirmTransaction(signature, "confirmed");
-        return postJson("/api/burn/verify", { signature });
+        return await sendAndRedeem(
+          () => sendTransaction(tx, connection),
+          (sig) => connection.confirmTransaction(sig, "confirmed"),
+          "/api/burn/verify"
+        );
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "Burn failed" };
       }
@@ -116,9 +219,11 @@ export function useChain() {
             CLIENT_CONFIG.ribbitDecimals
           )
         );
-        const signature = await sendTransaction(tx, connection);
-        await connection.confirmTransaction(signature, "confirmed");
-        return postJson("/api/credits/buy", { signature });
+        return await sendAndRedeem(
+          () => sendTransaction(tx, connection),
+          (sig) => connection.confirmTransaction(sig, "confirmed"),
+          "/api/credits/buy"
+        );
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "Purchase failed" };
       }
@@ -153,9 +258,11 @@ export function useChain() {
             CLIENT_CONFIG.ribbitDecimals
           )
         );
-        const signature = await sendTransaction(tx, connection);
-        await connection.confirmTransaction(signature, "confirmed");
-        return postJson("/api/deposits/verify", { signature });
+        return await sendAndRedeem(
+          () => sendTransaction(tx, connection),
+          (sig) => connection.confirmTransaction(sig, "confirmed"),
+          "/api/deposits/verify"
+        );
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "Deposit failed" };
       }
