@@ -11,6 +11,7 @@ import { verifyBurnTx } from "@/lib/solana";
 import { CONFIG, toRaw } from "@/lib/config";
 import { adjustCredits } from "@/lib/credits";
 import { houseConfig } from "@/lib/settings";
+import { rateLimit } from "@/lib/ratelimit";
 
 const body = z.object({ signature: z.string().min(64).max(120) });
 
@@ -31,6 +32,8 @@ export const POST = handler(async (req: Request) => {
   const existing = await prisma.burnEvent.findUnique({ where: { signature } });
   if (existing) return err("This burn was already redeemed", 409);
 
+  // RPC-lookup guard — same budget as the buy path.
+  rateLimit(`chain-verify:${session.userId}`, 6, 60_000);
   const amountRaw = await verifyBurnTx(signature, session.wallet);
   if (amountRaw === null) {
     return err(

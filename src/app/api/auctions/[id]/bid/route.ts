@@ -4,7 +4,7 @@ import { placeBid } from "@/lib/auctions";
 
 const body = z.object({
   // Raw token units as a string to avoid float precision issues.
-  amountRaw: z.string().regex(/^[0-9]{1,24}$/),
+  amountRaw: z.string().regex(/^[0-9]{1,18}$/),
 });
 
 export const POST = handler(

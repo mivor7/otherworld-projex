@@ -17,7 +17,13 @@ export const GET = handler(async (req: Request) => {
   const url = new URL(req.url);
   const game = url.searchParams.get("game") ?? "hopper";
   const since = url.searchParams.get("since");
-  const sinceDate = since ? new Date(since) : new Date(Date.now() - 7 * 24 * 3600 * 1000);
+  // Garbage ?since= must not reach Prisma as an Invalid Date (500) — fall
+  // back to the standard 7-day window.
+  const parsed = since ? new Date(since) : null;
+  const sinceDate =
+    parsed && !Number.isNaN(parsed.getTime())
+      ? parsed
+      : new Date(Date.now() - 7 * 24 * 3600 * 1000);
 
   if (game === "hopper" || game === "frogris" || game === "worm") {
     // Best score per player within the window, ranked burners only.

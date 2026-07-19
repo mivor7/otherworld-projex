@@ -71,18 +71,25 @@ export default function FlipPage() {
       return;
     }
 
-    const res = await fetch("/api/games/flip", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ side, wager, clientSeed: clientSeed || randomClientSeed() }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
+    try {
+      const res = await fetch("/api/games/flip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ side, wager, clientSeed: clientSeed || randomClientSeed() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSpinning(false);
+        setError(data.error ?? "Something went wrong");
+        return;
+      }
+      land(data);
+    } catch {
+      // Never leave the coin stuck mid-air on a network blip.
       setSpinning(false);
-      setError(data.error ?? "Something went wrong");
-      return;
+      setError("Connection hiccup — check your balance before retrying.");
+      await refresh().catch(() => {});
     }
-    land(data);
   };
   const busy = spinning || landing;
   const balance = sandbox ? practice.credits : (me.credits ?? 0);
@@ -167,10 +174,14 @@ export default function FlipPage() {
           <input
             type="number"
             className="input max-w-28 text-center"
-            min={1}
-            max={1000}
+            min={house.minWager}
+            max={house.maxWager}
             value={wager}
-            onChange={(e) => setWager(Math.max(1, Math.floor(Number(e.target.value))))}
+            onChange={(e) =>
+              setWager(
+                Math.min(house.maxWager, Math.max(house.minWager, Math.floor(Number(e.target.value)) || house.minWager))
+              )
+            }
           />
           <span className="text-sm text-fog">
             credits → win <span className="text-neon">{Math.floor(wager * flipMult)}</span>
@@ -197,7 +208,7 @@ export default function FlipPage() {
           <p className="text-fog text-sm mt-4">
             Not enough credits.{" "}
             <Link href="/games" className="text-neon hover:underline">
-              Burn $RIBBIT for more →
+              Get more credits →
             </Link>
           </p>
         )}

@@ -155,13 +155,33 @@ export async function creditSpendForGame(game: string, since: Date): Promise<num
 }
 
 /**
+ * The trigger a credit bounty must actually satisfy RIGHT NOW: never weaker
+ * than what was posted, and never weaker than what today's live economy
+ * (edge / credit price / margin) demands. Stored triggers are derived at
+ * creation — if an admin later softens the economy (lower edge, cheaper
+ * credits), the stored threshold would under-charge for the prize and break
+ * the house-nets-positive invariant. max() keeps both promises: the meter
+ * players saw can only be met or raised, and a pool that pays has always
+ * earned its keep at current rules.
+ */
+async function effectiveTriggerVolume(bounty: {
+  prizeRibbit: bigint;
+  triggerCreditVolume: number | null;
+}): Promise<number> {
+  const live = await computeTriggerCreditVolume(bounty.prizeRibbit);
+  return Math.max(bounty.triggerCreditVolume ?? 0, live);
+}
+
+/**
  * Progress of an auto-bounty toward its trigger, for the public "reward fills
  * as you play" bar. Credit games measure credit-spend vs threshold; free
- * games are time-based (weekly, endsAt).
+ * games are time-based (weekly, endsAt). Uses the same effective trigger the
+ * settle path enforces, so the bar can never sit at 100% without paying.
  */
 export async function bountyProgress(bounty: {
   game: string | null;
   autoPay: boolean;
+  prizeRibbit: bigint;
   triggerCreditVolume: number | null;
   startsAt: Date;
   endsAt: Date;
@@ -172,8 +192,10 @@ export async function bountyProgress(bounty: {
 > {
   if (!bounty.autoPay || !bounty.game) return null;
   if (!ARCADE_GAMES.has(bounty.game) && bounty.triggerCreditVolume) {
-    const spent = await creditSpendForGame(bounty.game, bounty.startsAt);
-    const threshold = bounty.triggerCreditVolume;
+    const [spent, threshold] = await Promise.all([
+      creditSpendForGame(bounty.game, bounty.startsAt),
+      effectiveTriggerVolume(bounty),
+    ]);
     return {
       mode: "credit",
       spent,
@@ -259,8 +281,11 @@ export async function awardBountyProRata(bountyId: string): Promise<AwardResult 
 
   const result = await prisma.$transaction(
     async (tx) => {
+      // Only OPEN bounties auto-pay. "Closed" is a definitive stop (admin
+      // closed it early, or it expired unmet) — an admin can still award a
+      // closed bounty explicitly via awardBounty, but the automat never will.
       const claimed = await tx.bounty.updateMany({
-        where: { id: bountyId, status: { in: ["open", "closed"] } },
+        where: { id: bountyId, status: "open" },
         data: { status: "paid", paidAt: new Date() },
       });
       if (claimed.count === 0) return null;
@@ -313,28 +338,83 @@ export async function awardBountyProRata(bountyId: string): Promise<AwardResult 
 }
 
 /**
+ * Roll a fresh weekly edition of an arcade bounty after the old one settles,
+ * so "pays weekly" never depends on an admin remembering to repost. Skipped
+ * when another open auto-pay bounty already covers the game (an admin may
+ * have posted a special edition — never double the weekly cost silently).
+ */
+async function renewWeeklyBounty(b: {
+  id: string;
+  title: string;
+  description: string;
+  target: string | null;
+  game: string | null;
+  kind: string;
+  prizeRibbit: bigint;
+  prizeText: string | null;
+}): Promise<void> {
+  const otherOpen = await prisma.bounty.count({
+    where: { game: b.game, status: "open", autoPay: true, id: { not: b.id } },
+  });
+  if (otherOpen > 0) return;
+  await prisma.bounty.create({
+    data: {
+      title: b.title,
+      description: b.description,
+      target: b.target,
+      game: b.game,
+      kind: b.kind,
+      prizeRibbit: b.prizeRibbit,
+      prizeText: b.prizeText,
+      autoPay: true,
+      endsAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+    },
+  });
+}
+
+/**
  * Lazily settle any auto-bounty whose trigger has fired: credit-game bounties
- * once credits wagered ≥ triggerCreditVolume; free-game bounties at endsAt.
- * Called on reads like the bounties list, mirroring lazy auction settlement.
- * Gated by BOUNTY_AUTO_PAY so nothing pays until the owner switches it on.
+ * once credits wagered ≥ triggerCreditVolume; free-game bounties at endsAt
+ * (then a fresh weekly edition is rolled automatically). Credit bounties that
+ * reach their deadline with the meter unfilled close UNPAID — the admin can
+ * extend, repost or award them manually. Called on reads like the bounties
+ * list, mirroring lazy auction settlement. Gated by the bounty auto-pay
+ * switch so nothing pays until the owner turns it on.
  */
 export async function autoSettleBounties(): Promise<void> {
   if (!(await houseConfig()).bountyAutoPay) return;
   const now = new Date();
   const candidates = await prisma.bounty.findMany({
-    where: { status: { in: ["open", "closed"] }, autoPay: true, game: { not: null } },
+    where: { status: "open", autoPay: true, game: { not: null } },
   });
   for (const b of candidates) {
-    let triggered = false;
-    if (b.game && ARCADE_GAMES.has(b.game)) {
-      triggered = now >= b.endsAt; // free games: weekly / time-based
-    } else if (b.triggerCreditVolume) {
-      const spent = await creditSpendForGame(b.game!, b.startsAt);
-      triggered = spent >= b.triggerCreditVolume;
-    }
-    if (!triggered) continue;
     try {
-      await awardBountyProRata(b.id);
+      if (b.game && ARCADE_GAMES.has(b.game)) {
+        if (now < b.endsAt) continue; // free games: weekly / time-based
+        const res = await awardBountyProRata(b.id);
+        if (!res) {
+          // Nobody eligible this week, or a concurrent caller settled it
+          // first. The guarded close means exactly one caller renews.
+          const closed = await prisma.bounty.updateMany({
+            where: { id: b.id, status: "open" },
+            data: { status: "closed" },
+          });
+          if (closed.count === 0) continue;
+        }
+        await renewWeeklyBounty(b);
+      } else if (b.triggerCreditVolume) {
+        const spent = await creditSpendForGame(b.game!, b.startsAt);
+        // Live-effective trigger: an economy softened after posting can't
+        // make an old bounty fire early and under-earn its prize.
+        if (spent >= (await effectiveTriggerVolume(b))) {
+          await awardBountyProRata(b.id);
+        } else if (now >= b.endsAt) {
+          await prisma.bounty.updateMany({
+            where: { id: b.id, status: "open" },
+            data: { status: "closed" },
+          });
+        }
+      }
     } catch (e) {
       console.error(`auto-settle failed for bounty ${b.id}:`, e);
     }

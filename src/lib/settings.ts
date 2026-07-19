@@ -104,10 +104,10 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "rankedMinBurnedRibbit",
     label: "Lifetime spend to rank",
-    desc: "Whole $RIBBIT (burned or bought) a wallet needs lifetime before prize boards rank it. 0 disables.",
+    desc: "Whole $RIBBIT (burned or bought) a wallet needs lifetime before prize boards rank it. Mission rule: only spenders earn — so the panel can't set this below 1 (env can, for dev).",
     group: "Eligibility",
     kind: "number",
-    min: 0,
+    min: 1,
     max: 100_000_000,
     integer: true,
     envDefault: CONFIG.rankedMinBurnedRibbit,

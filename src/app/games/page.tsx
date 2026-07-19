@@ -15,14 +15,14 @@ const GAMES = [
     href: "/games/flip",
     image: "/art/owp_pump.png",
     name: "Frog Flip",
-    desc: "Frog or fly — call the flip. 1.92× on a win.",
+    desc: "", // computed live from the house edge at render
     badge: "Even odds",
   },
   {
     href: "/games/dice",
     image: "/art/art-dice.jpg",
     name: "Pond Dice",
-    desc: "Set your own line, roll under it. Up to 47× payouts.",
+    desc: "", // computed live from the house edge at render
     badge: "Choose your risk",
   },
   {
@@ -169,7 +169,13 @@ export default function GamesPage() {
                 <h3 className="!text-[1rem] group-hover:text-neon transition-colors">
                   {g.name}
                 </h3>
-                <p className="text-fog text-[0.85rem] leading-relaxed">{g.desc}</p>
+                <p className="text-fog text-[0.85rem] leading-relaxed">
+                  {g.href === "/games/flip"
+                    ? `Frog or fly — call the flip. ${(2 * (1 - house.houseEdge)).toFixed(2)}× on a win.`
+                    : g.href === "/games/dice"
+                      ? `Set your own line, roll under it. Up to ${Math.floor(50 * (1 - house.houseEdge))}× payouts.`
+                      : g.desc}
+                </p>
                 <div className="card-price-row">
                   <span className="card-price-label">
                     {live ? "Live bounty" : "Play"}
@@ -319,8 +325,8 @@ export default function GamesPage() {
             className="mt-4 pt-4 text-xs leading-relaxed"
             style={{ borderTop: "1px solid var(--hairline)", color: "var(--text-dim)" }}
           >
-            House edge is a flat 4% on payouts, split 50% treasury · 30% bounty
-            pools · 20% ops.{" "}
+            House edge is a flat {Math.round(house.houseEdge * 100)}% on table
+            payouts — it funds the bounty pools every purchase and wager feeds.{" "}
             <Link href="/fairness" className="text-neon hover:underline">
               Verify fairness →
             </Link>

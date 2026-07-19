@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { getTreasuryStats } from "@/lib/solana";
 import { fromRaw } from "@/lib/config";
 import { CLIENT_CONFIG } from "@/lib/client-config";
+import { houseConfig } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -59,10 +60,11 @@ function ago(d: Date): string {
 const shortWallet = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 
 export default async function Home() {
-  const [chain, burnAgg, roundCount, liveAuctions, openBounties, awards, paidAgg] =
+  const [chain, burnAgg, buyBurnAgg, roundCount, liveAuctions, openBounties, awards, paidAgg] =
     await Promise.all([
       getTreasuryStats(),
       prisma.burnEvent.aggregate({ _sum: { amountRaw: true } }),
+      prisma.creditPurchase.aggregate({ _sum: { burnedRaw: true } }),
       prisma.gameRound.count(),
       prisma.auction.count({ where: { status: "live" } }),
       prisma.bounty.count({ where: { status: "open" } }),
@@ -76,7 +78,11 @@ export default async function Home() {
       }),
       prisma.bountyAward.aggregate({ _sum: { amountRaw: true } }),
     ]);
-  const burned = fromRaw(burnAgg._sum.amountRaw ?? 0n);
+  const houseCfg = await houseConfig(); // live, admin-tunable values
+  // Pure burns + the burn leg of every credit purchase — the real number.
+  const burned = fromRaw(
+    (burnAgg._sum.amountRaw ?? 0n) + (buyBurnAgg._sum.burnedRaw ?? 0n)
+  );
   const paidOut = fromRaw(paidAgg._sum.amountRaw ?? 0n);
 
   return (
@@ -167,7 +173,7 @@ export default async function Home() {
         <div className="mesh-band p-4 sm:p-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             ["01", "Connect & sign", "A free message signature proves wallet ownership. No custody, no email, no password."],
-            ["02", "Buy credits", `${CLIENT_CONFIG.ribbitPerCredit} $RIBBIT per credit, verified on-chain — ${Math.round(CLIENT_CONFIG.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes.`],
+            ["02", "Buy credits", `${houseCfg.ribbitPerCredit} $RIBBIT per credit, verified on-chain — ${Math.round(houseCfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes.`],
             ["03", "Play, bid, hunt", "Wager credits in the arcade, bid escrowed $RIBBIT on lots, climb the bounty boards."],
             ["04", "Pools unlock with play", "Every bounty posts a fixed $RIBBIT pool and a spend meter sized to it. The meter fills — every eligible winner is paid pro-rata, automatically."],
           ].map(([n, title, desc], i) => (

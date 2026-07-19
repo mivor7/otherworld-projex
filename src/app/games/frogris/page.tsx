@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { BountyStandings } from "@/components/bounty-standings";
-import { CLIENT_CONFIG } from "@/lib/client-config";
+import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE, PIECE_COLORS } from "@/lib/arcade-palette";
 import {
   FCOLS,
@@ -51,6 +51,7 @@ export default function FrogrisPage() {
   });
   const [board, setBoard] = useState<{ rank: number; player: string; score: number }[]>([]);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
+  const house = useHouseConfig();
 
   const loadBoard = useCallback(() => {
     fetch("/api/leaderboard?game=frogris")
@@ -71,18 +72,22 @@ export default function FrogrisPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ runToken: token, score, trace }),
         });
-        if (res.ok) {
-          const data = await res.json();
+        const data = await res.json().catch(() => null);
+        if (res.ok && data) {
           setSubmitMsg(
             data.ranked
               ? `Score ${score} posted to the bounty board — replay verified.`
-              : `Score ${score} verified & saved — unranked. Prize boards need ${CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT burned lifetime and ${CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside the board week.`
+              : `Score ${score} verified & saved — unranked. Prize boards need ${house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT spent on credits lifetime and ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside the board week.`
           );
           loadBoard();
+        } else {
+          setSubmitMsg(`Score ${score} not submitted — ${data?.error ?? "connection lost"}.`);
         }
-      })().catch(() => {});
+      })().catch(() =>
+        setSubmitMsg(`Score ${score} not submitted — connection lost.`)
+      );
     },
-    [loadBoard]
+    [loadBoard, house]
   );
 
   const start = useCallback(async () => {
@@ -103,8 +108,12 @@ export default function FrogrisPage() {
         });
         const data = await res.json();
         runTokenRef.current = data.runToken ?? null;
+        if (!runTokenRef.current) {
+          setSubmitMsg(`Playing unranked — ${data.error ?? "ranked runs unavailable right now"}.`);
+        }
       } catch {
         runTokenRef.current = null;
+        setSubmitMsg("Playing unranked — couldn't reach the house.");
       }
     }
     const seed = runTokenRef.current
@@ -383,7 +392,7 @@ export default function FrogrisPage() {
                 </button>
                 {!me.signedIn && (
                   <p className="text-fog text-xs mt-3 px-8 text-center">
-                    Practice run — sign in and burn $RIBBIT to compete for prizes.
+                    Practice run — sign in and spend $RIBBIT on credits to compete for prizes.
                   </p>
                 )}
               </div>

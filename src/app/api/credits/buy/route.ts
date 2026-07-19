@@ -10,6 +10,7 @@ import { verifyBuyTx } from "@/lib/solana";
 import { CONFIG, toRaw } from "@/lib/config";
 import { adjustCredits } from "@/lib/credits";
 import { houseConfig } from "@/lib/settings";
+import { rateLimit } from "@/lib/ratelimit";
 
 const body = z.object({ signature: z.string().min(64).max(120) });
 
@@ -24,7 +25,14 @@ export const POST = handler(async (req: Request) => {
 
   const existing = await prisma.creditPurchase.findUnique({ where: { signature } });
   if (existing) return err("This purchase was already credited", 409);
+  // Mirror of the deposit-side guard: one on-chain payment, one redemption —
+  // a tx already banked as an auction deposit can't also buy credits.
+  const usedAsDeposit = await prisma.deposit.findUnique({ where: { signature } });
+  if (usedAsDeposit) return err("That transaction was already redeemed as a deposit", 409);
 
+  // Each verification is an RPC lookup — don't let bogus signatures drain
+  // the quota. A real purchase needs at most a couple of attempts.
+  rateLimit(`chain-verify:${session.userId}`, 6, 60_000);
   const legs = await verifyBuyTx(signature, session.wallet);
   if (!legs) {
     return err(

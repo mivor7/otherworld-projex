@@ -166,10 +166,20 @@ export type TreasuryStats = {
   wallet: string | null;
 };
 
+// Treasury balances are read on several public pages — cache the RPC result
+// briefly per instance so anonymous traffic can't amplify into RPC-quota
+// burn. 30s staleness is immaterial for a dashboard (and the payout cap that
+// reads this is best-effort by design).
+let statsCache: { at: number; value: TreasuryStats } | null = null;
+const STATS_TTL_MS = 30_000;
+
 /** Live treasury balances for the transparency dashboard. Never throws. */
 export async function getTreasuryStats(): Promise<TreasuryStats> {
   if (!CONFIG.treasuryWallet) {
     return { configured: false, solBalance: null, ribbitBalance: null, wallet: null };
+  }
+  if (statsCache && Date.now() - statsCache.at < STATS_TTL_MS) {
+    return statsCache.value;
   }
   try {
     const owner = new PublicKey(CONFIG.treasuryWallet);
@@ -185,12 +195,16 @@ export async function getTreasuryStats(): Promise<TreasuryStats> {
         sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0),
       0
     );
-    return {
-      configured: true,
-      solBalance: lamports / LAMPORTS_PER_SOL,
-      ribbitBalance: ribbit,
-      wallet: CONFIG.treasuryWallet,
+    statsCache = {
+      at: Date.now(),
+      value: {
+        configured: true,
+        solBalance: lamports / LAMPORTS_PER_SOL,
+        ribbitBalance: ribbit,
+        wallet: CONFIG.treasuryWallet,
+      },
     };
+    return statsCache.value;
   } catch {
     return {
       configured: true,

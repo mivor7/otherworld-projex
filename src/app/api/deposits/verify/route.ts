@@ -14,6 +14,11 @@ export const POST = handler(async (req: Request) => {
 
   const existing = await prisma.deposit.findUnique({ where: { signature } });
   if (existing) return err("This deposit was already credited", 409);
+  // A credit purchase contains a treasury-transfer leg that would ALSO pass
+  // deposit verification — one payment must never be redeemable twice, so
+  // signatures are unique across BOTH redemption tables.
+  const usedAsBuy = await prisma.creditPurchase.findUnique({ where: { signature } });
+  if (usedAsBuy) return err("That transaction was a credit purchase — already redeemed", 409);
 
   const amountRaw = await verifyDepositTx(signature, session.wallet);
   if (amountRaw === null) {

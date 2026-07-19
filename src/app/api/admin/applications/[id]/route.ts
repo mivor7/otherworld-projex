@@ -7,7 +7,7 @@ const body = z.object({
   note: z.string().max(500).optional(),
   // On approve: auction runtime in hours and minimum increment in raw units.
   durationHours: z.number().int().min(1).max(14 * 24).default(72),
-  minIncrementRaw: z.string().regex(/^[0-9]{1,24}$/).optional(),
+  minIncrementRaw: z.string().regex(/^[0-9]{1,18}$/).optional(),
 });
 
 export const POST = handler(

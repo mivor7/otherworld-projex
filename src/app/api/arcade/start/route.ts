@@ -9,6 +9,7 @@ import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireSessionSecret } from "@/lib/config";
 import { houseConfig } from "@/lib/settings";
+import { rateLimit } from "@/lib/ratelimit";
 
 const body = z.object({ game: z.enum(["hopper", "frogris", "worm"]).default("hopper") });
 
@@ -18,6 +19,10 @@ export const POST = handler(async (req: Request) => {
   if ((await houseConfig()).gamesPaused) {
     return err("The arcade is paused — back shortly", 423);
   }
+  // Light throttle: token-seeded PRNGs make seed-shopping mostly pointless,
+  // but hammering starts to fish for a lucky frogris bag / hopper traffic
+  // pattern shouldn't be free either.
+  rateLimit(`arcade-start:${session.userId}`, 30, 60_000);
   const { game } = body.parse(await req.json().catch(() => ({})));
 
   const jti = crypto.randomUUID();

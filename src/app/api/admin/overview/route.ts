@@ -12,6 +12,7 @@ export const GET = handler(async () => {
     userCount,
     creditAgg,
     burnAgg,
+    buyBurnAgg,
     lockedAgg,
     unfulfilled,
     treasury,
@@ -31,6 +32,7 @@ export const GET = handler(async () => {
     prisma.user.count(),
     prisma.user.aggregate({ _sum: { credits: true } }),
     prisma.burnEvent.aggregate({ _sum: { amountRaw: true } }),
+    prisma.creditPurchase.aggregate({ _sum: { burnedRaw: true } }),
     prisma.user.aggregate({ _sum: { ribbitLocked: true } }),
     // Settled lots not yet delivered — the fulfillment queue.
     prisma.auction.findMany({
@@ -63,7 +65,10 @@ export const GET = handler(async () => {
     stats: {
       users: userCount,
       creditsOutstanding: creditAgg._sum.credits ?? 0,
-      lifetimeBurnedRaw: (burnAgg._sum.amountRaw ?? 0n).toString(),
+      // Pure burns + the burn leg of every credit purchase.
+      lifetimeBurnedRaw: (
+        (burnAgg._sum.amountRaw ?? 0n) + (buyBurnAgg._sum.burnedRaw ?? 0n)
+      ).toString(),
       lockedRaw: (lockedAgg._sum.ribbitLocked ?? 0n).toString(),
       treasury,
     },

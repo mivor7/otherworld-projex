@@ -9,7 +9,10 @@ export const GET = handler(async () => {
     await Promise.all([
       getTreasuryStats(),
       prisma.burnEvent.aggregate({ _sum: { amountRaw: true }, _count: true }),
-      prisma.creditPurchase.aggregate({ _sum: { ribbitRaw: true }, _count: true }),
+      prisma.creditPurchase.aggregate({
+        _sum: { ribbitRaw: true, burnedRaw: true },
+        _count: true,
+      }),
       prisma.gameRound.aggregate({ _sum: { houseTake: true, wager: true } }),
       prisma.gameRound.count(),
       prisma.bountyAward.aggregate({ _sum: { amountRaw: true } }),
@@ -30,7 +33,10 @@ export const GET = handler(async () => {
       ribbitPerCredit: cfg.ribbitPerCredit,
     },
     totals: {
-      ribbitBurnedRaw: burnAgg._sum.amountRaw ?? 0n,
+      // "Burned forever" = pure burns PLUS the burn leg of every credit
+      // purchase — the split-buy path is where most burns actually happen.
+      ribbitBurnedRaw:
+        (burnAgg._sum.amountRaw ?? 0n) + (buyAgg._sum.burnedRaw ?? 0n),
       burnCount: burnAgg._count,
       creditsSoldRaw: buyAgg._sum.ribbitRaw ?? 0n,
       purchaseCount: buyAgg._count,

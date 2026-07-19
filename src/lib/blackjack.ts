@@ -106,7 +106,10 @@ export function publicView(round: {
     dealerTotal: done ? handTotal(s.dealer).total : null,
     doubled: s.doubled,
     result: s.result ?? null,
-    wager: round.wager * (s.doubled ? 2 : 1),
+    // The wager column always holds the TRUE credits staked: doubling
+    // persists 2× at settle (a doubled hand can never stay open), so no
+    // multiplier here — rankings and bounty volume read the same column.
+    wager: round.wager,
     payout: done ? round.payout : null,
     nonce: round.nonce,
     seedHash: round.seed?.seedHash,
@@ -280,6 +283,10 @@ export async function act(
     let payout = 0;
     const done = s.phase === "done";
     if (done) ({ payout } = settleState(s, round.wager));
+    // Doubling stakes a second wager — persist the TRUE total in the wager
+    // column, or every ranking/volume/bounty-meter read of this round would
+    // undercount the double and overstate the player's net win.
+    const totalWager = round.wager * (s.doubled ? 2 : 1);
 
     // Optimistic lock on the previous state blob — a concurrent action on
     // the same round loses the race and errors instead of double-drawing.
@@ -289,7 +296,8 @@ export async function act(
         outcome: JSON.stringify(s),
         settled: done,
         payout,
-        houseTake: done ? round.wager * (s.doubled ? 2 : 1) - payout : 0,
+        wager: totalWager,
+        houseTake: done ? totalWager - payout : 0,
       },
     });
     if (updated.count === 0) throw new ApiError("Concurrent action — retry", 409);
@@ -299,7 +307,7 @@ export async function act(
       credits = await adjustCredits(tx, userId, payout, "payout", round.id);
     }
     return {
-      ...publicView({ ...round, outcome: JSON.stringify(s), payout }),
+      ...publicView({ ...round, wager: totalWager, outcome: JSON.stringify(s), payout }),
       credits,
     };
   });

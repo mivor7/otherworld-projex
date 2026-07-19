@@ -5,7 +5,7 @@ import { z } from "zod";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
 
-const body = z.object({ amountRaw: z.string().regex(/^[0-9]{1,24}$/) });
+const body = z.object({ amountRaw: z.string().regex(/^[0-9]{1,18}$/) });
 
 export const POST = handler(async (req: Request) => {
   const session = await requireSession();

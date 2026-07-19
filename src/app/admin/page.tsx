@@ -667,8 +667,8 @@ export default function AdminPage() {
                 </span>{" "}
                 credits are wagered on {bountyForm.game} — derived from the prize so
                 the house edge-take on that play covers it plus{" "}
-                {Math.round(CLIENT_CONFIG.bountyHouseMargin * 100)}% margin. Set the
-                prize; the threshold follows automatically.
+                {Math.round(liveNum("bountyHouseMargin", CLIENT_CONFIG.bountyHouseMargin) * 100)}%
+                margin. Set the prize; the threshold follows automatically.
               </div>
             )}
             {bountyForm.autoPay && bountyIsFree && (
@@ -936,7 +936,13 @@ export default function AdminPage() {
                     <button
                       className="btn btn-ghost text-xs"
                       disabled={busy}
-                      onClick={() => act(`/api/admin/bounties/${b.id}`, { action: "close" })}
+                      onClick={() =>
+                        act(
+                          `/api/admin/bounties/${b.id}`,
+                          { action: "close" },
+                          "Close this bounty early? Auto-pay stops for it permanently — only an explicit award from this console can still pay it."
+                        )
+                      }
                     >
                       Close early
                     </button>

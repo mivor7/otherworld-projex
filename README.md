@@ -86,8 +86,11 @@ Money out (never from the web server):
    vault PDA. Until the program is deployed you can start with the multisig
    address itself — deposits/escrow still verify against it.
 5. **Payout worker**: run `npm run payout-worker` on a separate box with
-   `TREASURY_KEYPAIR_PATH` (or skip it and pay withdrawals manually in
-   `/admin` — every payout is queued, nothing moves without a signature).
+   `PAYOUT_KEYPAIR_PATH` pointed at a DEDICATED hot wallet the owners keep
+   topped up — never the treasury key (or skip it and pay withdrawals
+   manually in `/admin` — every payout is queued, nothing moves without a
+   signature). `PAYOUT_INTERVAL_MS` tunes the polling cadence; the admin
+   panel's "Pause the payout worker" switch stops it remotely.
 6. Leave `DEV_FAUCET` **unset** in production (the route also hard-refuses
    when `NODE_ENV=production`).
 

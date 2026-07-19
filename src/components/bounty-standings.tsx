@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "./session";
-import { CLIENT_CONFIG } from "@/lib/client-config";
+import { useHouseConfig } from "./use-house-config";
 
 type Entry = {
   rank: number;
@@ -39,6 +39,7 @@ const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 
 
 export function BountyStandings({ game }: { game: string }) {
   const { me } = useSession();
+  const house = useHouseConfig();
   const [live, setLive] = useState<Live | null>(null);
 
   const load = useCallback(() => {
@@ -115,8 +116,8 @@ export function BountyStandings({ game }: { game: string }) {
           ) : (
             <div className="text-xs text-fog">
               You&apos;re not in the running yet — {b.unit === "best score" ? "post a top score" : "finish net-positive"}, and
-              burn {CLIENT_CONFIG.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT (lifetime) and{" "}
-              {CLIENT_CONFIG.rankedMinWindowBurnedRibbit.toLocaleString()}+ this window to qualify.
+              spend {house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT on credits (lifetime) and{" "}
+              {house.rankedMinWindowBurnedRibbit.toLocaleString()}+ this window to qualify.
             </div>
           )}
         </div>

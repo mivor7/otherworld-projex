@@ -4,6 +4,7 @@ import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireSessionSecret } from "@/lib/config";
 import { houseConfig } from "@/lib/settings";
+import { rateLimit } from "@/lib/ratelimit";
 import { replay as replayWorm, seedFromToken } from "@/lib/worm-sim";
 import { replayFrogris, FRAME_MS } from "@/lib/frogris-sim";
 import { replayHopper } from "@/lib/hopper-sim";
@@ -65,6 +66,11 @@ export const POST = handler(async (req: Request) => {
 
   const elapsedMs = Date.now() - Number(payload.startedAt);
   if (elapsedMs < 10_000) return err("Run too short to be real", 422);
+
+  // The replay below is the expensive part (up to a 20k-step simulation) and
+  // failed attempts don't consume the token (an honest client may retry after
+  // a glitch) — so bound the CPU with a per-user attempt limiter instead.
+  rateLimit(`replay:${session.userId}`, 12, 60_000);
 
   // Replay-verified scoring for every episode: the score is recomputed from
   // the input trace, and the run must have consumed real wall-time. A

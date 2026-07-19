@@ -6,6 +6,7 @@ import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
+import { useHouseConfig } from "@/components/use-house-config";
 import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
@@ -109,6 +110,7 @@ export default function BlackjackPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sandbox, setSandbox] = useState(false);
+  const house = useHouseConfig();
   const practice = usePractice();
   const practiceRef = useRef<PracticeRound | null>(null);
   const [practiceRound, setPracticeRound] = useState<View | null>(null);
@@ -126,23 +128,31 @@ export default function BlackjackPage() {
   const post = async (body: Record<string, unknown>) => {
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/games/blackjack", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setRound(data);
-      if (data.phase === "done") {
-        if (data.result === "win" || data.result === "blackjack") celebrate();
-        await refresh();
+    // finally-guarded: a network blip or non-JSON 5xx must never leave the
+    // table stuck on "Dealing…" — the server round (if it landed) is safe.
+    try {
+      const res = await fetch("/api/games/blackjack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRound(data);
+        if (data.phase === "done") {
+          if (data.result === "win" || data.result === "blackjack") celebrate();
+          await refresh();
+        }
+        if (body.action === "deal" || body.action === "double") await refresh();
+      } else {
+        setError(data.error ?? "Something went wrong");
       }
-      if (body.action === "deal" || body.action === "double") await refresh();
-    } else {
-      setError(data.error ?? "Something went wrong");
+    } catch {
+      setError("Connection hiccup — your hand is safe on the server, retry.");
+      await refresh().catch(() => {});
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   // ——— practice table actions (no wallet, no server, no $RIBBIT) ———
@@ -405,10 +415,14 @@ export default function BlackjackPage() {
             <input
               type="number"
               className="input max-w-28 text-center"
-              min={1}
-              max={1000}
+              min={house.minWager}
+              max={house.maxWager}
               value={wager}
-              onChange={(e) => setWager(Math.max(1, Math.floor(Number(e.target.value))))}
+              onChange={(e) =>
+                setWager(
+                  Math.min(house.maxWager, Math.max(house.minWager, Math.floor(Number(e.target.value)) || house.minWager))
+                )
+              }
             />
             <button
               className="btn btn-primary btn-lg px-10"
@@ -432,7 +446,7 @@ export default function BlackjackPage() {
           <p className="text-fog text-sm mt-5 text-center">
             Not enough credits.{" "}
             <Link href="/games" className="text-neon hover:underline">
-              Burn $RIBBIT for more →
+              Get more credits →
             </Link>
           </p>
         )}

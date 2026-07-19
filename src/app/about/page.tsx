@@ -3,11 +3,16 @@ import { PageHero } from "@/components/hero";
 import { Reveal } from "@/components/reveal";
 import { CopyChip } from "@/components/copy-chip";
 import { CLIENT_CONFIG } from "@/lib/client-config";
+import { prisma } from "@/lib/db";
+import { fromRaw } from "@/lib/config";
+import { houseConfig } from "@/lib/settings";
 
 export const metadata = {
   title: "About — Other World Projex",
   description: "The full dossier: the story, the house rules, the episodes, the treasury.",
 };
+
+export const dynamic = "force-dynamic";
 
 const EPISODES = [
   {
@@ -23,7 +28,7 @@ const EPISODES = [
     name: "Frogris",
     target: "The Stack-Smuggler",
     brief: "Stack the falling frogs. Clear the lines. Don't top out.",
-    reward: "1,000 $RIBBIT weekly pool",
+    game: "frogris",
     href: "/games/frogris",
   },
   {
@@ -39,7 +44,7 @@ const EPISODES = [
     name: "Worm Frog",
     target: "The Tail-Bite Serpent",
     brief: "Slither, grow, and don't bite your own tail.",
-    reward: "1,000 $RIBBIT weekly pool",
+    game: "worm",
     href: "/games/worm",
   },
   {
@@ -47,7 +52,7 @@ const EPISODES = [
     name: "Hopper",
     target: "The Highway Bandit",
     brief: "Hop the lanes. Dodge the traffic. Ride the logs home.",
-    reward: "1,250 $RIBBIT weekly pool",
+    game: "hopper",
     href: "/games/hopper",
   },
   {
@@ -55,7 +60,7 @@ const EPISODES = [
     name: "Blackjack",
     target: "The House Toad",
     brief: "Beat the dealer. Hold the line. Bank the RIBBIT.",
-    reward: "5,000 $RIBBIT unlock pool",
+    game: "blackjack",
     href: "/games/blackjack",
   },
   {
@@ -68,7 +73,30 @@ const EPISODES = [
   },
 ];
 
-export default function AboutPage() {
+const ARCADE = new Set(["frogris", "worm", "hopper"]);
+
+export default async function AboutPage() {
+  // Rewards shown here are the LIVE open pools — never a frozen claim.
+  const [cfg, openBounties] = await Promise.all([
+    houseConfig(),
+    prisma.bounty.findMany({
+      where: { status: "open", game: { not: null } },
+      select: { game: true, prizeRibbit: true },
+      orderBy: { prizeRibbit: "desc" },
+    }),
+  ]);
+  const poolByGame = new Map<string, bigint>();
+  for (const b of openBounties) {
+    if (b.game && !poolByGame.has(b.game)) poolByGame.set(b.game, b.prizeRibbit);
+  }
+  const rewardFor = (e: (typeof EPISODES)[number]): string => {
+    const game = "game" in e ? (e as { game?: string }).game : undefined;
+    const prize = game ? poolByGame.get(game) : undefined;
+    if (!prize) return "reward" in e ? ((e as { reward?: string }).reward ?? "pool TBA") : "pool TBA";
+    const amount = Math.round(fromRaw(prize)).toLocaleString();
+    return ARCADE.has(game!) ? `${amount} $RIBBIT weekly pool` : `${amount} $RIBBIT unlock pool`;
+  };
+
   return (
     <div className="pt-6">
       <PageHero
@@ -109,7 +137,7 @@ export default function AboutPage() {
           <div className="kicker pt-1.5">02 — House rules</div>
           <div className="grid sm:grid-cols-2 gap-4">
             {[
-              ["Buy credits", `${CLIENT_CONFIG.ribbitPerCredit} $RIBBIT buys one credit in a single on-chain transaction — ${Math.round(CLIENT_CONFIG.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes. The arcade episodes are free.`],
+              ["Buy credits", `${cfg.ribbitPerCredit} $RIBBIT buys one credit in a single on-chain transaction — ${Math.round(cfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes. The arcade episodes are free.`],
               ["Provably fair", "Every table outcome derives from a seed the house commits to before you play. Rotate your seed and re-check every round yourself."],
               ["Pools that pay themselves", "Every bounty posts a fixed $RIBBIT prize with an unlock meter derived from it. When the game's credit-spend fills the meter, all eligible winners are paid pro-rata — automatically."],
               ["Escrowed bids", "Auction bids lock deposited $RIBBIT held by the treasury. Outbid funds release instantly; withdrawals queue for the payout signer."],
@@ -156,7 +184,7 @@ export default function AboutPage() {
                   <div className="text-[0.7rem] uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
                     Target · {e.target}
                   </div>
-                  <div className="stat-number text-gold text-sm">{e.reward}</div>
+                  <div className="stat-number text-gold text-sm">{rewardFor(e)}</div>
                 </div>
               </div>
             ))}

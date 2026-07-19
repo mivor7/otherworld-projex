@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://otherworldprojex.com"),
   title: "Other World Projex — $RIBBIT Bounty Arcade",
   description:
-    "Decentralized gaming on Solana. Burn $RIBBIT to play provably-fair games, bid in the auction house, and hunt bounties. One transparent treasury.",
+    "Decentralized gaming on Solana. Turn $RIBBIT into credits — part burned forever — play provably-fair games, bid in the auction house, and hunt bounties that pay automatically. One transparent treasury.",
   openGraph: {
     title: "Other World Projex — $RIBBIT Bounty Arcade",
     description:

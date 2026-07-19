@@ -284,7 +284,7 @@ export default function FairnessPage() {
                 <div className="mt-1 text-base">
                   roll ={" "}
                   <span className="stat-number text-neon">{vResult.roll.toFixed(8)}</span>{" "}
-                  → dice value {(vResult.roll * 100).toFixed(2)} · flip lands{" "}
+                  → dice value {(Math.floor(vResult.roll * 100 * 100) / 100).toFixed(2)} · flip lands{" "}
                   {vResult.roll < 0.5 ? "🐸 frog" : "🪰 fly"}
                 </div>
               </div>
@@ -296,9 +296,9 @@ export default function FairnessPage() {
       <div className="panel p-6 mt-6">
         <h3 className="font-bold mb-3">What about the arcade episodes?</h3>
         <p className="text-sm text-fog leading-relaxed">
-          Worm Frog, Frogris and Lily Hopper are games of skill — there is no
+          Worm Frog, Frogris and Hopper are games of skill — there is no
           house randomness to commit to. Instead, each run gets a signed run
-          token, and for Worm Frog your inputs are recorded and{" "}
+          token, and for every episode your inputs are recorded and{" "}
           <strong className="text-frost">replayed move-by-move on the
           server</strong>, which recomputes the score itself and rejects
           anything that doesn&apos;t reproduce — including runs faster than

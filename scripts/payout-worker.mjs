@@ -1,8 +1,9 @@
-// Treasury payout worker — pays queued $RIBBIT withdrawals from the treasury
-// token account. Run this OFF the web server (ops box, or a locked-down
-// container) so the web deployment never holds the treasury key:
+// Payout worker — pays queued $RIBBIT withdrawals/prizes from a DEDICATED
+// hot wallet (a float the owners top up), NEVER the treasury key. Run it OFF
+// the web server (ops box, or a locked-down container) so no deployment ever
+// holds a private key:
 //
-//   TREASURY_KEYPAIR_PATH=~/treasury.json node scripts/payout-worker.mjs
+//   PAYOUT_KEYPAIR_PATH=~/payout-hot-wallet.json node scripts/payout-worker.mjs
 //
 // Safety rails:
 //   - MAX_PAYOUT_RIBBIT per withdrawal (default 1,000,000) — bigger ones wait

@@ -30,6 +30,10 @@ const api = (p) => fetch(BASE + p).then(async (r) => ({ status: r.status, data: 
 
 const bountyIds = [];
 const userIds = [];
+// The suite seeds real wagers in the shared DB — park EVERY standing open
+// auto-pay bounty for the duration, or the seeded spend would fill (and pay!)
+// the house's real pools. Restored in the finally block, crash included.
+let parkedIds = [];
 
 async function makeWinner(tag, net, vol, bountyStart, game = "dice") {
   const u = await prisma.user.create({ data: { wallet: `econ-${tag}-${Math.round(performance.now())}` } });
@@ -55,6 +59,17 @@ async function seedId(userId) {
 
 try {
   console.log(`economy checks → ${BASE}\n`);
+
+  const standing = await prisma.bounty.findMany({
+    where: { status: "open", autoPay: true },
+    select: { id: true },
+  });
+  parkedIds = standing.map((b) => b.id);
+  await prisma.bounty.updateMany({
+    where: { id: { in: parkedIds } },
+    data: { status: "closed" },
+  });
+  console.log(`parked ${parkedIds.length} standing bounties for the run\n`);
 
   // ---------------- buy-credits endpoint guards ----------------
   console.log("— Buy-credits endpoint guards");
@@ -85,14 +100,17 @@ try {
   const b2 = await prisma.bounty.create({
     data: {
       title: "ECON trigger", description: "e2e", game: "dice", kind: "leaderboard",
-      prizeRibbit: 10000n * RAW, autoPay: true, triggerCreditVolume: 150,
+      // 10,000 $RIBBIT prize honestly derives a 3,750-credit trigger
+      // (settle enforces max(stored, live-derived) — a weaker stored trigger
+      // can never fire early).
+      prizeRibbit: 10000n * RAW, autoPay: true, triggerCreditVolume: 3750,
       endsAt: new Date(Date.now() + 7 * 864e5),
     },
   });
   bountyIds.push(b2.id);
-  const wA = await makeWinner("b2a", 300, 100, b2.startsAt); // net 300, vol 100
-  const wB = await makeWinner("b2b", 100, 100, b2.startsAt); // net 100, vol 100
-  // total dice wager since b2.startsAt from these = 200 ≥ 150 → triggers
+  const wA = await makeWinner("b2a", 300, 2000, b2.startsAt); // net 300, vol 2000
+  const wB = await makeWinner("b2b", 100, 1750, b2.startsAt); // net 100, vol 1750
+  // total dice wager since b2.startsAt from these = 3750 ≥ trigger → fires
   const trig = await api("/api/bounties");
   check("bounties endpoint ok", trig.status === 200);
   let b2r = await prisma.bounty.findUnique({ where: { id: b2.id } });
@@ -126,17 +144,18 @@ try {
   const b3 = await prisma.bounty.create({
     data: {
       title: "ECON progress", description: "e2e", game: "dice", kind: "leaderboard",
-      prizeRibbit: 5000n * RAW, autoPay: true, triggerCreditVolume: 1000,
+      // 5,000 $RIBBIT prize → honest derived trigger 1,875 credits
+      prizeRibbit: 5000n * RAW, autoPay: true, triggerCreditVolume: 1875,
       endsAt: new Date(Date.now() + 7 * 864e5),
     },
   });
   bountyIds.push(b3.id);
-  await makeWinner("b3a", 50, 250, b3.startsAt); // 250 wagered of 1000 = 25%
+  await makeWinner("b3a", 50, 250, b3.startsAt); // 250 wagered of 1875 = 13%
   const list = await api("/api/bounties");
   const b3v = list.data.open.find((b) => b.id === b3.id);
   check("open bounty exposes credit progress toward trigger",
-    b3v?.progress?.mode === "credit" && b3v.progress.threshold === 1000 &&
-    b3v.progress.spent >= 250 && b3v.progress.pct >= 25,
+    b3v?.progress?.mode === "credit" && b3v.progress.threshold === 1875 &&
+    b3v.progress.spent >= 250 && b3v.progress.pct >= 13,
     JSON.stringify(b3v?.progress));
 
   // ---------------- live standings + projected earnings ----------------
@@ -212,9 +231,69 @@ try {
   const b4awards = await prisma.bountyAward.count({ where: { bountyId: b4.id } });
   check("past-due free-game bounty auto-pays its winner", b4r.status === "paid" && b4awards === 1,
     `status ${b4r.status} awards ${b4awards}`);
+
+  // ---------------- weekly cadence renews itself ----------------
+  console.log("— Weekly arcade bounty rolls a fresh edition when it settles");
+  // (all standing bounties are parked, so renewal isn't skipped for frogris)
+  const b7 = await prisma.bounty.create({
+    data: {
+      title: "ECON weekly renew", description: "e2e", game: "frogris", kind: "leaderboard",
+      prizeRibbit: 1000n * RAW, autoPay: true,
+      endsAt: new Date(Date.now() - 1000), // due, and nobody eligible
+    },
+  });
+  bountyIds.push(b7.id);
+  await api("/api/bounties");
+  const b7r = await prisma.bounty.findUnique({ where: { id: b7.id } });
+  const successor = await prisma.bounty.findFirst({
+    where: { title: "ECON weekly renew", status: "open" },
+  });
+  if (successor) bountyIds.push(successor.id);
+  check("expired weekly with no winners closes unpaid and rolls a fresh week",
+    b7r.status === "closed" && !b7r.paidAt && !!successor &&
+      successor.endsAt.getTime() > Date.now() + 6 * 864e5,
+    `status ${b7r.status} successor ${!!successor}`);
+
+  // ---------------- credit bounty deadline + closed-means-stopped ----------------
+  console.log("— Credit bounty deadline closes unpaid; closed never auto-pays");
+  const b8 = await prisma.bounty.create({
+    data: {
+      title: "ECON deadline", description: "e2e", game: "dice", kind: "leaderboard",
+      prizeRibbit: 10000n * RAW, autoPay: true, triggerCreditVolume: 100000,
+      endsAt: new Date(Date.now() - 1000), // deadline passed, meter unfilled
+    },
+  });
+  bountyIds.push(b8.id);
+  await api("/api/bounties");
+  const b8r = await prisma.bounty.findUnique({ where: { id: b8.id } });
+  check("credit bounty past deadline with unfilled meter closes unpaid",
+    b8r.status === "closed" && !b8r.paidAt, `status ${b8r.status}`);
+  // Even a trivially-reachable trigger must not revive it: closed is final
+  // for the automat (only an explicit admin award can pay it now).
+  await prisma.bounty.update({ where: { id: b8.id }, data: { triggerCreditVolume: 1 } });
+  await api("/api/bounties");
+  const b8r2 = await prisma.bounty.findUnique({ where: { id: b8.id } });
+  const b8awards = await prisma.bountyAward.count({ where: { bountyId: b8.id } });
+  check("closed bounty never auto-pays", b8r2.status === "closed" && b8awards === 0,
+    `status ${b8r2.status} awards ${b8awards}`);
 } finally {
   console.log("\ncleaning test data…");
-  const bIds = bountyIds.filter(Boolean);
+  // Reopen every standing bounty parked at the top, even on a crash.
+  if (parkedIds.length) {
+    await prisma.bounty.updateMany({
+      where: { id: { in: parkedIds } },
+      data: { status: "open" },
+    });
+  }
+  // Belt and braces: renewal successors carry the test titles — fold them
+  // into the id list so the ordered cleanup below (awards before bounties)
+  // catches them too.
+  const strays = await prisma.bounty.findMany({
+    where: { title: { in: ["ECON weekly renew", "ECON free weekly", "ECON deadline"] } },
+    select: { id: true },
+  });
+  bountyIds.push(...strays.map((s) => s.id));
+  const bIds = [...new Set(bountyIds.filter(Boolean))];
   const uIds = userIds.filter(Boolean);
   await prisma.withdrawal.deleteMany({ where: { ref: { in: bIds } } });
   await prisma.treasuryEvent.deleteMany({ where: { ref: { in: bIds } } });
@@ -222,10 +301,13 @@ try {
   await prisma.bounty.deleteMany({ where: { id: { in: bIds } } });
   for (const id of uIds) {
     await prisma.arcadeScore.deleteMany({ where: { userId: id } });
+    await prisma.arcadeRun.deleteMany({ where: { userId: id } });
     await prisma.gameRound.deleteMany({ where: { userId: id } });
     await prisma.serverSeed.deleteMany({ where: { userId: id } });
     await prisma.burnEvent.deleteMany({ where: { userId: id } });
     await prisma.creditPurchase.deleteMany({ where: { userId: id } });
+    await prisma.bountyAward.deleteMany({ where: { userId: id } });
+    await prisma.withdrawal.deleteMany({ where: { userId: id } });
     await prisma.ledgerEntry.deleteMany({ where: { userId: id } });
     await prisma.user.deleteMany({ where: { id } });
   }

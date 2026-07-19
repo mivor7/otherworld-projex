@@ -7,8 +7,10 @@ import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { requireSession, ApiError } from "@/lib/api";
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as HandleUploadBody;
   try {
+    // Parse inside the try — a malformed body must be a clean 400, and the
+    // session gate runs before any token is minted.
+    const body = (await request.json()) as HandleUploadBody;
     const jsonResponse = await handleUpload({
       body,
       request,
@@ -29,9 +31,8 @@ export async function POST(request: Request) {
     if (e instanceof ApiError) {
       return NextResponse.json({ error: e.message }, { status: e.status });
     }
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Upload failed" },
-      { status: 400 }
-    );
+    // Never echo internal error text (blob/token internals) to the client.
+    console.error("upload:", e);
+    return NextResponse.json({ error: "Upload failed" }, { status: 400 });
   }
 }

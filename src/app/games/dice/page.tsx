@@ -62,21 +62,28 @@ export default function DicePage() {
       return;
     }
 
-    const res = await fetch("/api/games/dice", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target, wager, clientSeed: clientSeed || randomClientSeed() }),
-    });
-    const data = await res.json();
-    await new Promise((r) => setTimeout(r, 600));
-    if (!res.ok) {
-      setError(data.error ?? "Something went wrong");
-    } else {
-      setResult(data);
-      if (data.win) celebrate();
-      await refresh();
+    // finally-guarded so a network blip can't leave the die stuck rolling.
+    try {
+      const res = await fetch("/api/games/dice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target, wager, clientSeed: clientSeed || randomClientSeed() }),
+      });
+      const data = await res.json();
+      await new Promise((r) => setTimeout(r, 600));
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong");
+      } else {
+        setResult(data);
+        if (data.win) celebrate();
+        await refresh();
+      }
+    } catch {
+      setError("Connection hiccup — check your balance before retrying.");
+      await refresh().catch(() => {});
+    } finally {
+      setRolling(false);
     }
-    setRolling(false);
   };
 
   return (
@@ -199,10 +206,14 @@ export default function DicePage() {
           <input
             type="number"
             className="input max-w-28 text-center"
-            min={1}
-            max={1000}
+            min={house.minWager}
+            max={house.maxWager}
             value={wager}
-            onChange={(e) => setWager(Math.max(1, Math.floor(Number(e.target.value))))}
+            onChange={(e) =>
+              setWager(
+                Math.min(house.maxWager, Math.max(house.minWager, Math.floor(Number(e.target.value)) || house.minWager))
+              )
+            }
           />
           <span className="text-sm text-fog">credits</span>
         </div>
