@@ -299,7 +299,7 @@ export default function BlackjackPage() {
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
-      <div className="panel panel-glow panel-etched p-6 sm:p-8">
+      <div className="panel panel-glow panel-etched game-stage p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
             <button
@@ -394,7 +394,7 @@ export default function BlackjackPage() {
 
         {done && view?.result && (
           <div
-            className={`stat-number text-center text-xl mb-5 ${
+            className={`stat-number text-center text-xl mb-5 result-pop ${
               view.result === "lose" ? "text-danger" : "text-neon"
             }`}
           >

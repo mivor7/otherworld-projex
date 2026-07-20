@@ -401,7 +401,7 @@ export default function HopperPage() {
       </FirstVisitHint>
 
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
-        <div className="panel panel-glow p-4 flex flex-col items-center">
+        <div className="panel panel-glow game-stage p-4 flex flex-col items-center">
           <div className="flex gap-7 mb-3 items-baseline">
             <span className="kicker !text-[0.6rem]">
               Score <span className="stat-number text-neon text-sm ml-1.5">{hud.score}</span>

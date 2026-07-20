@@ -112,7 +112,7 @@ export default function DicePage() {
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
-      <div className="panel panel-glow p-8">
+      <div className="panel panel-glow game-stage p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
             <button className={`chip ${!sandbox ? "active" : ""}`} aria-pressed={!sandbox} onClick={() => setSandbox(false)}>
@@ -235,7 +235,7 @@ export default function DicePage() {
 
         {result && !rolling && (
           <div
-            className={`stat-number text-center text-2xl mb-4 ${result.win ? "neon-text" : "text-danger"}`}
+            className={`stat-number text-center text-2xl mb-4 result-pop ${result.win ? "neon-text" : "text-danger"}`}
           >
             rolled {result.outcome.rolled.toFixed(2)} —{" "}
             {result.win ? `+${result.payout} credits!` : "under the water it goes."}

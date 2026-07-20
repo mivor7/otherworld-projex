@@ -363,7 +363,7 @@ export default function FrogrisPage() {
       </FirstVisitHint>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
-        <div className="panel panel-glow p-5 flex flex-col sm:flex-row items-center sm:items-start justify-center gap-6">
+        <div className="panel panel-glow game-stage p-5 flex flex-col sm:flex-row items-center sm:items-start justify-center gap-6">
           <div className="relative">
             <canvas
               ref={canvasRef}
