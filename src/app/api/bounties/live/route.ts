@@ -98,6 +98,8 @@ export const GET = handler(async (req: Request) => {
         spendEligible: boolean;
         lifetimeEligible: boolean;
         windowEligible: boolean;
+        lifetimeSpent: number; // $RIBBIT spent on credits, lifetime
+        windowSpent: number; // $RIBBIT spent on credits during this bounty
       }
     | null = null;
   if (session) {
@@ -139,6 +141,8 @@ export const GET = handler(async (req: Request) => {
       spendEligible: lifetimeEligible && windowEligible,
       lifetimeEligible,
       windowEligible,
+      lifetimeSpent: fromRaw(lifeTotals.get(session.userId) ?? 0n),
+      windowSpent: fromRaw(winTotals.get(session.userId) ?? 0n),
     };
   }
 

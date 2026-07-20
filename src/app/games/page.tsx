@@ -10,7 +10,8 @@ import { MatteMedia } from "@/components/matte-media";
 import { Notice } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 
-const GAMES = [
+// Casino tables — cost credits (bought with $RIBBIT).
+const CREDIT_GAMES = [
   {
     href: "/games/flip",
     image: "/art/owp_pump.png",
@@ -32,26 +33,30 @@ const GAMES = [
     desc: "Single deck, dealer stands on 17, naturals pay 3:2. Every deck order is committed before the deal.",
     badge: "3:2 tables",
   },
+];
+// Free arcade — skill games, no credits to play. A live bounty (if any) shows
+// as a gold overlay; you must have credit spend behind your wallet to win it.
+const FREE_GAMES = [
   {
     href: "/games/hopper",
     image: "/art/owp_frogger.png",
     name: "Hopper",
-    desc: "Free arcade action — cross the traffic, climb the weekly leaderboard.",
-    badge: "Free · bounty",
+    desc: "Cross the traffic, climb the weekly leaderboard.",
+    badge: "Free",
   },
   {
     href: "/games/frogris",
     image: "/art/owp_frogris.png",
     name: "Frogris",
     desc: "The falling-block episode. Clear lines, chase levels, top the weekly board.",
-    badge: "Free · bounty",
+    badge: "Free",
   },
   {
     href: "/games/worm",
     image: "/art/owp_worm.png",
     name: "Worm Frog",
     desc: "Slither, grow, and don't bite your own tail. Ten points a fly.",
-    badge: "Free · bounty",
+    badge: "Free",
   },
 ];
 
@@ -171,6 +176,46 @@ export default function GamesPage() {
     setBusy(false);
   };
 
+  const renderCard = (g: {
+    href: string;
+    image: string;
+    name: string;
+    desc: string;
+    badge: string;
+  }) => {
+    const gameKey = g.href.split("/").pop()!;
+    const live = liveBounties[gameKey];
+    return (
+      <Link key={g.href} href={g.href} className="lot-card group">
+        <div className="card-media">
+          <MatteMedia src={g.image} fit="cover" />
+          <span className="badge absolute top-2 right-2">{g.badge}</span>
+          {live && (
+            <span className="badge badge-gold absolute top-2 left-2">
+              <span className="live-dot" /> bounty ·{" "}
+              {live.prizeText ??
+                `${live.prizeRibbit.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT`}
+            </span>
+          )}
+        </div>
+        <div className="card-body">
+          <h3 className="!text-[1rem] group-hover:text-neon transition-colors">{g.name}</h3>
+          <p className="text-fog text-[0.85rem] leading-relaxed">
+            {g.href === "/games/flip"
+              ? `Frog or fly — call the flip. ${(2 * (1 - house.houseEdge)).toFixed(2)}× on a win.`
+              : g.href === "/games/dice"
+                ? `Set your own line, roll under it. Up to ${Math.floor(50 * (1 - house.houseEdge))}× payouts.`
+                : g.desc}
+          </p>
+          <div className="card-price-row">
+            <span className="card-price-label">{live ? "Live bounty" : "Play"}</span>
+            <span className="text-fog group-hover:text-neon transition-colors">→</span>
+          </div>
+        </div>
+      </Link>
+    );
+  };
+
   return (
     <div className="pt-6">
       <PageHero
@@ -186,43 +231,21 @@ export default function GamesPage() {
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
         <div className="grid sm:grid-cols-2 gap-4 content-start">
-          {GAMES.map((g) => {
-            const gameKey = g.href.split("/").pop()!;
-            const live = liveBounties[gameKey];
-            return (
-            <Link key={g.href} href={g.href} className="lot-card group">
-              <div className="card-media">
-                <MatteMedia src={g.image} fit="cover" />
-                <span className="badge absolute top-2 right-2">{g.badge}</span>
-                {live && (
-                  <span className="badge badge-gold absolute top-2 left-2">
-                    <span className="live-dot" /> bounty ·{" "}
-                    {live.prizeText ??
-                      `${live.prizeRibbit.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT`}
-                  </span>
-                )}
-              </div>
-              <div className="card-body">
-                <h3 className="!text-[1rem] group-hover:text-neon transition-colors">
-                  {g.name}
-                </h3>
-                <p className="text-fog text-[0.85rem] leading-relaxed">
-                  {g.href === "/games/flip"
-                    ? `Frog or fly — call the flip. ${(2 * (1 - house.houseEdge)).toFixed(2)}× on a win.`
-                    : g.href === "/games/dice"
-                      ? `Set your own line, roll under it. Up to ${Math.floor(50 * (1 - house.houseEdge))}× payouts.`
-                      : g.desc}
-                </p>
-                <div className="card-price-row">
-                  <span className="card-price-label">
-                    {live ? "Live bounty" : "Play"}
-                  </span>
-                  <span className="text-fog group-hover:text-neon transition-colors">→</span>
-                </div>
-              </div>
-            </Link>
-            );
-          })}
+          <div className="sm:col-span-2">
+            <div className="kicker">Casino tables</div>
+            <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
+              Played with credits · provably fair, published edge
+            </p>
+          </div>
+          {CREDIT_GAMES.map(renderCard)}
+
+          <div className="sm:col-span-2 pt-2">
+            <div className="kicker">Free arcade</div>
+            <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
+              Skill games · free to play; a live bounty pays weekly to eligible spenders
+            </p>
+          </div>
+          {FREE_GAMES.map(renderCard)}
 
           {me.signedIn && history.length > 0 && (
             <div className="panel p-5 sm:col-span-2">
@@ -380,6 +403,28 @@ export default function GamesPage() {
           {msg && (
             <div className="mt-2">
               <Notice kind={msg.kind}>{msg.text}</Notice>
+            </div>
+          )}
+
+          {(house.rankedMinBurnedRibbit > 0 || house.rankedMinWindowBurnedRibbit > 0) && (
+            <div
+              className="mt-4 rounded-lg p-3 text-xs leading-relaxed"
+              style={{
+                background: "oklch(0.78 0.12 85 / 0.06)",
+                border: "1px solid oklch(0.78 0.12 85 / 0.25)",
+              }}
+            >
+              <span className="text-gold">🏆 Buying makes you bounty-eligible.</span> To
+              win prizes you need{" "}
+              {Math.ceil(
+                house.rankedMinBurnedRibbit / (house.ribbitPerCredit || 1)
+              ).toLocaleString()}{" "}
+              credits ({house.rankedMinBurnedRibbit.toLocaleString()} $RIBBIT) bought in
+              total, plus{" "}
+              {Math.ceil(
+                house.rankedMinWindowBurnedRibbit / (house.ribbitPerCredit || 1)
+              ).toLocaleString()}{" "}
+              credits during each bounty you enter. Every credit counts.
             </div>
           )}
 

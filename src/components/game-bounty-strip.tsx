@@ -8,8 +8,9 @@
 // projected-split table still lives below the game (see BountyStandings); this
 // is just the at-a-glance header. Polls so it stays live, and refreshes the
 // instant a round settles.
-import { useCallback, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useSession } from "./session";
+import { QualifyStatus } from "./qualify-status";
 
 type Entry = { rank: number; isYou: boolean };
 type Progress =
@@ -31,6 +32,10 @@ type Live = {
     unit: "net credits" | "best score";
     projectedRibbit: number;
     spendEligible: boolean;
+    lifetimeEligible: boolean;
+    windowEligible: boolean;
+    lifetimeSpent: number;
+    windowSpent: number;
   } | null;
 };
 
@@ -65,21 +70,26 @@ export function GameBountyStrip({ game }: { game: string }) {
   const you = live?.you;
   const myRank = live?.entries.find((e) => e.isYou)?.rank;
 
-  // The glanceable one-liner about the player's own state — win-tinted when
-  // they're actually in line to be paid, dim when they still need to qualify.
-  let mine: { text: string; win: boolean } | null = null;
+  // The glanceable one-liner about the player's own state — the canonical
+  // qualify helper (compact) when they still need spend, else their standing.
+  let statusNode: ReactNode = null;
   if (me.signedIn && you) {
     if (you.inRunning && you.projectedRibbit > 0) {
-      mine = { text: `you're #${myRank ?? "—"} · ~${fmt(you.projectedRibbit)} $RIBBIT`, win: true };
+      statusNode = (
+        <span className="text-neon">
+          you&apos;re #{myRank ?? "—"} · ~{fmt(you.projectedRibbit)} $RIBBIT
+        </span>
+      );
     } else if (!you.spendEligible) {
-      mine = { text: "not in the running — buy credits", win: false };
+      statusNode = <QualifyStatus you={you} compact />;
     } else if (you.value <= 0) {
-      mine = {
-        text: you.unit === "best score" ? "post a score to enter" : "go net-positive to enter",
-        win: false,
-      };
+      statusNode = (
+        <span className="text-fog">
+          {you.unit === "best score" ? "post a score to enter" : "go net-positive to enter"}
+        </span>
+      );
     } else {
-      mine = { text: "in the running", win: true };
+      statusNode = <span className="text-neon">in the running</span>;
     }
   }
 
@@ -96,11 +106,7 @@ export function GameBountyStrip({ game }: { game: string }) {
           <span className="live-dot" /> live bounty
         </span>
         <span className="stat-number text-gold text-sm">{prize} pool</span>
-        {mine && (
-          <span className={`text-xs ml-auto ${mine.win ? "text-neon" : "text-fog"}`}>
-            {mine.text}
-          </span>
-        )}
+        {statusNode && <span className="text-xs ml-auto">{statusNode}</span>}
       </div>
       {pct !== null && (
         <div className="mt-2 flex items-center gap-2">

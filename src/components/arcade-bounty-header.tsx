@@ -7,6 +7,7 @@
 // arrangement (a separate bounty panel above the leaderboard) with one card.
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "./session";
+import { QualifyStatus } from "./qualify-status";
 
 type Live = {
   bounty: { prizeRibbit: number; prizeText: string | null } | null;
@@ -16,6 +17,10 @@ type Live = {
     value: number;
     projectedRibbit: number;
     spendEligible: boolean;
+    lifetimeEligible: boolean;
+    windowEligible: boolean;
+    lifetimeSpent: number;
+    windowSpent: number;
   } | null;
 };
 
@@ -44,20 +49,18 @@ export function ArcadeBountyHeader({ game }: { game: string }) {
   const you = live?.you;
   const myRank = live?.entries.find((e) => e.isYou)?.rank;
 
-  let status: { text: string; win: boolean } | null = null;
-  if (me.signedIn && you) {
-    if (you.inRunning && you.projectedRibbit > 0) {
-      status = {
+  // Eligible players see their standing; not-eligible players get the canonical
+  // "what you need to qualify" helper (rendered below the note).
+  let eligibleStatus: { text: string; win: boolean } | null = null;
+  if (me.signedIn && you && you.spendEligible) {
+    if (you.inRunning && you.projectedRibbit > 0)
+      eligibleStatus = {
         text: `You're in the running — #${myRank ?? "—"} · ~${fmt(you.projectedRibbit)} $RIBBIT`,
         win: true,
       };
-    } else if (!you.spendEligible) {
-      status = { text: "Not eligible yet — buy credits to qualify", win: false };
-    } else if (you.value <= 0) {
-      status = { text: "Post a score to enter", win: false };
-    } else {
-      status = { text: "You're in the running", win: true };
-    }
+    else if (you.value <= 0)
+      eligibleStatus = { text: "Post a score to enter", win: false };
+    else eligibleStatus = { text: "You're in the running", win: true };
   }
 
   return (
@@ -71,10 +74,15 @@ export function ArcadeBountyHeader({ game }: { game: string }) {
       <p className="text-xs" style={{ color: "var(--text-dim)" }}>
         Top scores share this pool, paid weekly to eligible hunters.
       </p>
-      {status && (
-        <p className={`text-xs mt-1.5 ${status.win ? "text-neon" : "text-fog"}`}>
-          {status.text}
+      {eligibleStatus && (
+        <p className={`text-xs mt-1.5 ${eligibleStatus.win ? "text-neon" : "text-fog"}`}>
+          {eligibleStatus.text}
         </p>
+      )}
+      {me.signedIn && you && !you.spendEligible && (
+        <div className="mt-2.5">
+          <QualifyStatus you={you} />
+        </div>
       )}
     </div>
   );

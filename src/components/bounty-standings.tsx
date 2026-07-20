@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "./session";
-import { useHouseConfig } from "./use-house-config";
+import { QualifyStatus } from "./qualify-status";
 
 type Entry = {
   rank: number;
@@ -40,6 +40,8 @@ type Live = {
     spendEligible: boolean;
     lifetimeEligible: boolean;
     windowEligible: boolean;
+    lifetimeSpent: number;
+    windowSpent: number;
   } | null;
 };
 
@@ -47,7 +49,6 @@ const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 
 
 export function BountyStandings({ game }: { game: string }) {
   const { me } = useSession();
-  const house = useHouseConfig();
   const [live, setLive] = useState<Live | null>(null);
 
   const load = useCallback(() => {
@@ -112,35 +113,12 @@ export function BountyStandings({ game }: { game: string }) {
         </p>
       )}
 
-      {/* Eligibility — shown UP FRONT (amber) so a player never grinds a bounty
-          they can't win. Names exactly which rule is unmet. */}
-      {me.signedIn && live?.you && !live.you.spendEligible && (() => {
-        const you = live.you;
-        const reasons: string[] = [];
-        if (!you.lifetimeEligible)
-          reasons.push(`spend ${house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT on credits in total`);
-        if (!you.windowEligible)
-          reasons.push(`buy ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ $RIBBIT of credits during this bounty`);
-        return (
-          <div
-            className="rounded-lg p-3 mb-4"
-            style={{ background: "oklch(0.75 0.14 70 / 0.1)", border: "1px solid oklch(0.75 0.14 70 / 0.4)" }}
-          >
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-sm">⚠</span>
-              <span className="font-medium text-sm" style={{ color: "oklch(0.85 0.13 80)" }}>
-                You&apos;re not in the running yet
-              </span>
-            </div>
-            <p className="text-[0.72rem] leading-snug" style={{ color: "var(--text-dim)" }}>
-              Playing now won&apos;t win you any of the {prize} prize. To qualify: {reasons.join(" and ")}.
-            </p>
-            <Link href="/games" className="text-xs text-neon hover:underline inline-block mt-1.5">
-              Buy credits →
-            </Link>
-          </div>
-        );
-      })()}
+      {/* Canonical "what you need to qualify" — identical phrasing everywhere. */}
+      {me.signedIn && live?.you && !live.you.spendEligible && (
+        <div className="mb-4">
+          <QualifyStatus you={live.you} />
+        </div>
+      )}
 
       {/* Your live situation once you qualify — never make the player guess. */}
       {me.signedIn && live?.you && live.you.spendEligible && (() => {
