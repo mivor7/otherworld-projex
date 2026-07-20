@@ -148,6 +148,25 @@ const SPLIT_PRESETS: { key: string; label: string; splits: number[] }[] = [
   { key: "top5", label: "Top 5 · 40/25/15/12/8", splits: [40, 25, 15, 12, 8] },
 ];
 
+// One-click bounty templates — fill the whole create form for a game, then tweak.
+const BOUNTY_PRESETS: {
+  label: string;
+  title: string;
+  description: string;
+  target: string;
+  game: string;
+  prizeRibbit: number;
+  durationDays: number;
+  autoPay: boolean;
+}[] = [
+  { label: "Hopper (weekly)", game: "hopper", title: "EP 05 — Hopper", description: "Cross the pond for the highest replay-verified score this week — every eligible hunter shares the pool.", target: "Top score", prizeRibbit: 1250, durationDays: 7, autoPay: true },
+  { label: "Frogris (weekly)", game: "frogris", title: "EP 02 — Frogris", description: "Clear lines and chase levels for the top verified score this week. Eligible top scores split the pool.", target: "Top score", prizeRibbit: 1000, durationDays: 7, autoPay: true },
+  { label: "Worm (weekly)", game: "worm", title: "EP 04 — Worm Frog", description: "Grow the longest and post the best verified score this week. Paid pro-rata to eligible hunters.", target: "Top score", prizeRibbit: 900, durationDays: 7, autoPay: true },
+  { label: "Frog Flip (table)", game: "flip", title: "Double or Nothing — Frog Flip", description: "Call the flip and ride your streak. The pool fills as the table is played and pays out the best net.", target: "Best net credits", prizeRibbit: 4000, durationDays: 7, autoPay: true },
+  { label: "Pond Dice (table)", game: "dice", title: "High Roller — Pond Dice", description: "Set your line and roll under it. The pool unlocks as dice is played and splits by net winnings.", target: "Best net credits", prizeRibbit: 5000, durationDays: 7, autoPay: true },
+  { label: "Blackjack (table)", game: "blackjack", title: "The House Edge — Blackjack", description: "Beat the dealer across the week. The pool fills as blackjack is played and pays out the best net.", target: "Best net credits", prizeRibbit: 6000, durationDays: 7, autoPay: true },
+];
+
 function previewShares(prize: number, splits: number[], winners: number): number[] {
   const usable = splits.slice(0, Math.max(1, winners));
   const sum = usable.reduce((a, b) => a + b, 0);
@@ -729,6 +748,31 @@ export default function AdminPage() {
         <div className="panel p-6">
           <h3 className="font-bold mb-4">Create bounty</h3>
           <div className="space-y-3">
+            <div>
+              <label className="text-xs text-fog">Quick-fill a preset</label>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {BOUNTY_PRESETS.map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    className="btn btn-ghost !text-xs !min-h-[2rem] !px-2.5"
+                    onClick={() =>
+                      setBountyForm({
+                        title: p.title,
+                        description: p.description,
+                        target: p.target,
+                        game: p.game,
+                        prizeRibbit: p.prizeRibbit,
+                        durationDays: p.durationDays,
+                        autoPay: p.autoPay,
+                      })
+                    }
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <input className="input" placeholder="Title" value={bountyForm.title}
               onChange={(e) => setBountyForm({ ...bountyForm, title: e.target.value })} />
             <textarea className="input" placeholder="Description" value={bountyForm.description}
