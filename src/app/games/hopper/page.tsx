@@ -397,11 +397,12 @@ export default function HopperPage() {
   const mmss = `${Math.floor(hud.seconds / 60)}:${String(hud.seconds % 60).padStart(2, "0")}`;
 
   return (
-    <div className="pt-10 max-w-4xl mx-auto">
+    <div className="pt-6 max-w-4xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
       <SectionTitle
+        compact
         kicker="Wing I — free arcade"
         title="Hopper"
         desc="Arrows / WASD to hop. +1 for every new row of progress, +10 per crossing, three lives — each crossing brings faster traffic. Runs are replayed and verified on the server."

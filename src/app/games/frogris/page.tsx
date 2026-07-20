@@ -378,11 +378,12 @@ export default function FrogrisPage() {
   const mmss = `${Math.floor(hud.seconds / 60)}:${String(hud.seconds % 60).padStart(2, "0")}`;
 
   return (
-    <div className="pt-10 max-w-4xl mx-auto">
+    <div className="pt-6 max-w-4xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
       <SectionTitle
+        compact
         kicker="Wing I — free arcade"
         title="Frogris"
         desc="The falling-block episode. Arrows to move, ↑ to rotate, space to drop. Every run is replayed and verified on the server before it can rank."

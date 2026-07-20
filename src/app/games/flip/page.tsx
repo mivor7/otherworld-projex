@@ -119,11 +119,12 @@ export default function FlipPage() {
   const canDouble = pot >= house.minWager && pot <= house.maxWager && (sandbox || balance >= pot);
 
   return (
-    <div className="pt-10 max-w-2xl lg:max-w-5xl mx-auto">
+    <div className="pt-6 max-w-2xl lg:max-w-5xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
       <SectionTitle
+        compact
         kicker="Wing I — table 01"
         title="Frog Flip"
         desc={`Call frog or fly, even odds, ${flipMult.toFixed(2)}× a win — then ride the streak or cash out. ${Math.round(house.houseEdge * 100)}% published edge.`}
@@ -139,7 +140,7 @@ export default function FlipPage() {
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
-        <div className="panel panel-glow game-stage p-8 text-center">
+        <div className="panel panel-glow game-stage p-5 sm:p-6 text-center">
           <AmbientPond />
 
           <div className="flex items-center justify-between mb-6">
@@ -186,7 +187,7 @@ export default function FlipPage() {
             </div>
           )}
 
-          <div className="coin-stage mb-6">
+          <div className="coin-stage mb-4">
             <div className="coin-scene">
               <div
                 className={`coin ${spinning ? "coin--spin" : ""}`}

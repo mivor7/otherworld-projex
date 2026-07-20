@@ -67,17 +67,29 @@ export function SectionTitle({
   kicker,
   title,
   desc,
+  compact = false,
 }: {
   kicker?: string;
   title: string;
   desc?: string;
+  /** Tight header for pages where the content should sit high (e.g. games):
+      smaller title, tight margins, and the desc hidden on phones. */
+  compact?: boolean;
 }) {
   return (
-    <div className="mb-7">
-      {kicker && <div className="kicker mb-2">{kicker}</div>}
-      <h1 className="text-[1.6rem] sm:text-[1.9rem]">{title}</h1>
+    <div className={compact ? "mb-3" : "mb-7"}>
+      {kicker && <div className={`kicker ${compact ? "mb-0.5" : "mb-2"}`}>{kicker}</div>}
+      <h1 className={compact ? "text-[1.2rem] sm:text-[1.5rem]" : "text-[1.6rem] sm:text-[1.9rem]"}>
+        {title}
+      </h1>
       {desc && (
-        <p className="text-fog mt-2.5 max-w-2xl leading-relaxed text-[0.9375rem]">
+        <p
+          className={
+            compact
+              ? "text-fog mt-1 max-w-2xl leading-snug text-[0.8rem] hidden sm:block"
+              : "text-fog mt-2.5 max-w-2xl leading-relaxed text-[0.9375rem]"
+          }
+        >
           {desc}
         </p>
       )}

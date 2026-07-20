@@ -91,11 +91,12 @@ export default function DicePage() {
   };
 
   return (
-    <div className="pt-10 max-w-2xl lg:max-w-5xl mx-auto">
+    <div className="pt-6 max-w-2xl lg:max-w-5xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
       <SectionTitle
+        compact
         kicker="Wing I — table 02"
         title="Pond Dice"
         desc="Set your own line and roll under it. Lower target, bigger multiplier."
@@ -113,7 +114,7 @@ export default function DicePage() {
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
-      <div className="panel panel-glow game-stage p-8">
+      <div className="panel panel-glow game-stage p-5 sm:p-6">
         <AmbientPond />
         <div className="flex items-center justify-between mb-6">
           <div className="chips">

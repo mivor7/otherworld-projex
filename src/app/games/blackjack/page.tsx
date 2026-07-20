@@ -278,11 +278,12 @@ export default function BlackjackPage() {
   const doubleFundsOk = sandbox || (me.credits ?? 0) >= (view?.wager ?? 0);
 
   return (
-    <div className="pt-10 max-w-3xl lg:max-w-6xl mx-auto">
+    <div className="pt-6 max-w-3xl lg:max-w-6xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
       <SectionTitle
+        compact
         kicker="Wing I — table 03"
         title="Blackjack"
         desc="Single deck, dealer stands on 17, blackjack pays 3:2. The whole deck order is committed before your first card — verifiably fair."

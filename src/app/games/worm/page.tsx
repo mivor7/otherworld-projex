@@ -481,11 +481,12 @@ export default function WormPage() {
   }, [submitScore, makeLocalGame]);
 
   return (
-    <div className="pt-10 max-w-4xl mx-auto">
+    <div className="pt-6 max-w-4xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
       <SectionTitle
+        compact
         kicker="Wing I — free arcade · EP 04"
         title="Worm Frog"
         desc="Slither, grow, and don't bite your own tail. Arrows / WASD to steer — every fly is worth 10, the pace keeps climbing."
