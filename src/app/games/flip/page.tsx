@@ -194,17 +194,13 @@ export default function FlipPage() {
               >
                 <div className="coin-face coin-face--front">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/art/ribbit-mark.jpg" alt="Frog side" className="coin-face-art" />
+                  <img src="/art/owp_coin_frog.png" alt="Frog side" className="coin-face-art" />
                   <span className="coin-face-sheen" aria-hidden />
-                  <span className="coin-face-ring" aria-hidden />
-                  <span className="coin-face-badge" aria-hidden>🐸</span>
                 </div>
                 <div className="coin-face coin-face--back">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/art/logo.png" alt="Fly side" className="coin-face-art" />
+                  <img src="/art/owp_coin_fly.png" alt="Fly side" className="coin-face-art" />
                   <span className="coin-face-sheen" aria-hidden />
-                  <span className="coin-face-ring" aria-hidden />
-                  <span className="coin-face-badge" aria-hidden>🪰</span>
                 </div>
               </div>
             </div>

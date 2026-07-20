@@ -510,20 +510,14 @@ function PlayingCard({
   if (hidden || card === undefined) {
     return (
       <div
-        className="card-in w-14 h-20 sm:w-16 sm:h-24 rounded-lg border relative flex items-center justify-center overflow-hidden"
+        className="card-in w-14 h-20 sm:w-16 sm:h-24 rounded-lg relative overflow-hidden"
         style={{
-          borderColor: "oklch(0 0 0 / 0.5)",
-          background:
-            "repeating-linear-gradient(45deg, oklch(0.19 0.022 150) 0 3px, oklch(0.145 0.015 150) 3px 6px), repeating-linear-gradient(-45deg, oklch(0.19 0.022 150) 0 3px, oklch(0.145 0.015 150) 3px 6px)",
-          backgroundBlendMode: "overlay",
-          boxShadow: "0 3px 10px oklch(0 0 0 / 0.5), inset 0 0 0 1px oklch(1 0 0 / 0.06)",
+          boxShadow: "0 3px 10px oklch(0 0 0 / 0.5), inset 0 0 0 1px oklch(1 0 0 / 0.08)",
+          animationDelay: `${delay}ms`,
         }}
       >
-        <span
-          className="absolute inset-[5px] rounded-md"
-          style={{ border: "1px solid oklch(0.78 0.11 150 / 0.25)" }}
-        />
-        <span className="text-neon opacity-45 text-base">◆</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/art/owp_card_back.png" alt="" className="absolute inset-0 w-full h-full object-cover" />
       </div>
     );
   }
@@ -534,15 +528,13 @@ function PlayingCard({
     <div
       className="card-in w-14 h-20 sm:w-16 sm:h-24 rounded-lg relative select-none overflow-hidden"
       style={{
-        background:
-          "repeating-linear-gradient(0deg, oklch(1 0 0 / 0.35) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, oklch(0 0 0 / 0.02) 0 1px, transparent 1px 3px), linear-gradient(160deg, oklch(0.985 0.002 270), oklch(0.94 0.004 270))",
-        color: red ? "oklch(0.48 0.19 25)" : "oklch(0.19 0.01 270)",
-        border: "1px solid oklch(0 0 0 / 0.4)",
-        boxShadow:
-          "0 3px 10px oklch(0 0 0 / 0.45), inset 0 1px 0 oklch(1 0 0 / 0.8)",
+        color: red ? "oklch(0.48 0.19 25)" : "oklch(0.2 0.01 270)",
+        boxShadow: "0 3px 10px oklch(0 0 0 / 0.45), inset 0 1px 0 oklch(1 0 0 / 0.5)",
         animationDelay: `${delay}ms`,
       }}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/art/owp_card_face.png" alt="" className="absolute inset-0 w-full h-full object-cover" />
       {/* corner index — top left */}
       <div
         className="absolute top-1 left-1.5 text-center leading-none"
@@ -559,9 +551,8 @@ function PlayingCard({
         <div className="text-[0.82rem] font-bold tracking-tight">{rank}</div>
         <div className="text-[0.72rem] -mt-px">{suit}</div>
       </div>
-      {/* center pip over a faint watermark */}
+      {/* center suit pip (the face art already carries the frog watermark) */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="absolute text-[3.2rem] opacity-[0.07]">{suit}</span>
         <span className="text-[1.55rem]">{suit}</span>
       </div>
     </div>

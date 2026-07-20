@@ -173,13 +173,15 @@ export default function DicePage() {
               style={{ left: `${result.outcome.rolled}%` }}
               title={`rolled ${result.outcome.rolled}`}
             >
-              <span
-                className="block w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45"
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/art/owp_dice_orb.png"
+                alt=""
+                className="block w-7 h-7 -translate-x-1/2 -translate-y-1/2"
                 style={{
-                  background: result.win ? "var(--color-neon)" : "var(--color-danger)",
-                  boxShadow: result.win
-                    ? "0 0 12px oklch(0.78 0.11 150 / 0.9)"
-                    : "0 0 12px oklch(0.64 0.18 25 / 0.9)",
+                  filter: result.win
+                    ? "drop-shadow(0 0 10px oklch(0.78 0.11 150 / 0.95))"
+                    : "drop-shadow(0 0 10px oklch(0.64 0.18 25 / 0.9))",
                 }}
               />
             </div>

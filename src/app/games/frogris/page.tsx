@@ -48,6 +48,29 @@ export default function FrogrisPage() {
   const overAtRef = useRef(0);
   const popRef = useRef<Pop | null>(null);
   const prevScoreRef = useRef(0);
+  const tintedRef = useRef<HTMLCanvasElement[]>([]);
+
+  // Preload the block tile and pre-tint one glossy copy per piece colour, so
+  // every block is a real tile (falls back to the painted block until ready).
+  useEffect(() => {
+    const tile = new Image();
+    tile.src = "/art/owp_frogris_tile.png";
+    tile.onload = () => {
+      tintedRef.current = PIECE_COLORS.map((color) => {
+        const oc = document.createElement("canvas");
+        oc.width = tile.naturalWidth;
+        oc.height = tile.naturalHeight;
+        const octx = oc.getContext("2d")!;
+        octx.drawImage(tile, 0, 0);
+        octx.globalCompositeOperation = "multiply"; // colourise, keep the gloss
+        octx.fillStyle = color;
+        octx.fillRect(0, 0, oc.width, oc.height);
+        octx.globalCompositeOperation = "destination-in"; // clip back to tile alpha
+        octx.drawImage(tile, 0, 0);
+        return oc;
+      });
+    };
+  }, []);
   const [hud, setHud] = useState({
     score: 0, lines: 0, level: 0, over: true, started: false, seconds: 0,
   });
@@ -190,7 +213,13 @@ export default function FrogrisPage() {
       alpha = 1
     ) => {
       c.globalAlpha = alpha;
-      // body
+      const tinted = tintedRef.current[piece];
+      if (tinted) {
+        c.drawImage(tinted, x + 1, y + 1, size - 2, size - 2);
+        c.globalAlpha = 1;
+        return;
+      }
+      // body (painted fallback)
       c.fillStyle = PIECE_COLORS[piece];
       c.beginPath();
       c.roundRect(x + 1.5, y + 1.5, size - 3, size - 3, 5);

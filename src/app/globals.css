@@ -1002,25 +1002,6 @@ html[data-intro="1"] .vault-word {
   overflow: hidden;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  /* milled coin edge */
-  border: 3px solid transparent;
-  background-clip: padding-box;
-}
-.coin-face::before {
-  /* metal rim with milling */
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 999px;
-  padding: 3px;
-  background: repeating-conic-gradient(
-    oklch(0.72 0.04 150) 0deg 3deg,
-    oklch(0.38 0.03 150) 3deg 6deg
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
 }
 .coin-face--front {
   box-shadow: 0 0 46px -10px oklch(0.78 0.11 150 / 0.5), inset 0 0 30px oklch(0 0 0 / 0.45);

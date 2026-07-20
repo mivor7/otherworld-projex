@@ -48,6 +48,14 @@ export default function HopperPage() {
     score: 0, lives: 3, level: 0, over: true, started: false, seconds: 0,
   });
   const [board, setBoard] = useState<{ rank: number; player: string; score: number }[]>([]);
+  const spritesRef = useRef<{ frog?: HTMLImageElement }>({});
+
+  // Preload the player frog sprite (painted fallback until it loads).
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/art/owp_hopper_frog.png";
+    spritesRef.current = { frog: img };
+  }, []);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
   const house = useHouseConfig();
 
@@ -317,47 +325,49 @@ export default function HopperPage() {
         ctx.save();
         ctx.translate(fx2, fy2 - hopT * 5);
         ctx.scale(1 + hopT * 0.08, 1 + hopT * 0.14);
-        // rear legs
-        ctx.fillStyle = "oklch(0.55 0.1 150)";
-        ctx.beginPath();
-        ctx.ellipse(-9.5, 6, 5, 7.5, -0.5, 0, 7);
-        ctx.ellipse(9.5, 6, 5, 7.5, 0.5, 0, 7);
-        ctx.fill();
-        // body
-        const bodyGrad = ctx.createRadialGradient(0, -4, 2, 0, 0, 13);
-        bodyGrad.addColorStop(0, "oklch(0.83 0.1 150)");
-        bodyGrad.addColorStop(0.7, "oklch(0.68 0.11 150)");
-        bodyGrad.addColorStop(1, "oklch(0.5 0.09 150)");
-        ctx.fillStyle = bodyGrad;
-        ctx.beginPath();
-        ctx.ellipse(0, 1, 10.5, 11.5, 0, 0, 7);
-        ctx.fill();
-        // belly sheen
-        ctx.fillStyle = "oklch(0.9 0.05 150 / 0.35)";
-        ctx.beginPath();
-        ctx.ellipse(0, 5, 6, 5, 0, 0, 7);
-        ctx.fill();
-        // eye domes + pupils
-        for (const sideX of [-5.5, 5.5]) {
-          ctx.fillStyle = "oklch(0.72 0.1 150)";
+        const frogSprite = spritesRef.current.frog;
+        if (frogSprite?.complete && frogSprite.naturalWidth) {
+          const d = HCELL + 6;
+          ctx.drawImage(frogSprite, -d / 2, -d / 2, d, d);
+        } else {
+          // painted fallback
+          ctx.fillStyle = "oklch(0.55 0.1 150)";
           ctx.beginPath();
-          ctx.arc(sideX, -9, 4.2, 0, 7);
+          ctx.ellipse(-9.5, 6, 5, 7.5, -0.5, 0, 7);
+          ctx.ellipse(9.5, 6, 5, 7.5, 0.5, 0, 7);
           ctx.fill();
-          ctx.fillStyle = "oklch(0.97 0.003 270)";
+          const bodyGrad = ctx.createRadialGradient(0, -4, 2, 0, 0, 13);
+          bodyGrad.addColorStop(0, "oklch(0.83 0.1 150)");
+          bodyGrad.addColorStop(0.7, "oklch(0.68 0.11 150)");
+          bodyGrad.addColorStop(1, "oklch(0.5 0.09 150)");
+          ctx.fillStyle = bodyGrad;
           ctx.beginPath();
-          ctx.arc(sideX, -9.5, 2.6, 0, 7);
+          ctx.ellipse(0, 1, 10.5, 11.5, 0, 0, 7);
           ctx.fill();
-          ctx.fillStyle = ARCADE.ink;
+          ctx.fillStyle = "oklch(0.9 0.05 150 / 0.35)";
           ctx.beginPath();
-          ctx.arc(sideX, -10, 1.3, 0, 7);
+          ctx.ellipse(0, 5, 6, 5, 0, 0, 7);
+          ctx.fill();
+          for (const sideX of [-5.5, 5.5]) {
+            ctx.fillStyle = "oklch(0.72 0.1 150)";
+            ctx.beginPath();
+            ctx.arc(sideX, -9, 4.2, 0, 7);
+            ctx.fill();
+            ctx.fillStyle = "oklch(0.97 0.003 270)";
+            ctx.beginPath();
+            ctx.arc(sideX, -9.5, 2.6, 0, 7);
+            ctx.fill();
+            ctx.fillStyle = ARCADE.ink;
+            ctx.beginPath();
+            ctx.arc(sideX, -10, 1.3, 0, 7);
+            ctx.fill();
+          }
+          ctx.fillStyle = "oklch(0.6 0.1 150)";
+          ctx.beginPath();
+          ctx.ellipse(-6, 10, 3, 2, 0, 0, 7);
+          ctx.ellipse(6, 10, 3, 2, 0, 0, 7);
           ctx.fill();
         }
-        // front feet
-        ctx.fillStyle = "oklch(0.6 0.1 150)";
-        ctx.beginPath();
-        ctx.ellipse(-6, 10, 3, 2, 0, 0, 7);
-        ctx.ellipse(6, 10, 3, 2, 0, 0, 7);
-        ctx.fill();
         ctx.restore();
 
         // Brief danger flash on a lost life.
