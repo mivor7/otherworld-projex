@@ -24,6 +24,19 @@ const BASE = process.argv[2] ?? "http://localhost:3000";
 const prisma = new PrismaClient();
 const RAW = 10n ** 6n;
 
+// Mirror of the app's requiredCreditSpend, read from live house config (same
+// helper as economy-e2e) so trigger assertions stay correct at any credit price
+// — the old edge-based derivation (× margin / edge) no longer applies.
+async function requiredCredits(prizeRaw) {
+  const s = Object.fromEntries((await prisma.houseSetting.findMany()).map((x) => [x.key, x.value]));
+  const num = (k, envK, def) =>
+    s[k] !== undefined && s[k] !== "" ? Number(s[k]) : Number(process.env[envK] ?? def);
+  const ribbitPerCredit = num("ribbitPerCredit", "RIBBIT_PER_CREDIT", 100);
+  const buyBurnShare = num("buyBurnShare", "BUY_BURN_SHARE", 0.5);
+  const margin = num("bountyHouseMargin", "BOUNTY_HOUSE_MARGIN", 0.5);
+  return Math.max(1, Math.ceil((Number(prizeRaw / RAW) * (1 + margin)) / ((1 - buyBurnShare) * ribbitPerCredit)));
+}
+
 let passed = 0, failed = 0;
 function check(name, cond, extra = "") {
   if (cond) { passed++; console.log(`  ✓ ${name}`); }
@@ -279,13 +292,15 @@ try {
     }),
   });
   if (autoB.data?.id) bountyIds.push(autoB.data.id);
-  // 5000 $RIBBIT / 100 per credit = 50 credits; ×1.5 margin / 0.04 edge = 1875
-  check("trigger auto-derived from prize (5000 → 1875 credits)",
-    autoB.status === 200 && autoB.data.triggerCreditVolume === 1875,
-    `got ${autoB.data?.triggerCreditVolume}`);
+  // Trigger is derived by the app from the prize × (1+margin) / ((1−burnShare)
+  // × ribbitPerCredit) — read the same value from live config.
+  const req5000 = await requiredCredits(5000n * RAW);
+  check("trigger auto-derived from prize (5000 $RIBBIT → derived credits)",
+    autoB.status === 200 && autoB.data.triggerCreditVolume === req5000,
+    `got ${autoB.data?.triggerCreditVolume}, expected ${req5000}`);
   const autoRow = await prisma.bounty.findUnique({ where: { id: autoB.data.id } });
   check("threshold persisted, autoPay set",
-    autoRow.autoPay === true && autoRow.triggerCreditVolume === 1875);
+    autoRow.autoPay === true && autoRow.triggerCreditVolume === req5000);
   // free game: no credit threshold, weekly instead
   const autoFree = await admin.api("/api/admin/bounties", {
     method: "POST",
@@ -309,13 +324,14 @@ try {
     }),
   });
   if (eb.data?.id) bountyIds.push(eb.data.id);
-  check("editable bounty created w/ trigger 1875", eb.data?.triggerCreditVolume === 1875);
+  check("editable bounty created w/ derived trigger", eb.data?.triggerCreditVolume === req5000);
   const edit = await admin.api(`/api/admin/bounties/${eb.data.id}`, {
     method: "POST",
     body: JSON.stringify({ action: "edit", title: "ADM edited", prizeRibbit: 10000, extendDays: 3 }),
   });
-  check("edit succeeds and re-derives trigger (10000 → 3750)",
-    edit.status === 200 && edit.data.triggerCreditVolume === 3750,
+  const req10000 = await requiredCredits(10000n * RAW);
+  check("edit succeeds and re-derives trigger (10000 $RIBBIT)",
+    edit.status === 200 && edit.data.triggerCreditVolume === req10000,
     JSON.stringify(edit.data));
   const edited = await prisma.bounty.findUnique({ where: { id: eb.data.id } });
   check("edit persisted (title + prize)",

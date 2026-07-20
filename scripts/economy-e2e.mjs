@@ -57,6 +57,20 @@ async function seedId(userId) {
   return s.id;
 }
 
+// Mirror of the app's requiredCreditSpend (src/lib/bounty.ts), read from the
+// LIVE house config so the suite tracks price/split/margin changes instead of
+// hardcoding a derived number. Keeps the tests correct at any credit price.
+async function requiredCredits(prizeRaw) {
+  const s = Object.fromEntries((await prisma.houseSetting.findMany()).map((x) => [x.key, x.value]));
+  const num = (k, envK, def) =>
+    s[k] !== undefined && s[k] !== "" ? Number(s[k]) : Number(process.env[envK] ?? def);
+  const ribbitPerCredit = num("ribbitPerCredit", "RIBBIT_PER_CREDIT", 100);
+  const buyBurnShare = num("buyBurnShare", "BUY_BURN_SHARE", 0.5);
+  const margin = num("bountyHouseMargin", "BOUNTY_HOUSE_MARGIN", 0.5);
+  const houseRibbitPerCredit = (1 - buyBurnShare) * ribbitPerCredit;
+  return Math.max(1, Math.ceil((Number(prizeRaw / RAW) * (1 + margin)) / houseRibbitPerCredit));
+}
+
 try {
   console.log(`economy checks → ${BASE}\n`);
 
@@ -81,41 +95,46 @@ try {
 
   // ---------------- auto-bounty: below threshold does NOT pay ----------------
   console.log("— Auto-bounty stays open below the spend threshold");
+  const req1 = await requiredCredits(10000n * RAW);
   const b1 = await prisma.bounty.create({
     data: {
       title: "ECON below-threshold", description: "e2e", game: "dice", kind: "leaderboard",
-      prizeRibbit: 10000n * RAW, autoPay: true, triggerCreditVolume: 100000,
+      prizeRibbit: 10000n * RAW, autoPay: true, triggerCreditVolume: req1,
       endsAt: new Date(Date.now() + 7 * 864e5),
     },
   });
   bountyIds.push(b1.id);
-  await makeWinner("b1a", 300, 100, b1.startsAt); // only 100 credits spent << 100000
+  const belowVol = Math.max(1, Math.floor(req1 * 0.2)); // a fifth of the meter
+  await makeWinner("b1a", 300, belowVol, b1.startsAt);
   await api("/api/bounties");
   let b1r = await prisma.bounty.findUnique({ where: { id: b1.id } });
   check("below-threshold bounty stays open (no payout)", b1r.status === "open",
-    `status ${b1r.status}`);
+    `spent ${belowVol} / req ${req1} → status ${b1r.status}`);
 
   // ---------------- auto-bounty: crosses threshold → pro-rata payout ----------------
   console.log("— Auto-bounty fires at the threshold, pays all winners pro-rata");
+  const req2 = await requiredCredits(10000n * RAW);
   const b2 = await prisma.bounty.create({
     data: {
       title: "ECON trigger", description: "e2e", game: "dice", kind: "leaderboard",
-      // 10,000 $RIBBIT prize honestly derives a 3,750-credit trigger
-      // (settle enforces max(stored, live-derived) — a weaker stored trigger
-      // can never fire early).
-      prizeRibbit: 10000n * RAW, autoPay: true, triggerCreditVolume: 3750,
+      // The trigger is derived from the prize by the app (prize × (1+margin) /
+      // ((1−burnShare) × ribbitPerCredit)); the suite reads it live.
+      prizeRibbit: 10000n * RAW, autoPay: true, triggerCreditVolume: req2,
       endsAt: new Date(Date.now() + 7 * 864e5),
     },
   });
   bountyIds.push(b2.id);
-  const wA = await makeWinner("b2a", 300, 2000, b2.startsAt); // net 300, vol 2000
-  const wB = await makeWinner("b2b", 100, 1750, b2.startsAt); // net 100, vol 1750
-  // total dice wager since b2.startsAt from these = 3750 ≥ trigger → fires
+  // Two winners whose combined dice wager clears the derived trigger; nets
+  // 300 / 100 drive the 75% / 25% pro-rata split of the fixed 10,000 prize.
+  const halfVol = Math.max(100, Math.ceil(req2 * 0.6)); // each ≥ rankedMinTableVolume
+  const wA = await makeWinner("b2a", 300, halfVol, b2.startsAt); // net 300
+  const wB = await makeWinner("b2b", 100, halfVol, b2.startsAt); // net 100
+  // combined wager ~1.2× the trigger → fires
   const trig = await api("/api/bounties");
   check("bounties endpoint ok", trig.status === 200);
   let b2r = await prisma.bounty.findUnique({ where: { id: b2.id } });
   check("bounty auto-marked paid once threshold crossed", b2r.status === "paid" && b2r.paidAt,
-    `status ${b2r.status}`);
+    `spent ${2 * halfVol} / req ${req2} → status ${b2r.status}`);
 
   const awards = await prisma.bountyAward.findMany({ where: { bountyId: b2.id }, orderBy: { rank: "asc" } });
   check("both eligible winners awarded", awards.length === 2);
@@ -141,22 +160,23 @@ try {
 
   // ---------------- progress surfaced publicly ----------------
   console.log("— Progress is visible to players");
+  const req3 = await requiredCredits(5000n * RAW);
   const b3 = await prisma.bounty.create({
     data: {
       title: "ECON progress", description: "e2e", game: "dice", kind: "leaderboard",
-      // 5,000 $RIBBIT prize → honest derived trigger 1,875 credits
-      prizeRibbit: 5000n * RAW, autoPay: true, triggerCreditVolume: 1875,
+      prizeRibbit: 5000n * RAW, autoPay: true, triggerCreditVolume: req3,
       endsAt: new Date(Date.now() + 7 * 864e5),
     },
   });
   bountyIds.push(b3.id);
-  await makeWinner("b3a", 50, 250, b3.startsAt); // 250 wagered of 1875 = 13%
+  const progVol = Math.max(1, Math.floor(req3 * 0.2)); // ~20% of the meter
+  await makeWinner("b3a", 50, progVol, b3.startsAt);
   const list = await api("/api/bounties");
   const b3v = list.data.open.find((b) => b.id === b3.id);
-  check("open bounty exposes credit progress toward trigger",
-    b3v?.progress?.mode === "credit" && b3v.progress.threshold === 1875 &&
-    b3v.progress.spent >= 250 && b3v.progress.pct >= 13,
-    JSON.stringify(b3v?.progress));
+  check("open bounty exposes credit progress toward the derived trigger",
+    b3v?.progress?.mode === "credit" && b3v.progress.threshold === req3 &&
+    b3v.progress.spent >= progVol && b3v.progress.pct >= 10 && b3v.progress.pct < 100,
+    `req ${req3} → ${JSON.stringify(b3v?.progress)}`);
 
   // ---------------- live standings + projected earnings ----------------
   console.log("— Live standings project each player's pro-rata earning");
