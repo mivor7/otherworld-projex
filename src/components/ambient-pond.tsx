@@ -29,15 +29,15 @@ export function AmbientPond() {
       canvas.width = Math.max(1, Math.floor(w * dpr));
       canvas.height = Math.max(1, Math.floor(h * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = Math.max(18, Math.min(56, Math.floor(w / 15)));
+      const n = Math.max(14, Math.min(40, Math.floor(w / 20)));
       motes = Array.from({ length: n }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        r: 1.3 + Math.random() * 3,
-        vy: -(0.06 + Math.random() * 0.26), // slower, dreamier drift
-        vx: (Math.random() - 0.5) * 0.14,
-        a: 0.16 + Math.random() * 0.4,
-        gold: Math.random() < 0.25,
+        r: 1 + Math.random() * 2.4,
+        vy: -(0.06 + Math.random() * 0.24), // slow, dreamy drift
+        vx: (Math.random() - 0.5) * 0.13,
+        a: 0.05 + Math.random() * 0.11, // very faint — a soft haze, never obvious dots
+        gold: Math.random() < 0.22,
       }));
     };
     resize();
@@ -55,7 +55,7 @@ export function AmbientPond() {
         }
         if (m.x < -6) m.x = w + 6;
         else if (m.x > w + 6) m.x = -6;
-        const rr = m.r * 6;
+        const rr = m.r * 9; // wide soft falloff so each mote is a glow, not a dot
         const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, rr);
         g.addColorStop(0, m.gold ? `rgba(232,200,120,${m.a})` : `rgba(130,235,175,${m.a})`);
         g.addColorStop(1, "rgba(0,0,0,0)");
