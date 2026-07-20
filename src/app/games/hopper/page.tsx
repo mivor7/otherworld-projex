@@ -436,8 +436,8 @@ export default function HopperPage() {
               ref={canvasRef}
               width={W}
               height={H}
-              className="w-full rounded-lg border"
-              style={{ borderColor: "var(--hairline-strong)" }}
+              className="rounded-lg border block mx-auto"
+              style={{ borderColor: "var(--hairline-strong)", width: "100%", maxWidth: W, height: "auto" }}
             />
             <div
               className="absolute inset-0 rounded-lg pointer-events-none"
