@@ -304,11 +304,17 @@ and clear payouts by hand in `/admin`. Never run it against the treasury key.
 
 - **`scripts/prod-smoke.mjs`** — the reliable one. 22 checks against live prod;
   run it after every deploy.
-- **`admin-e2e.mjs`, `economy-e2e.mjs`, `games-e2e.mjs`** — end-to-end suites.
-  ⚠️ Two cautions: (a) they run against the **production Neon DB**, so don't run
-  them casually while the owner is testing; (b) they still assume the *old*
-  bounty trigger math and **need rewriting for the current gross-wager model**
-  before they'll pass. Treat them as WIP.
+- **`economy-e2e.mjs`, `games-e2e.mjs`, `admin-e2e.mjs`** — end-to-end suites,
+  self-cleaning (they create test users/bounties and delete them in a `finally`
+  block, and park/restore any standing open bounties). Run with a base URL, e.g.
+  `node scripts/economy-e2e.mjs https://otherworld-projex.vercel.app`.
+  - They compute expected bounty triggers from the app's live formula, so they
+    track the credit price/split/margin — no hardcoded thresholds.
+  - ⚠️ They hit the **production Neon DB** (the app's only DB) — don't run them
+    while someone is playing/testing. They self-clean, but pick a quiet window.
+  - `admin-e2e.mjs` needs `TEST_ADMIN_KEYPAIR` (JSON `{wallet, secret}` of an
+    admin wallet) — the owner holds it.
+  - Last verified green against prod: economy 20/20, games 34/34.
 
 There is no unit-test harness. Type-checking (`npm run build`) and lint are the
 first line of defense; the smoke test is the second.
@@ -320,7 +326,6 @@ first line of defense; the smoke test is the second.
 - **Auction house is still under development** — the page carries an "under
   development" notice. The bidding/escrow backend exists; the front-of-house UX
   is unfinished.
-- **The 3 e2e suites need updating** for the gross-wager bounty model (§9).
 - **Semi-custodial** (§5). SPL escrow with on-chain refunds would be the next
   hardening step if volume grows.
 - **The Anchor program is unaudited.** Get it audited before it holds meaningful
