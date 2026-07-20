@@ -10,6 +10,7 @@ import { useHouseConfig } from "@/components/use-house-config";
 import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
+import { GameBountyStrip } from "@/components/game-bounty-strip";
 
 type View = {
   roundId: string;
@@ -284,6 +285,8 @@ export default function BlackjackPage() {
         title="Blackjack"
         desc="Single deck, dealer stands on 17, blackjack pays 3:2. The whole deck order is committed before your first card — verifiably fair."
       />
+
+      <GameBountyStrip game="blackjack" />
 
       <div className="panel panel-glow panel-etched p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">

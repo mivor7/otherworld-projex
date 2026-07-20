@@ -10,6 +10,7 @@ import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { useHouseConfig } from "@/components/use-house-config";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
+import { GameBountyStrip } from "@/components/game-bounty-strip";
 
 type DiceResult = {
   outcome: { rolled: number; target: number; multiplier: number };
@@ -97,6 +98,8 @@ export default function DicePage() {
         title="Pond Dice"
         desc="Set your own line and roll under it. Lower target, bigger multiplier."
       />
+
+      <GameBountyStrip game="dice" />
 
       <div className="panel panel-glow p-8">
         <div className="flex items-center justify-between mb-6">

@@ -10,6 +10,7 @@ import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { useHouseConfig } from "@/components/use-house-config";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
+import { GameBountyStrip } from "@/components/game-bounty-strip";
 
 type FlipResult = {
   outcome: { landed: "frog" | "fly" };
@@ -109,6 +110,8 @@ export default function FlipPage() {
         desc={`Frog or fly, even odds, ${flipMult.toFixed(2)}× payout on a win — ${Math.round(house.houseEdge * 100)}% published edge.`}
       />
 
+      <GameBountyStrip game="flip" />
+
       <div className="panel panel-glow p-8 text-center">
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
@@ -154,11 +157,15 @@ export default function FlipPage() {
           </div>
         </div>
 
-        {result && !busy && (
-          <div className={`stat-number text-2xl mb-4 ${result.win ? "neon-text" : "text-danger"}`}>
-            {result.win ? `+${result.payout} credits!` : "The pond takes it."}
-          </div>
-        )}
+        {/* Fixed-height slot so revealing the result never shoves the controls
+            below it — no layout jump between rounds. */}
+        <div className="min-h-[2.25rem] mb-4 flex items-center justify-center">
+          {result && !busy && (
+            <span className={`stat-number text-2xl ${result.win ? "neon-text" : "text-danger"}`}>
+              {result.win ? `+${result.payout} credits!` : "The pond takes it."}
+            </span>
+          )}
+        </div>
 
         <div className="flex justify-center gap-3 mb-6">
           {(["frog", "fly"] as const).map((s) => (
