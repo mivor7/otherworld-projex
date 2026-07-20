@@ -276,7 +276,7 @@ export default function BlackjackPage() {
   const doubleFundsOk = sandbox || (me.credits ?? 0) >= (view?.wager ?? 0);
 
   return (
-    <div className="pt-10 max-w-3xl mx-auto">
+    <div className="pt-10 max-w-3xl lg:max-w-6xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
@@ -286,8 +286,13 @@ export default function BlackjackPage() {
         desc="Single deck, dealer stands on 17, blackjack pays 3:2. The whole deck order is committed before your first card — verifiably fair."
       />
 
-      <GameBountyStrip game="blackjack" />
+      {/* Mobile: the strip is the at-a-glance header (standings stack far
+          below). Desktop: hidden — the full standings sit beside the game. */}
+      <div className="lg:hidden">
+        <GameBountyStrip game="blackjack" />
+      </div>
 
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
       <div className="panel panel-glow panel-etched p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
@@ -479,7 +484,6 @@ export default function BlackjackPage() {
         )}
         {!sandbox && <FairCommit clientSeed={clientSeed} />}
       </div>
-      <div className="mt-6">
         <BountyStandings game="blackjack" />
       </div>
     </div>

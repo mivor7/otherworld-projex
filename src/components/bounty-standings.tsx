@@ -75,7 +75,7 @@ export function BountyStandings({ game }: { game: string }) {
   const prize = b.prizeText ?? `${fmt(b.prizeRibbit)} $RIBBIT`;
 
   return (
-    <aside className="panel panel-glow p-5 h-fit">
+    <aside className="panel panel-glow p-5 h-fit lg:sticky lg:top-24">
       <div className="flex items-center gap-2 mb-1.5">
         <span className="badge badge-live">
           <span className="live-dot" /> live bounty

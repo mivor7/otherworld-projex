@@ -100,7 +100,7 @@ export default function FlipPage() {
   const canPlay = sandbox || me.signedIn;
 
   return (
-    <div className="pt-10 max-w-2xl mx-auto">
+    <div className="pt-10 max-w-2xl lg:max-w-6xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
@@ -110,8 +110,13 @@ export default function FlipPage() {
         desc={`Frog or fly, even odds, ${flipMult.toFixed(2)}× payout on a win — ${Math.round(house.houseEdge * 100)}% published edge.`}
       />
 
-      <GameBountyStrip game="flip" />
+      {/* Mobile: the strip is the at-a-glance header (standings stack far
+          below). Desktop: hidden — the full standings sit beside the game. */}
+      <div className="lg:hidden">
+        <GameBountyStrip game="flip" />
+      </div>
 
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
       <div className="panel panel-glow p-8 text-center">
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
@@ -243,7 +248,6 @@ export default function FlipPage() {
         )}
         {!sandbox && <FairCommit clientSeed={clientSeed} />}
       </div>
-      <div className="mt-6">
         <BountyStandings game="flip" />
       </div>
     </div>

@@ -89,7 +89,7 @@ export default function DicePage() {
   };
 
   return (
-    <div className="pt-10 max-w-2xl mx-auto">
+    <div className="pt-10 max-w-2xl lg:max-w-6xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>
@@ -99,8 +99,13 @@ export default function DicePage() {
         desc="Set your own line and roll under it. Lower target, bigger multiplier."
       />
 
-      <GameBountyStrip game="dice" />
+      {/* Mobile: the strip is the at-a-glance header (standings stack far
+          below). Desktop: hidden — the full standings sit beside the game. */}
+      <div className="lg:hidden">
+        <GameBountyStrip game="dice" />
+      </div>
 
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
       <div className="panel panel-glow p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
@@ -269,7 +274,6 @@ export default function DicePage() {
         )}
         {!sandbox && <FairCommit clientSeed={clientSeed} />}
       </div>
-      <div className="mt-6">
         <BountyStandings game="dice" />
       </div>
     </div>
