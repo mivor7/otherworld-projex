@@ -70,7 +70,7 @@ function ago(d: Date): string {
 const shortWallet = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 
 export default async function Home() {
-  const [chain, burnAgg, buyBurnAgg, roundCount, liveAuctions, openBounties, awards, paidAgg, gameBounties] =
+  const [chain, burnAgg, buyBurnAgg, roundCount, liveAuctions, openBounties, awards, paidAgg, gameBounties, openPrizeAgg] =
     await Promise.all([
       getTreasuryStats(),
       prisma.burnEvent.aggregate({ _sum: { amountRaw: true } }),
@@ -92,6 +92,7 @@ export default async function Home() {
         select: { game: true, prizeRibbit: true },
         orderBy: { prizeRibbit: "desc" },
       }),
+      prisma.bounty.aggregate({ where: { status: "open" }, _sum: { prizeRibbit: true } }),
     ]);
   const houseCfg = await houseConfig(); // live, admin-tunable values
   // Richest live pool per game — powers the bounty chip on each card.
@@ -104,6 +105,7 @@ export default async function Home() {
     (burnAgg._sum.amountRaw ?? 0n) + (buyBurnAgg._sum.burnedRaw ?? 0n)
   );
   const paidOut = fromRaw(paidAgg._sum.amountRaw ?? 0n);
+  const openPrize = fromRaw(openPrizeAgg._sum.prizeRibbit ?? 0n);
 
   return (
     <div className="pt-6">
@@ -222,11 +224,19 @@ export default async function Home() {
                   it&apos;s played. Pick a target, fill the meter, split the pool.
                 </p>
               </div>
-              <div className="text-right">
-                <div className="stat-number text-gold text-[1.35rem]">
-                  {paidOut.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT
+              <div className="flex items-baseline gap-6 text-right">
+                <div>
+                  <div className="stat-number text-neon text-[1.35rem]">
+                    {openPrize.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT
+                  </div>
+                  <div className="kicker !text-[0.6rem]">on the board now</div>
                 </div>
-                <div className="kicker !text-[0.6rem]">paid to hunters, all time</div>
+                <div>
+                  <div className="stat-number text-gold text-[1.35rem]">
+                    {paidOut.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT
+                  </div>
+                  <div className="kicker !text-[0.6rem]">paid to hunters, all time</div>
+                </div>
               </div>
             </div>
 
