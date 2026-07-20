@@ -42,13 +42,19 @@ const WINGS = [
 
 // The house's game slate. `game` links a card to its live bounty pool;
 // cards with no href are placeholders still in production.
-const GAME_SLATE: { image: string; title: string; href?: string; game?: string }[] = [
-  { image: "/art/owp_frogris.png", title: "Frogris", href: "/games/frogris", game: "frogris" },
-  { image: "/art/owp_bj.png", title: "Blackjack", href: "/games/blackjack", game: "blackjack" },
-  { image: "/art/owp_pump.png", title: "Frog Flip", href: "/games/flip", game: "flip" },
-  { image: "/art/art-dice.jpg", title: "Pond Dice", href: "/games/dice", game: "dice" },
-  { image: "/art/owp_frogger.png", title: "Hopper", href: "/games/hopper", game: "hopper" },
-  { image: "/art/owp_worm.png", title: "Worm Frog", href: "/games/worm", game: "worm" },
+const GAME_SLATE: {
+  image: string;
+  title: string;
+  href?: string;
+  game?: string;
+  free?: boolean; // arcade games are free; tables cost credits
+}[] = [
+  { image: "/art/owp_frogris.png", title: "Frogris", href: "/games/frogris", game: "frogris", free: true },
+  { image: "/art/owp_bj.png", title: "Blackjack", href: "/games/blackjack", game: "blackjack", free: false },
+  { image: "/art/owp_pump.png", title: "Frog Flip", href: "/games/flip", game: "flip", free: false },
+  { image: "/art/art-dice.jpg", title: "Pond Dice", href: "/games/dice", game: "dice", free: false },
+  { image: "/art/owp_frogger.png", title: "Hopper", href: "/games/hopper", game: "hopper", free: true },
+  { image: "/art/owp_worm.png", title: "Worm Frog", href: "/games/worm", game: "worm", free: true },
   { image: "/art/owp_ff.jpg", title: "Fraud Frog Exterminator" },
   { image: "/art/owp_poker.png", title: "Poker Face" },
 ];
@@ -250,13 +256,23 @@ export default async function Home() {
                     </div>
                     <div className="card-body !p-3">
                       <h3 className="!text-[0.8rem] !min-h-0">{e.title}</h3>
-                      <p className="text-[0.68rem] mt-0.5" style={{ color: "var(--text-dim)" }}>
-                        {poolRaw !== undefined
-                          ? "Bounty live"
-                          : live
-                            ? "Free play"
-                            : "In production"}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {live && (
+                          <span
+                            className="text-[0.55rem] font-medium px-1.5 py-0.5 rounded uppercase tracking-wide"
+                            style={
+                              e.free
+                                ? { background: "oklch(0.78 0.11 150 / 0.15)", color: "oklch(0.85 0.12 150)" }
+                                : { background: "oklch(0.78 0.12 85 / 0.15)", color: "oklch(0.85 0.13 85)" }
+                            }
+                          >
+                            {e.free ? "Free" : "Credits"}
+                          </span>
+                        )}
+                        <span className="text-[0.66rem]" style={{ color: "var(--text-dim)" }}>
+                          {poolRaw !== undefined ? "Bounty live" : live ? "Play now" : "In production"}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );

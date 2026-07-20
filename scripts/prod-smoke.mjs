@@ -38,9 +38,17 @@ check("/api/config is NOT cached",
 const bounties = await get("/api/bounties");
 check("/api/bounties serves open bounties", bounties.status === 200 && Array.isArray(bounties.json?.open),
   `status ${bounties.status}`);
-const withProgress = (bounties.json?.open ?? []).filter((b) => b.progress);
-check("bounty progress meters present", withProgress.length > 0,
-  `${(bounties.json?.open ?? []).length} open, 0 with progress`);
+const openBounties = bounties.json?.open ?? [];
+const withProgress = openBounties.filter((b) => b.progress);
+// An empty slate is a valid state (e.g. right after launch, before bounties are
+// posted) — skip the meter check rather than fail it. Only assert when there
+// are open bounties to exercise.
+if (openBounties.length === 0) {
+  console.log("  ⚠ skip: no open bounties right now — meter check needs one open");
+} else {
+  check("bounty progress meters present", withProgress.length > 0,
+    `${openBounties.length} open, 0 with progress`);
+}
 
 // Credit-game bounties expose a sane credit-spend meter: a positive threshold
 // and progress that never exceeds it. (The exact threshold formula is
