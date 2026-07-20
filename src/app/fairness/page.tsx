@@ -24,10 +24,32 @@ async function hmacSha256Hex(key: string, message: string): Promise<string> {
     .join("");
 }
 
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+type VerifiableRound = {
+  id: string;
+  game: string;
+  nonce: number;
+  clientSeed: string;
+  seed: string;
+  seedHash: string;
+  outcome: string;
+  wager: number;
+  payout: number;
+  createdAt: string;
+};
+type Check = { ok: boolean; roll: number };
+
 type FairnessData = {
   activeHash: string;
   nextNonce: number;
   revealed: { seed: string; seedHash: string; nonce: number; revealedAt: string }[];
+  rounds: VerifiableRound[];
 };
 
 export default function FairnessPage() {
@@ -42,6 +64,41 @@ export default function FairnessPage() {
   const [vResult, setVResult] = useState<{ roll: number; digest: string } | null>(null);
   const [deck, setDeck] = useState<string[] | null>(null);
   const { seed: myClientSeed, setSeed: setMyClientSeed, randomize } = useClientSeed();
+
+  // Auto-check each revealed round right here in the browser (flip/dice);
+  // blackjack uses the manual deck deriver below.
+  const [checks, setChecks] = useState<Record<string, Check>>({});
+  useEffect(() => {
+    const rounds = data?.rounds;
+    if (!rounds || rounds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const out: Record<string, Check> = {};
+      for (const rd of rounds) {
+        if (rd.game === "blackjack") continue;
+        const hashOk = (await sha256Hex(rd.seed)) === rd.seedHash;
+        const digest = await hmacSha256Hex(rd.seed, `${rd.clientSeed}:${rd.nonce}`);
+        const r = parseInt(digest.slice(0, 8), 16) / 0x100000000;
+        const o = JSON.parse(rd.outcome);
+        const match =
+          rd.game === "flip"
+            ? (r < 0.5 ? "frog" : "fly") === o.landed
+            : Math.abs(Math.floor(r * 100 * 100) / 100 - o.rolled) < 1e-9;
+        out[rd.id] = { ok: hashOk && match, roll: r };
+      }
+      if (!cancelled) setChecks(out);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [data]);
+
+  const checkDeck = (rd: VerifiableRound) => {
+    setVSeed(rd.seed);
+    setVClient(rd.clientSeed);
+    setVNonce(rd.nonce);
+    document.getElementById("verifier")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const load = () => {
     fetch("/api/fairness")
@@ -173,8 +230,8 @@ export default function FairnessPage() {
               <span className="stat-number">{data.nextNonce}</span>
             </div>
           </div>
-          <button className="btn btn-ghost mt-4" onClick={rotate}>
-            Rotate seed & reveal previous
+          <button className="btn btn-primary mt-4" onClick={rotate}>
+            Reveal my seed &amp; verify my rounds
           </button>
           {rotateMsg && (
             <div className="mt-3">
@@ -208,7 +265,66 @@ export default function FairnessPage() {
         </div>
       )}
 
-      <div className="panel p-6">
+      {me.signedIn && data && (
+        <div className="panel p-6 mb-6">
+          <h3 className="font-bold mb-1">Your rounds — checked in your browser</h3>
+          <p className="text-sm text-fog mb-4 leading-relaxed">
+            Reveal a seed (button above) and every round played under it is
+            recomputed right here from that seed. A ✓ means the recorded result is
+            exactly what the committed seed produces — proof, not trust.
+          </p>
+          {data.rounds.length === 0 ? (
+            <p className="text-fog text-sm">
+              No revealed rounds yet — play a few, then hit “Reveal my seed” above
+              and they&apos;ll appear here, each checked.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {data.rounds.map((rd) => {
+                const o = JSON.parse(rd.outcome);
+                const won = rd.payout > 0;
+                const shown =
+                  rd.game === "flip"
+                    ? `landed ${o.landed}`
+                    : rd.game === "dice"
+                    ? `rolled ${o.rolled}`
+                    : "dealt hand";
+                const c = checks[rd.id];
+                return (
+                  <div
+                    key={rd.id}
+                    className="flex items-center gap-3 text-sm rounded-lg p-3"
+                    style={{ border: "1px solid var(--hairline)" }}
+                  >
+                    <span className="capitalize font-medium w-20 shrink-0">{rd.game}</span>
+                    <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+                      {shown} ·{" "}
+                      <span className={won ? "text-neon" : ""}>
+                        {won ? `+${rd.payout}` : `−${rd.wager}`} cr
+                      </span>
+                    </span>
+                    <span className="ml-auto shrink-0">
+                      {rd.game === "blackjack" ? (
+                        <button className="btn btn-ghost !text-xs" onClick={() => checkDeck(rd)}>
+                          Check deck →
+                        </button>
+                      ) : !c ? (
+                        <span className="text-fog text-xs">checking…</span>
+                      ) : c.ok ? (
+                        <span className="badge badge-live">✓ verified</span>
+                      ) : (
+                        <span className="badge text-danger">✗ mismatch</span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="panel p-6" id="verifier">
         <h3 className="font-bold mb-4">Independent verifier (runs in your browser)</h3>
         <div className="space-y-3">
           <input

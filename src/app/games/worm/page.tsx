@@ -8,8 +8,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
-import { BountyStandings } from "@/components/bounty-standings";
-import { LeaderboardBountyNote } from "@/components/leaderboard-bounty-note";
+import { ArcadeBountyHeader } from "@/components/arcade-bounty-header";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE } from "@/lib/arcade-palette";
@@ -518,8 +517,8 @@ export default function WormPage() {
         </div>
 
         <div className="space-y-6">
-        <BountyStandings game="worm" />
-        <aside className="panel p-5 h-fit">
+        <aside className="panel p-5 h-fit lg:sticky lg:top-24">
+          <ArcadeBountyHeader game="worm" />
           <div className="kicker mb-1.5">Weekly leaderboard</div>
           <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
             Best replay-verified score per hunter, last 7 days.{" "}
@@ -527,7 +526,6 @@ export default function WormPage() {
               All bounties →
             </Link>
           </p>
-          <LeaderboardBountyNote game="worm" />
           {board.length === 0 ? (
             <p className="text-fog text-sm">No scores yet — the serpent waits.</p>
           ) : (
