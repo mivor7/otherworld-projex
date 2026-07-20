@@ -9,6 +9,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { BountyStandings } from "@/components/bounty-standings";
+import { LeaderboardBountyNote } from "@/components/leaderboard-bounty-note";
+import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE } from "@/lib/arcade-palette";
 import {
@@ -446,6 +448,11 @@ export default function WormPage() {
         title="Worm Frog"
         desc="Slither, grow, and don't bite your own tail. Arrows / WASD to steer — every fly is worth 10, the pace keeps climbing."
       />
+      <FirstVisitHint id="how-games-work">
+        New here? When a game shows a live bounty, playing enters you in a shared
+        $RIBBIT prize — the panel tracks your standing in real time.
+      </FirstVisitHint>
+
       <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
         <div className="panel panel-glow p-5 flex flex-col items-center">
           <div className="flex gap-7 mb-3 items-baseline">
@@ -520,6 +527,7 @@ export default function WormPage() {
               All bounties →
             </Link>
           </p>
+          <LeaderboardBountyNote game="worm" />
           {board.length === 0 ? (
             <p className="text-fog text-sm">No scores yet — the serpent waits.</p>
           ) : (

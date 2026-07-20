@@ -11,6 +11,7 @@ import { useHouseConfig } from "@/components/use-house-config";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
+import { FirstVisitHint } from "@/components/first-visit-hint";
 
 type DiceResult = {
   outcome: { rolled: number; target: number; multiplier: number };
@@ -98,6 +99,11 @@ export default function DicePage() {
         title="Pond Dice"
         desc="Set your own line and roll under it. Lower target, bigger multiplier."
       />
+
+      <FirstVisitHint id="how-games-work">
+        New here? When a game shows a live bounty, playing enters you in a shared
+        $RIBBIT prize — the panel tracks your standing in real time.
+      </FirstVisitHint>
 
       {/* Mobile: the strip is the at-a-glance header (standings stack far
           below). Desktop: hidden — the full standings sit beside the game. */}

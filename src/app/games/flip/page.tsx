@@ -11,6 +11,7 @@ import { useHouseConfig } from "@/components/use-house-config";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
+import { FirstVisitHint } from "@/components/first-visit-hint";
 
 type FlipResult = {
   outcome: { landed: "frog" | "fly" };
@@ -109,6 +110,11 @@ export default function FlipPage() {
         title="Frog Flip"
         desc={`Frog or fly, even odds, ${flipMult.toFixed(2)}× payout on a win — ${Math.round(house.houseEdge * 100)}% published edge.`}
       />
+
+      <FirstVisitHint id="how-games-work">
+        New here? When a game shows a live bounty, playing enters you in a shared
+        $RIBBIT prize — the panel tracks your standing in real time.
+      </FirstVisitHint>
 
       {/* Mobile: the strip is the at-a-glance header (standings stack far
           below). Desktop: hidden — the full standings sit beside the game. */}

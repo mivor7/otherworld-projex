@@ -11,6 +11,7 @@ import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
+import { FirstVisitHint } from "@/components/first-visit-hint";
 
 type View = {
   roundId: string;
@@ -285,6 +286,11 @@ export default function BlackjackPage() {
         title="Blackjack"
         desc="Single deck, dealer stands on 17, blackjack pays 3:2. The whole deck order is committed before your first card — verifiably fair."
       />
+
+      <FirstVisitHint id="how-games-work">
+        New here? When a game shows a live bounty, playing enters you in a shared
+        $RIBBIT prize — the panel tracks your standing in real time.
+      </FirstVisitHint>
 
       {/* Mobile: the strip is the at-a-glance header (standings stack far
           below). Desktop: hidden — the full standings sit beside the game. */}

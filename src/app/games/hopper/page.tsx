@@ -11,6 +11,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { BountyStandings } from "@/components/bounty-standings";
+import { LeaderboardBountyNote } from "@/components/leaderboard-bounty-note";
+import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE, CAR_COLORS } from "@/lib/arcade-palette";
 import {
@@ -394,6 +396,11 @@ export default function HopperPage() {
         title="Hopper"
         desc="Arrows / WASD to hop. +1 for every new row of progress, +10 per crossing, three lives — each crossing brings faster traffic. Runs are replayed and verified on the server."
       />
+      <FirstVisitHint id="how-games-work">
+        New here? When a game shows a live bounty, playing enters you in a shared
+        $RIBBIT prize — the panel tracks your standing in real time.
+      </FirstVisitHint>
+
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
         <div className="panel panel-glow p-4 flex flex-col items-center">
           <div className="flex gap-7 mb-3 items-baseline">
@@ -473,6 +480,7 @@ export default function HopperPage() {
               All bounties →
             </Link>
           </p>
+          <LeaderboardBountyNote game="hopper" />
           {board.length === 0 ? (
             <p className="text-fog text-sm">No scores yet — be the first frog in.</p>
           ) : (
