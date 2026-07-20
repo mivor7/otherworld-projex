@@ -1388,11 +1388,17 @@ button:focus-visible,
    vignette that pulls the eye to the centre, layered under the surface. */
 .game-stage {
   position: relative;
+  overflow: hidden;
   background:
     radial-gradient(130% 90% at 50% -18%, oklch(0.23 0.024 160 / 0.7), transparent 55%),
     radial-gradient(120% 120% at 50% 42%, transparent 56%, oklch(0.09 0.01 270 / 0.55)),
     var(--color-surface);
   border-color: var(--hairline-strong);
+}
+/* keep real content above the animated backdrop (canvas.ambient) */
+.game-stage > *:not(.ambient) {
+  position: relative;
+  z-index: 1;
 }
 
 /* Coin flip: staged spotlight + a weighty cast shadow under the coin. */
