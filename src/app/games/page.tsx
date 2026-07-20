@@ -33,6 +33,13 @@ const CREDIT_GAMES = [
     desc: "Single deck, dealer stands on 17, naturals pay 3:2. Every deck order is committed before the deal.",
     badge: "3:2 tables",
   },
+  {
+    href: "/games/plinko",
+    image: "/art/owp_plinko.png",
+    name: "Lily Pad Drop",
+    desc: "Drop a frog through the pond and bounce into a multiplier pad — the whole fall is provably fair.",
+    badge: "Big multipliers",
+  },
 ];
 // Free arcade — skill games, no credits to play. A live bounty (if any) shows
 // as a gold overlay; you must have credit spend behind your wallet to win it.

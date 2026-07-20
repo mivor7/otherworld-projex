@@ -35,6 +35,7 @@ const GAME_LABELS: Record<string, string> = {
   flip: "Frog Flip",
   dice: "Pond Dice",
   blackjack: "Blackjack",
+  plinko: "Lily Pad Drop",
 };
 
 // Same artwork the arcade uses, so a bounty reads as its game at a glance.
@@ -45,6 +46,7 @@ const GAME_ART: Record<string, string> = {
   hopper: "/art/owp_frogger.png",
   frogris: "/art/owp_frogris.png",
   worm: "/art/owp_worm.png",
+  plinko: "/art/owp_plinko.png",
 };
 
 export default function BountiesPage() {
