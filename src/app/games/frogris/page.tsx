@@ -76,7 +76,7 @@ export default function FrogrisPage() {
         if (res.ok && data) {
           setSubmitMsg(
             data.ranked
-              ? `Score ${score} posted to the bounty board — replay verified.`
+              ? `Score ${score} posted to the leaderboard — replay verified.`
               : `Score ${score} verified & saved — unranked. Prize boards need ${house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT spent on credits lifetime and ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside the board week.`
           );
           loadBoard();
@@ -441,11 +441,11 @@ export default function FrogrisPage() {
         <div className="space-y-6">
         <BountyStandings game="frogris" />
         <aside className="panel p-5 h-fit">
-          <div className="kicker mb-1.5">Weekly bounty board</div>
+          <div className="kicker mb-1.5">Weekly leaderboard</div>
           <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
             Best replay-verified score per hunter, last 7 days.{" "}
             <Link href="/bounties" className="text-neon hover:underline">
-              Prizes →
+              All bounties →
             </Link>
           </p>
           {board.length === 0 ? (

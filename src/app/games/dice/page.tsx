@@ -89,7 +89,7 @@ export default function DicePage() {
   };
 
   return (
-    <div className="pt-10 max-w-2xl lg:max-w-6xl mx-auto">
+    <div className="pt-10 max-w-2xl lg:max-w-5xl mx-auto">
       <Link href="/games" className="text-fog text-sm hover:text-frost transition-colors inline-block mb-4">
         ← Arcade
       </Link>

@@ -36,7 +36,7 @@ const GAMES = [
     href: "/games/hopper",
     image: "/art/owp_frogger.png",
     name: "Hopper",
-    desc: "Free arcade action — cross the traffic, climb the weekly bounty board.",
+    desc: "Free arcade action — cross the traffic, climb the weekly leaderboard.",
     badge: "Free · bounty",
   },
   {
