@@ -1,9 +1,10 @@
 "use client";
 
-// A living backdrop for a game stage: slow-drifting bioluminescent motes over
-// the dark pond, drawn on a canvas behind the panel content. Cheap (a few dozen
-// soft dots), pauses for reduced-motion, and clips to the panel's rounded box.
-// Reusable across every game so the tables feel alive, not static.
+// A living backdrop for a game stage: slow-drifting bioluminescent motes.
+// Smoothness matters, so each frame is just a handful of cheap drawImage calls
+// from two pre-rendered glow sprites — no per-mote gradient allocation, capped
+// at 1x device pixels (soft glows don't need retina), on its own GPU layer.
+// Pauses for reduced-motion. Clips to the panel's rounded box.
 import { useEffect, useRef } from "react";
 
 export function AmbientPond() {
@@ -15,6 +16,21 @@ export function AmbientPond() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // One soft radial glow per colour, rendered once and reused every frame.
+    const sprite = (rgb: string) => {
+      const s = document.createElement("canvas");
+      s.width = s.height = 64;
+      const c = s.getContext("2d")!;
+      const g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, `rgba(${rgb},1)`);
+      g.addColorStop(1, `rgba(${rgb},0)`);
+      c.fillStyle = g;
+      c.fillRect(0, 0, 64, 64);
+      return s;
+    };
+    const green = sprite("130,235,175");
+    const gold = sprite("232,200,120");
+
     let raf = 0;
     let w = 0;
     let h = 0;
@@ -23,20 +39,20 @@ export function AmbientPond() {
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
       w = rect.width;
       h = rect.height;
-      canvas.width = Math.max(1, Math.floor(w * dpr));
-      canvas.height = Math.max(1, Math.floor(h * dpr));
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = Math.max(14, Math.min(40, Math.floor(w / 20)));
+      // 1x on purpose — glows are soft; retina fill would only cost frames.
+      canvas.width = Math.max(1, Math.floor(w));
+      canvas.height = Math.max(1, Math.floor(h));
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const n = Math.max(12, Math.min(34, Math.floor(w / 22)));
       motes = Array.from({ length: n }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        r: 1 + Math.random() * 2.4,
-        vy: -(0.06 + Math.random() * 0.24), // slow, dreamy drift
-        vx: (Math.random() - 0.5) * 0.13,
-        a: 0.05 + Math.random() * 0.11, // very faint — a soft haze, never obvious dots
+        r: 8 + Math.random() * 16, // glow radius in px
+        vy: -(0.05 + Math.random() * 0.22),
+        vx: (Math.random() - 0.5) * 0.12,
+        a: 0.05 + Math.random() * 0.11, // faint — a haze, not dots
         gold: Math.random() < 0.22,
       }));
     };
@@ -49,21 +65,16 @@ export function AmbientPond() {
       for (const m of motes) {
         m.y += m.vy;
         m.x += m.vx;
-        if (m.y < -6) {
-          m.y = h + 6;
+        if (m.y < -m.r) {
+          m.y = h + m.r;
           m.x = Math.random() * w;
         }
-        if (m.x < -6) m.x = w + 6;
-        else if (m.x > w + 6) m.x = -6;
-        const rr = m.r * 9; // wide soft falloff so each mote is a glow, not a dot
-        const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, rr);
-        g.addColorStop(0, m.gold ? `rgba(232,200,120,${m.a})` : `rgba(130,235,175,${m.a})`);
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, rr, 0, Math.PI * 2);
-        ctx.fill();
+        if (m.x < -m.r) m.x = w + m.r;
+        else if (m.x > w + m.r) m.x = -m.r;
+        ctx.globalAlpha = m.a;
+        ctx.drawImage(m.gold ? gold : green, m.x - m.r, m.y - m.r, m.r * 2, m.r * 2);
       }
+      ctx.globalAlpha = 1;
       if (!reduce) raf = requestAnimationFrame(draw);
     };
     draw();
@@ -79,6 +90,7 @@ export function AmbientPond() {
     <canvas
       ref={ref}
       className="ambient absolute inset-0 w-full h-full pointer-events-none"
+      style={{ transform: "translateZ(0)" }}
       aria-hidden
     />
   );
