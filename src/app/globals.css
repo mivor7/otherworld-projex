@@ -1370,15 +1370,23 @@ button:focus-visible,
 .game-stage {
   position: relative;
   overflow: hidden;
-  /* pond backdrop pushed well back — deep atmosphere, not a competing scene;
-     a strong vignette focuses the eye on the game in the centre */
-  background:
-    radial-gradient(140% 130% at 50% 42%, oklch(0.05 0.012 260 / 0.66) 28%, oklch(0.03 0.008 270 / 0.92)),
-    url("/art/owp_pond_bg.jpg") center / cover no-repeat,
-    var(--color-surface);
+  background: var(--color-surface);
   border-color: var(--hairline-strong);
 }
-/* keep real content above the animated backdrop (canvas.ambient) */
+/* pond backdrop as a heavily-blurred, darkened layer behind everything — soft
+   deep atmosphere with no competing detail, so the game stays the focus.
+   inset:-40px lets the blur bleed off-screen (clipped) instead of fading edges. */
+.game-stage::before {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  pointer-events: none;
+  background:
+    radial-gradient(140% 130% at 50% 42%, oklch(0.05 0.012 260 / 0.6) 28%, oklch(0.03 0.008 270 / 0.9)),
+    url("/art/owp_pond_bg.jpg") center / cover no-repeat;
+  filter: blur(18px);
+}
+/* keep real content (and the mote canvas) above the blurred backdrop */
 .game-stage > *:not(.ambient) {
   position: relative;
   z-index: 1;
