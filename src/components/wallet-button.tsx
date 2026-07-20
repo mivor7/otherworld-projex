@@ -71,7 +71,7 @@ export function WalletButton() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="mono text-gold" title="$RIBBIT in your wallet">
+        <span className="mono text-gold hidden sm:inline" title="$RIBBIT in your wallet">
           {ribbit === null
             ? "…"
             : ribbit.toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}

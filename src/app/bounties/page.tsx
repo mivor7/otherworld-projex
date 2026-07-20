@@ -281,7 +281,7 @@ export default function BountiesPage() {
           {board.length === 0 ? (
             <p className="text-fog text-sm">No entries yet this week.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
                 {board.map((row) => (
                   <tr key={row.rank} className="table-row">
@@ -299,7 +299,7 @@ export default function BountiesPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
           <p className="text-xs mt-4 leading-relaxed" style={{ color: "var(--text-dim)" }}>
             Arcade boards rank best score; the tables rank net credits won.

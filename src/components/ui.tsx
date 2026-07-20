@@ -25,7 +25,7 @@ export function StatCard({
   return (
     <div className="panel panel-hover px-4 py-4">
       <div className="kicker mb-1.5">{label}</div>
-      <div className={`stat-number text-[1.35rem] ${toneClass}`}>
+      <div className={`stat-number text-[1.15rem] sm:text-[1.35rem] ${toneClass}`}>
         <Ticker text={value} />
       </div>
       {sub && (

@@ -159,9 +159,9 @@ export default function TreasuryPage() {
                 ] as const
               ).map(([label, detail, color, frac]) => (
                 <div key={label} className="mb-4">
-                  <div className="flex justify-between gap-3 text-sm mb-1.5">
-                    <span className="text-frost font-medium whitespace-nowrap">{label}</span>
-                    <span className="text-fog text-right text-[0.8rem]">{detail}</span>
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-3 text-sm mb-1.5">
+                    <span className="text-frost font-medium">{label}</span>
+                    <span className="text-fog sm:text-right text-[0.8rem]">{detail}</span>
                   </div>
                   <div
                     className="h-1.5 rounded-full overflow-hidden"

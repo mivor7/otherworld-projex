@@ -120,7 +120,7 @@ export default function LeaderboardPage() {
             />
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <tbody>
               {rows.map((row) => (
                 <tr key={row.rank} className="table-row">
@@ -144,7 +144,7 @@ export default function LeaderboardPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 

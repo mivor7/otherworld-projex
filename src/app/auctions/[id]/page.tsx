@@ -165,12 +165,12 @@ export default function AuctionDetailPage({
         {/* Bid rail */}
         <div className="md:sticky md:top-24 space-y-4">
           <div className="panel panel-glow panel-etched p-6">
-            <div className="flex justify-between items-start mb-5">
-              <div>
+            <div className="flex justify-between items-start gap-3 mb-5">
+              <div className="min-w-0">
                 <div className="kicker mb-1.5">
                   {BigInt(auction.currentRaw) > 0n ? "Current bid" : "Opening bid"}
                 </div>
-                <div className="stat-number text-[2rem] text-neon leading-none">
+                <div className="stat-number text-[1.6rem] sm:text-[2rem] text-neon leading-none">
                   {fmtRibbit(
                     BigInt(auction.currentRaw) > 0n ? auction.currentRaw : auction.startBidRaw
                   )}

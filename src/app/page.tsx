@@ -231,7 +231,7 @@ export default async function Home() {
             </div>
 
             {/* the games, each with its live bounty pool */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 sm:px-6">
               {GAME_SLATE.map((e, i) => {
                 const poolRaw = e.game ? poolByGame.get(e.game) : undefined;
                 const live = !!e.href;
@@ -350,7 +350,7 @@ export default async function Home() {
       <section className="mt-16">
         <Reveal>
           <div className="panel panel-glow overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_280px]">
-            <div className="p-8">
+            <div className="p-5 sm:p-8">
               <div className="kicker mb-2">Settlement currency</div>
               <h2 className="text-[1.5rem] mb-3">$RIBBIT</h2>
               <p className="text-fog text-[0.9375rem] leading-relaxed max-w-lg mb-5">

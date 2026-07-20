@@ -29,16 +29,16 @@ export function Navbar() {
       }}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-5">
-        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+        <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
           <SealMark size={38} />
-          <span className="leading-none">
+          <span className="leading-none min-w-0">
             <span
-              className="block font-semibold tracking-tight text-[0.95rem]"
+              className="block font-semibold tracking-tight text-[0.95rem] truncate"
               style={{ fontFamily: "var(--font-display)" }}
             >
               Other World Projex
             </span>
-            <span className="kicker block mt-0.5 !text-[0.6rem]">
+            <span className="kicker mt-0.5 !text-[0.6rem] hidden sm:block">
               The $RIBBIT house
             </span>
           </span>
@@ -88,7 +88,7 @@ export function Navbar() {
           <Link
             key={l.href}
             href={l.href}
-            className={`px-3 py-1 rounded-md text-[0.82rem] whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-md text-[0.82rem] whitespace-nowrap ${
               pathname.startsWith(l.href) ? "text-frost" : "text-fog"
             }`}
             style={

@@ -341,7 +341,7 @@ export default function AccountPage() {
               No bounty prizes yet — qualify and win to see them here.
             </p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
                 {bountyWins.slice(0, 8).map((w) => (
                   <tr key={w.id} className="table-row">
@@ -377,7 +377,7 @@ export default function AccountPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
 
@@ -391,7 +391,7 @@ export default function AccountPage() {
           {bids.length === 0 ? (
             <p className="text-fog text-sm">No bids yet — the lots await.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
                 {bids.slice(0, 8).map((b) => (
                   <tr key={b.id} className="table-row">
@@ -416,7 +416,7 @@ export default function AccountPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
 
@@ -427,7 +427,7 @@ export default function AccountPage() {
           {withdrawals.filter((w) => w.kind !== "bounty").length === 0 ? (
             <p className="text-fog text-sm">Nothing queued or paid yet.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
                 {withdrawals.filter((w) => w.kind !== "bounty").slice(0, 8).map((w) => (
                   <tr key={w.id} className="table-row">
@@ -454,7 +454,7 @@ export default function AccountPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
 
@@ -468,7 +468,7 @@ export default function AccountPage() {
           {applications.length === 0 ? (
             <p className="text-fog text-sm">You haven’t consigned anything yet.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
                 {applications.slice(0, 8).map((a) => (
                   <tr key={a.id} className="table-row">
@@ -486,7 +486,7 @@ export default function AccountPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
 
@@ -500,7 +500,7 @@ export default function AccountPage() {
           {rounds.length === 0 ? (
             <p className="text-fog text-sm">No rounds played yet.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
                 {rounds.slice(0, 8).map((r) => (
                   <tr key={r.id} className="table-row">
@@ -518,7 +518,7 @@ export default function AccountPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       </div>
