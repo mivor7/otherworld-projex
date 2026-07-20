@@ -1379,12 +1379,12 @@ button:focus-visible,
 .game-stage::before {
   content: "";
   position: absolute;
-  inset: -40px;
+  inset: -60px;
   pointer-events: none;
   background:
     radial-gradient(140% 130% at 50% 42%, oklch(0.05 0.012 260 / 0.6) 28%, oklch(0.03 0.008 270 / 0.9)),
     url("/art/owp_pond_bg.jpg") center / cover no-repeat;
-  filter: blur(18px);
+  filter: blur(30px);
 }
 /* keep real content (and the mote canvas) above the blurred backdrop */
 .game-stage > *:not(.ambient) {
