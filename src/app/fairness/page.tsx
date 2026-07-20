@@ -65,7 +65,7 @@ export default function FairnessPage() {
   const [deck, setDeck] = useState<string[] | null>(null);
   const { seed: myClientSeed, setSeed: setMyClientSeed, randomize } = useClientSeed();
 
-  // Auto-check each revealed round right here in the browser (flip/dice/plinko);
+  // Auto-check each revealed round right here in the browser (flip/dice);
   // blackjack uses the manual deck deriver below.
   const [checks, setChecks] = useState<Record<string, Check>>({});
   useEffect(() => {
@@ -80,17 +80,10 @@ export default function FairnessPage() {
         const digest = await hmacSha256Hex(rd.seed, `${rd.clientSeed}:${rd.nonce}`);
         const r = parseInt(digest.slice(0, 8), 16) / 0x100000000;
         const o = JSON.parse(rd.outcome);
-        let match: boolean;
-        if (rd.game === "flip") {
-          match = (r < 0.5 ? "frog" : "fly") === o.landed;
-        } else if (rd.game === "plinko") {
-          // Re-derive the drop path: hex nibble i of the digest, ≥8 → right.
-          let bucket = 0;
-          for (let i = 0; i < (o.rows ?? 12); i++) if (parseInt(digest[i], 16) >= 8) bucket++;
-          match = bucket === o.bucket;
-        } else {
-          match = Math.abs(Math.floor(r * 100 * 100) / 100 - o.rolled) < 1e-9;
-        }
+        const match =
+          rd.game === "flip"
+            ? (r < 0.5 ? "frog" : "fly") === o.landed
+            : Math.abs(Math.floor(r * 100 * 100) / 100 - o.rolled) < 1e-9;
         out[rd.id] = { ok: hashOk && match, roll: r };
       }
       if (!cancelled) setChecks(out);
@@ -295,8 +288,6 @@ export default function FairnessPage() {
                     ? `landed ${o.landed}`
                     : rd.game === "dice"
                     ? `rolled ${o.rolled}`
-                    : rd.game === "plinko"
-                    ? `bucket ${o.bucket} · ${o.mult}×`
                     : "dealt hand";
                 const c = checks[rd.id];
                 return (

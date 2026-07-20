@@ -43,22 +43,3 @@ export function fmtRibbit(raw: bigint | string | number): string {
 export function shortWallet(w: string): string {
   return w.length > 10 ? `${w.slice(0, 4)}…${w.slice(-4)}` : w;
 }
-
-// ── Lily Pad Drop (plinko) ──
-// A symmetric BASE multiplier per bucket; the real payouts are these scaled so
-// the house edge is exactly houseEdge whatever the shape. Shared by the server
-// resolver (src/lib/games.ts) and the game page so the two never drift.
-export const PLINKO_ROWS = 12;
-export const PLINKO_BASE = [16, 6, 3, 1.6, 1.2, 0.8, 0.5, 0.8, 1.2, 1.6, 3, 6, 16];
-function binom(n: number, k: number): number {
-  let c = 1;
-  for (let i = 0; i < k; i++) c = (c * (n - i)) / (i + 1);
-  return c;
-}
-export function plinkoTable(edge: number): number[] {
-  const n = PLINKO_ROWS;
-  let ev = 0;
-  for (let k = 0; k <= n; k++) ev += (binom(n, k) / 2 ** n) * PLINKO_BASE[k];
-  const scale = (1 - edge) / ev; // normalise so expected return = 1 − edge
-  return PLINKO_BASE.map((m) => m * scale);
-}

@@ -3,8 +3,7 @@
 // the payout multiplier, never to the roll itself — odds are exactly what the
 // fairness page says they are.
 import { z } from "zod";
-import { getActiveSeed, roll, plinkoPath } from "./fairness";
-import { PLINKO_ROWS, plinkoTable } from "./client-config";
+import { getActiveSeed, roll } from "./fairness";
 import { adjustCredits, InsufficientCredits } from "./credits";
 import { prisma } from "./db";
 import { houseConfig, type HouseConfig } from "./settings";
@@ -25,12 +24,6 @@ export const diceParams = z.object({
   clientSeed: z.string().min(1).max(64),
 });
 
-export const plinkoParams = z.object({
-  // Fixed board (PLINKO_ROWS); only the wager + client seed vary per drop.
-  wager: z.number().int().min(1).max(100_000_000),
-  clientSeed: z.string().min(1).max(64),
-});
-
 /** Enforce the live table rules before any round is dealt. */
 export function assertWagerAllowed(cfg: HouseConfig, wager: number): void {
   if (cfg.gamesPaused) {
@@ -46,7 +39,7 @@ export function assertWagerAllowed(cfg: HouseConfig, wager: number): void {
 
 export type RoundResult = {
   roundId: string;
-  game: "flip" | "dice" | "plinko";
+  game: "flip" | "dice";
   nonce: number;
   seedHash: string;
   outcome: Record<string, unknown>;
@@ -72,33 +65,6 @@ function diceResolve(r: number, target: number, wager: number, edge: number) {
   return { outcome: { rolled, target, multiplier: Number(multiplier.toFixed(4)) }, payout, win };
 }
 
-function plinkoResolve(
-  serverSeed: string,
-  clientSeed: string,
-  nonce: number,
-  wager: number,
-  edge: number
-) {
-  const path = plinkoPath(serverSeed, clientSeed, nonce, PLINKO_ROWS);
-  const bucket = path.reduce((a, b) => a + b, 0); // 0..rows = number of rights
-  const table = plinkoTable(edge);
-  const mult = table[bucket];
-  const payout = Math.floor(wager * mult);
-  // The full board + path travel to the client so it can replay the exact fall
-  // and anyone can re-derive it from the revealed seed.
-  return {
-    outcome: {
-      path,
-      bucket,
-      rows: PLINKO_ROWS,
-      mult: Number(mult.toFixed(4)),
-      table: table.map((m) => Number(m.toFixed(2))),
-    },
-    payout,
-    win: payout > wager,
-  };
-}
-
 export { InsufficientCredits };
 
 /**
@@ -108,7 +74,7 @@ export { InsufficientCredits };
  */
 export async function playRound(
   userId: string,
-  game: "flip" | "dice" | "plinko",
+  game: "flip" | "dice",
   params: { wager: number; clientSeed: string; side?: "frog" | "fly"; target?: number }
 ): Promise<RoundResult> {
   const cfg = await houseConfig();
@@ -126,12 +92,11 @@ export async function playRound(
 
     await adjustCredits(tx, userId, -params.wager, "wager");
 
+    const r = roll(seed.seed, params.clientSeed, nonce);
     const resolved =
       game === "flip"
-        ? flipResolve(roll(seed.seed, params.clientSeed, nonce), params.side!, params.wager, cfg.houseEdge)
-        : game === "dice"
-          ? diceResolve(roll(seed.seed, params.clientSeed, nonce), params.target!, params.wager, cfg.houseEdge)
-          : plinkoResolve(seed.seed, params.clientSeed, nonce, params.wager, cfg.houseEdge);
+        ? flipResolve(r, params.side!, params.wager, cfg.houseEdge)
+        : diceResolve(r, params.target!, params.wager, cfg.houseEdge);
 
     const round = await tx.gameRound.create({
       data: {
@@ -141,11 +106,7 @@ export async function playRound(
         nonce,
         clientSeed: params.clientSeed,
         params: JSON.stringify(
-          game === "flip"
-            ? { side: params.side }
-            : game === "dice"
-              ? { target: params.target }
-              : { rows: PLINKO_ROWS }
+          game === "flip" ? { side: params.side } : { target: params.target }
         ),
         outcome: JSON.stringify(resolved.outcome),
         wager: params.wager,

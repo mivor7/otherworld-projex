@@ -23,26 +23,6 @@ export function roll(serverSeed: string, clientSeed: string, nonce: number): num
   return parseInt(digest.slice(0, 8), 16) / 0x100000000;
 }
 
-/**
- * The left/right path a plinko drop takes (0 = left, 1 = right) — one bit per
- * row, read from the committed seed so the whole fall is independently
- * verifiable. Uses hex nibble i of HMAC-SHA256(serverSeed, clientSeed:nonce);
- * nibble ≥ 8 → right, an even 50/50 per peg.
- */
-export function plinkoPath(
-  serverSeed: string,
-  clientSeed: string,
-  nonce: number,
-  rows: number
-): number[] {
-  const digest = createHmac("sha256", serverSeed)
-    .update(`${clientSeed}:${nonce}`)
-    .digest("hex");
-  const path: number[] = [];
-  for (let i = 0; i < rows; i++) path.push(parseInt(digest[i], 16) >= 8 ? 1 : 0);
-  return path;
-}
-
 export async function getActiveSeed(userId: string): Promise<ServerSeed> {
   const existing = await prisma.serverSeed.findFirst({
     where: { userId, active: true },

@@ -53,7 +53,6 @@ const GAME_SLATE: {
   { image: "/art/owp_bj.png", title: "Blackjack", href: "/games/blackjack", game: "blackjack", free: false },
   { image: "/art/owp_pump.png", title: "Frog Flip", href: "/games/flip", game: "flip", free: false },
   { image: "/art/art-dice.jpg", title: "Pond Dice", href: "/games/dice", game: "dice", free: false },
-  { image: "/art/owp_plinko.png", title: "Lily Pad Drop", href: "/games/plinko", game: "plinko", free: false },
   { image: "/art/owp_frogger.png", title: "Hopper", href: "/games/hopper", game: "hopper", free: true },
   { image: "/art/owp_worm.png", title: "Worm Frog", href: "/games/worm", game: "worm", free: true },
   { image: "/art/owp_ff.jpg", title: "Fraud Frog Exterminator" },

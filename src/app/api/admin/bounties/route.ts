@@ -8,7 +8,7 @@ const body = z.object({
   title: z.string().min(3).max(80),
   description: z.string().min(10).max(2000),
   target: z.string().max(80).optional(),
-  game: z.enum(["hopper", "frogris", "worm", "flip", "dice", "blackjack", "plinko"]).optional(),
+  game: z.enum(["hopper", "frogris", "worm", "flip", "dice", "blackjack"]).optional(),
   kind: z.enum(["leaderboard", "challenge"]).default("leaderboard"),
   prizeRibbit: z.number().positive(),
   prizeText: z.string().max(120).optional(),
