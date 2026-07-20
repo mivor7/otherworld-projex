@@ -1394,6 +1394,17 @@ button:focus-visible,
   z-index: 1;
 }
 
+/* Frogris board is tall (2:1). On phones, fit it to the viewport height so the
+   board AND the on-screen controls are both visible without scrolling. */
+@media (max-width: 640px) {
+  .frogris-canvas {
+    width: auto !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 56vh;
+  }
+}
+
 /* Coin flip: staged spotlight + a weighty cast shadow under the coin. */
 .coin-stage {
   position: relative;

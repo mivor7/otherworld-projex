@@ -395,12 +395,12 @@ export default function FrogrisPage() {
       <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
         <div className="panel panel-glow game-stage p-5 flex flex-col sm:flex-row items-center sm:items-start justify-center gap-6">
           <AmbientPond />
-          <div className="relative">
+          <div className="relative order-1 sm:order-none">
             <canvas
               ref={canvasRef}
               width={W}
               height={H}
-              className="rounded-lg border block mx-auto"
+              className="frogris-canvas rounded-lg border block mx-auto"
               style={{ borderColor: "var(--hairline-strong)", width: "100%", maxWidth: W, height: "auto" }}
             />
             <div
@@ -435,7 +435,7 @@ export default function FrogrisPage() {
               </div>
             )}
           </div>
-          <div className="flex sm:flex-col gap-5 items-center sm:items-start">
+          <div className="flex sm:flex-col gap-5 items-center sm:items-start order-3 sm:order-none">
             <div>
               <div className="kicker mb-1.5">Next</div>
               <canvas
@@ -461,7 +461,7 @@ export default function FrogrisPage() {
             </div>
           </div>
           {/* Mobile controls */}
-          <div className="grid grid-cols-5 gap-2 sm:hidden w-full">
+          <div className="grid grid-cols-5 gap-2 sm:hidden w-full order-2">
             <button className="btn btn-ghost" onClick={() => enqueue(0)} aria-label="Move left">←</button>
             <button className="btn btn-ghost" onClick={() => enqueue(4)} aria-label="Soft drop">↓</button>
             <button className="btn btn-ghost" onClick={() => enqueue(1)} aria-label="Move right">→</button>
@@ -469,7 +469,7 @@ export default function FrogrisPage() {
             <button className="btn btn-ghost" onClick={() => enqueue(5)} aria-label="Hard drop">⤓</button>
           </div>
           {submitMsg && (
-            <div className="w-full sm:hidden">
+            <div className="w-full sm:hidden order-4">
               <Notice kind="ok">{submitMsg}</Notice>
             </div>
           )}
