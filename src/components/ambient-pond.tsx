@@ -29,15 +29,15 @@ export function AmbientPond() {
       canvas.width = Math.max(1, Math.floor(w * dpr));
       canvas.height = Math.max(1, Math.floor(h * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = Math.max(12, Math.min(40, Math.floor(w / 20)));
+      const n = Math.max(18, Math.min(56, Math.floor(w / 15)));
       motes = Array.from({ length: n }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        r: 1 + Math.random() * 2.4,
-        vy: -(0.08 + Math.random() * 0.32),
-        vx: (Math.random() - 0.5) * 0.16,
-        a: 0.12 + Math.random() * 0.38,
-        gold: Math.random() < 0.22,
+        r: 1.3 + Math.random() * 3,
+        vy: -(0.06 + Math.random() * 0.26), // slower, dreamier drift
+        vx: (Math.random() - 0.5) * 0.14,
+        a: 0.16 + Math.random() * 0.4,
+        gold: Math.random() < 0.25,
       }));
     };
     resize();

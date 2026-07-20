@@ -1379,13 +1379,14 @@ button:focus-visible,
 .game-stage::before {
   content: "";
   position: absolute;
-  inset: -120px;
+  inset: -220px;
   pointer-events: none;
   background:
-    radial-gradient(140% 130% at 50% 42%, oklch(0.05 0.012 260 / 0.6) 28%, oklch(0.03 0.008 270 / 0.9)),
+    radial-gradient(140% 130% at 50% 42%, oklch(0.05 0.012 260 / 0.72) 25%, oklch(0.03 0.008 270 / 0.95)),
     url("/art/owp_pond_bg.jpg") center / cover no-repeat;
-  /* soft dreamy pond — present as atmosphere, blurred enough to never compete */
-  filter: blur(60px);
+  /* pond dissolved almost entirely — just a faint dark glow with no discernible
+     objects; the drifting motes carry the dreamy atmosphere on top */
+  filter: blur(120px);
 }
 /* keep real content (and the mote canvas) above the blurred backdrop */
 .game-stage > *:not(.ambient) {
