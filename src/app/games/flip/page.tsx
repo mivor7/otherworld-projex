@@ -123,7 +123,7 @@ export default function FlipPage() {
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
-      <div className="panel panel-glow p-8 text-center">
+      <div className="panel panel-glow game-stage p-8 text-center">
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
             <button className={`chip ${!sandbox ? "active" : ""}`} aria-pressed={!sandbox} onClick={() => setSandbox(false)}>
@@ -146,33 +146,39 @@ export default function FlipPage() {
             </Notice>
           </div>
         )}
-        <div className="coin-scene mb-6">
-          <div
-            className={`coin ${spinning ? "coin--spin" : ""}`}
-            style={spinning ? undefined : { transform: `rotateY(${rotation}deg)` }}
-          >
-            <div className="coin-face coin-face--front">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/art/ribbit-mark.jpg" alt="Frog side" className="coin-face-art" />
-              <span className="coin-face-sheen" aria-hidden />
-              <span className="coin-face-ring" aria-hidden />
-              <span className="coin-face-badge" aria-hidden>🐸</span>
-            </div>
-            <div className="coin-face coin-face--back">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/art/logo.png" alt="Fly side" className="coin-face-art" />
-              <span className="coin-face-sheen" aria-hidden />
-              <span className="coin-face-ring" aria-hidden />
-              <span className="coin-face-badge" aria-hidden>🪰</span>
+        <div className="coin-stage mb-6">
+          <div className="coin-scene">
+            <div
+              className={`coin ${spinning ? "coin--spin" : ""}`}
+              style={spinning ? undefined : { transform: `rotateY(${rotation}deg)` }}
+            >
+              <div className="coin-face coin-face--front">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/art/ribbit-mark.jpg" alt="Frog side" className="coin-face-art" />
+                <span className="coin-face-sheen" aria-hidden />
+                <span className="coin-face-ring" aria-hidden />
+                <span className="coin-face-badge" aria-hidden>🐸</span>
+              </div>
+              <div className="coin-face coin-face--back">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/art/logo.png" alt="Fly side" className="coin-face-art" />
+                <span className="coin-face-sheen" aria-hidden />
+                <span className="coin-face-ring" aria-hidden />
+                <span className="coin-face-badge" aria-hidden>🪰</span>
+              </div>
             </div>
           </div>
+          <div className="coin-cast" aria-hidden />
         </div>
 
         {/* Fixed-height slot so revealing the result never shoves the controls
             below it — no layout jump between rounds. */}
         <div className="min-h-[2.25rem] mb-4 flex items-center justify-center">
           {result && !busy && (
-            <span className={`stat-number text-2xl ${result.win ? "neon-text" : "text-danger"}`}>
+            <span
+              key={result.nonce}
+              className={`stat-number text-2xl result-pop ${result.win ? "neon-text" : "text-danger"}`}
+            >
               {result.win ? `+${result.payout} credits!` : "The pond takes it."}
             </span>
           )}
