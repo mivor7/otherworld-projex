@@ -172,7 +172,7 @@ async function insufficientFundsReason(
   try {
     const sol = await connection.getBalance(owner);
     if (sol < 3_000_000) {
-      return "Not enough SOL for the network fee — add a little SOL (about 0.01) and retry.";
+      return "Not enough SOL for the network fee — add ~0.005 SOL and retry.";
     }
   } catch {
     // If the balance read fails, don't block — the wallet will surface it.
