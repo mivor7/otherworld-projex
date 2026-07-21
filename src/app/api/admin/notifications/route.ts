@@ -17,10 +17,13 @@ const plural = (n: number, one: string, many = `${one}s`) =>
 export const GET = handler(async () => {
   await requireAdmin();
 
-  const [withdrawals, applications, unfulfilled] = await Promise.all([
+  const [withdrawals, applications, unfulfilled, bounties] = await Promise.all([
     prisma.withdrawal.count({ where: { status: { in: ["pending", "processing"] } } }),
     prisma.listingApplication.count({ where: { status: "pending" } }),
     prisma.auction.count({ where: { status: "settled", fulfilled: false } }),
+    // Leaderboard bounties that ended unpaid — need a manual award (or cancel)
+    // in the Payout review section. Self-clears when settled.
+    prisma.bounty.count({ where: { status: "closed", kind: "leaderboard" } }),
   ]);
 
   const items: {
@@ -31,6 +34,14 @@ export const GET = handler(async () => {
     tone: "gold" | "portal" | "neon";
   }[] = [];
 
+  if (bounties > 0)
+    items.push({
+      id: "bounties",
+      count: bounties,
+      title: `${plural(bounties, "bounty", "bounties")} to settle`,
+      href: "/admin",
+      tone: "gold",
+    });
   if (withdrawals > 0)
     items.push({
       id: "withdrawals",
@@ -57,8 +68,8 @@ export const GET = handler(async () => {
     });
 
   return ok({
-    total: withdrawals + applications + unfulfilled,
-    counts: { withdrawals, applications, unfulfilled },
+    total: withdrawals + applications + unfulfilled + bounties,
+    counts: { withdrawals, applications, unfulfilled, bounties },
     items,
   });
 });

@@ -103,6 +103,8 @@ export default function WormPage() {
               : `Score ${score} verified & saved — unranked. Prize boards need ${house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT spent on credits lifetime and ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside the board week.`
           );
           loadBoard();
+          // Same signal the table games fire — refreshes the live bounty header.
+          window.dispatchEvent(new Event("owp:round"));
         } else {
           // A rejected run must never fail silently — the player just watched
           // their score vanish otherwise.

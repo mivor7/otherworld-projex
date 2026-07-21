@@ -18,6 +18,7 @@ const ICON: Record<Notif["type"], string> = {
   auction_won: "🔨",
 };
 const ADMIN_ICON: Record<string, string> = {
+  bounties: "🏁",
   withdrawals: "💸",
   applications: "📝",
   fulfillment: "📦",

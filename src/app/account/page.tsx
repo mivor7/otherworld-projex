@@ -104,15 +104,28 @@ export default function AccountPage() {
   // playing still has a share riding on the pool, and can see it move here.
   useEffect(() => {
     if (!me.signedIn) return;
-    const load = () =>
-      fetch("/api/me/bounties/live")
+    const grab = <T,>(url: string, set: (v: T[]) => void) =>
+      fetch(url)
         .then((r) => (r.ok ? r.json() : []))
-        .then((rows) => Array.isArray(rows) && setLivePositions(rows))
+        .then((rows) => Array.isArray(rows) && set(rows))
         .catch(() => {});
+    const load = () => {
+      grab<LivePosition>("/api/me/bounties/live", setLivePositions);
+      // Poll the status-changing data too, so a prize going pending→paid, a new
+      // win landing, or a balance change shows up here without a manual refresh.
+      grab<Withdrawal>("/api/withdrawals", setWithdrawals);
+      grab<BountyWin>("/api/me/bounties", setBountyWins);
+      refresh(); // balances (credits / $RIBBIT available)
+    };
     load();
-    const t = setInterval(load, 8_000);
-    return () => clearInterval(t);
-  }, [me.signedIn]);
+    const t = setInterval(load, 10_000);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [me.signedIn, refresh]);
 
   const withdrawAll = async () => {
     setBusy(true);

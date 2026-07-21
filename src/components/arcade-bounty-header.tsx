@@ -40,8 +40,15 @@ export function ArcadeBountyHeader({ game }: { game: string }) {
   }, [game]);
   useEffect(() => {
     load();
-    const t = setInterval(load, 15_000);
-    return () => clearInterval(t);
+    const t = setInterval(load, 8_000);
+    // Refresh right after a run posts so the header reflects the new score and
+    // standing immediately, not only on the next poll tick.
+    const onRound = () => load();
+    window.addEventListener("owp:round", onRound);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("owp:round", onRound);
+    };
   }, [load]);
 
   const b = live?.bounty;

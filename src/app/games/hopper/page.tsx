@@ -85,6 +85,8 @@ export default function HopperPage() {
               : `Score ${score} verified & saved — unranked. Prize boards need ${house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT spent on credits lifetime and ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside the board week.`
           );
           loadBoard();
+          // Same signal the table games fire — refreshes the live bounty header.
+          window.dispatchEvent(new Event("owp:round"));
         } else {
           setSubmitMsg(`Score ${score} not submitted — ${data?.error ?? "connection lost"}.`);
         }

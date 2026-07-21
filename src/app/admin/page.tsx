@@ -1288,6 +1288,13 @@ export default function AdminPage() {
                     </button>
                   )}
                 </div>
+                {b.status !== "paid" && (
+                  <p className="text-[0.7rem] mt-2" style={{ color: "var(--text-dim)" }}>
+                    {b.autoPay
+                      ? "Settles automatically when its trigger fills."
+                      : "Manual settlement — review eligible winners & pay in “Payout review” below."}
+                  </p>
+                )}
                 {editBounty === b.id && (
                   <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: "var(--hairline)" }}>
                     <div className="grid sm:grid-cols-2 gap-2">
