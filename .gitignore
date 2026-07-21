@@ -33,6 +33,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# secrets — wallet/payout keypairs must NEVER be committed
+*-wallet.json
+*-keypair.json
+*.keypair.json
+payout-hot-wallet.json
+
 # vercel
 .vercel
 
