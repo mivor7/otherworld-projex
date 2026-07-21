@@ -12,7 +12,6 @@ import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
 import { FirstVisitHint } from "@/components/first-visit-hint";
-import { AmbientPond } from "@/components/ambient-pond";
 
 type DiceResult = {
   outcome: { rolled: number; target: number; multiplier: number };
@@ -114,9 +113,7 @@ export default function DicePage() {
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
-      <div className="panel panel-glow game-stage p-5 sm:p-6">
-        <AmbientPond />
-        <div className="flex items-center justify-between mb-6">
+      <div className="panel panel-glow game-stage p-5 sm:p-6">        <div className="flex items-center justify-between mb-6">
           <div className="chips">
             <button className={`chip ${!sandbox ? "active" : ""}`} aria-pressed={!sandbox} onClick={() => setSandbox(false)}>
               Live table

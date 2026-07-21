@@ -18,7 +18,11 @@ export function InteractiveFX() {
     const magnet = (t: EventTarget | null): HTMLElement | null =>
       (t as HTMLElement | null)?.closest?.("[data-magnetic]") ?? null;
 
-    const onMove = (e: PointerEvent) => {
+    // Coalesce raw pointer moves to one update per animation frame — avoids
+    // layout thrash (getBoundingClientRect + style writes) on every move event.
+    let rafId = 0;
+    let pending: PointerEvent | null = null;
+    const applyMove = (e: PointerEvent) => {
       const el = card(e.target);
       if (el) {
         const r = el.getBoundingClientRect();
@@ -38,6 +42,15 @@ export function InteractiveFX() {
         m.style.transform = `translate(${dx * MAGNET_PX}px, ${dy * MAGNET_PX}px)`;
       }
     };
+    const onMove = (e: PointerEvent) => {
+      pending = e;
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          rafId = 0;
+          if (pending) applyMove(pending);
+        });
+      }
+    };
 
     const onOut = (e: PointerEvent) => {
       const el = card(e.target);
@@ -49,6 +62,7 @@ export function InteractiveFX() {
     document.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("pointerout", onOut, { passive: true });
     return () => {
+      cancelAnimationFrame(rafId);
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerout", onOut);
     };
@@ -60,11 +74,20 @@ export function InteractiveFX() {
 export function ScrollProgress() {
   const [progress, setProgress] = useState(0);
   useEffect(() => {
-    const onScroll = () => {
+    // rAF-throttle: coalesce scroll bursts to one state update per frame.
+    let ticking = false;
+    const update = () => {
+      ticking = false;
       const max = document.documentElement.scrollHeight - window.innerHeight;
       setProgress(max > 0 ? Math.min(1, window.scrollY / max) : 0);
     };
-    onScroll();
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    };
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);

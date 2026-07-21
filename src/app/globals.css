@@ -1367,34 +1367,10 @@ button:focus-visible,
 /* ══ Game stage: atmospheric depth for a play surface ══
    Editorial, not neon — an overhead "table light" from above and a soft edge
    vignette that pulls the eye to the centre, layered under the surface. */
+/* Game panels use the plain elevated surface — background removed for a clean,
+   low-cost stage (no blur layer, no animation). */
 .game-stage {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  background: var(--color-surface);
   border-color: var(--hairline-strong);
-}
-/* pond backdrop as a heavily-blurred, darkened layer behind everything — soft
-   deep atmosphere with no competing detail, so the game stays the focus.
-   inset:-40px lets the blur bleed off-screen (clipped) instead of fading edges. */
-.game-stage::before {
-  content: "";
-  position: absolute;
-  inset: -110px;
-  pointer-events: none;
-  background:
-    radial-gradient(140% 130% at 50% 42%, oklch(0.05 0.012 260 / 0.72) 25%, oklch(0.03 0.008 270 / 0.95)),
-    url("/art/owp_pond_bg.jpg") center / cover no-repeat;
-  /* pond dissolved to a faint dark glow — no discernible objects. The blur is
-     rasterised ONCE onto its own GPU layer (translateZ), so the animated motes
-     over it never re-trigger it — that live re-blur was the stutter. */
-  filter: blur(60px);
-  transform: translateZ(0);
-}
-/* keep real content (and the mote canvas) above the blurred backdrop */
-.game-stage > *:not(.ambient) {
-  position: relative;
-  z-index: 1;
 }
 
 /* Frogris board is tall (2:1). On phones, fit it to the viewport height so the

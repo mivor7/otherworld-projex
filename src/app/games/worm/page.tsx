@@ -10,7 +10,6 @@ import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { ArcadeBountyHeader } from "@/components/arcade-bounty-header";
 import { FirstVisitHint } from "@/components/first-visit-hint";
-import { AmbientPond } from "@/components/ambient-pond";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE } from "@/lib/arcade-palette";
 import {
@@ -497,9 +496,7 @@ export default function WormPage() {
       </FirstVisitHint>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
-        <div className="panel panel-glow game-stage p-5 flex flex-col items-center">
-          <AmbientPond />
-          <div className="flex gap-7 mb-3 items-baseline">
+        <div className="panel panel-glow game-stage p-5 flex flex-col items-center">          <div className="flex gap-7 mb-3 items-baseline">
             <span className="kicker !text-[0.6rem]">
               Score <span className="stat-number text-neon text-sm ml-1.5">{hud.score}</span>
             </span>
