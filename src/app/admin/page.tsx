@@ -54,6 +54,17 @@ type Overview = {
   };
 };
 
+type Pulse = {
+  active24: number;
+  active7d: number;
+  newUsers24: number;
+  newUsers7d: number;
+  rounds24: number;
+  wagered24: number;
+  ribbitIn24: number;
+  topPlayers: { wallet: string; rounds: number; volume: number; net: number }[];
+};
+
 type ReviewEntry = {
   rank: number;
   wallet: string;
@@ -218,6 +229,7 @@ export default function AdminPage() {
   const [splitChoice, setSplitChoice] = useState<Record<string, string>>({});
   const [settings, setSettings] = useState<HouseSettingRow[]>([]);
   const [settingDrafts, setSettingDrafts] = useState<Record<string, string>>({});
+  const [pulse, setPulse] = useState<Pulse | null>(null);
 
   const load = useCallback(() => {
     fetch("/api/admin/overview")
@@ -249,6 +261,10 @@ export default function AdminPage() {
         setSettings(d.settings);
         setSettingDrafts({}); // fresh values win over stale drafts
       })
+      .catch(() => {});
+    fetch("/api/admin/pulse")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setPulse(d))
       .catch(() => {});
   }, []);
 
@@ -438,6 +454,93 @@ export default function AdminPage() {
           }
           tone="gold"
         />
+      </div>
+
+      {/* Live pulse — who's active, and who's up on the house */}
+      <div className="mb-8">
+        <div className="kicker mb-3">Live pulse</div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+          <StatCard
+            label="Active · 24h"
+            value={pulse ? pulse.active24.toLocaleString() : "…"}
+            sub="played a game"
+            tone="neon"
+          />
+          <StatCard label="Active · 7d" value={pulse ? pulse.active7d.toLocaleString() : "…"} />
+          <StatCard
+            label="New · 24h"
+            value={pulse ? pulse.newUsers24.toLocaleString() : "…"}
+            sub={pulse ? `${pulse.newUsers7d.toLocaleString()} in 7d` : undefined}
+            tone="portal"
+          />
+          <StatCard label="Rounds · 24h" value={pulse ? pulse.rounds24.toLocaleString() : "…"} />
+          <StatCard
+            label="Wagered · 24h"
+            value={pulse ? pulse.wagered24.toLocaleString() : "…"}
+            sub="credits"
+          />
+          <StatCard
+            label="$RIBBIT in · 24h"
+            value={pulse ? pulse.ribbitIn24.toLocaleString() : "…"}
+            sub="burned + bought"
+            tone="gold"
+          />
+        </div>
+        <div className="panel p-5">
+          <h3 className="font-bold mb-1">Most active at the tables · 7d</h3>
+          <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
+            By credits wagered. A <span className="text-neon">green net</span> means
+            they&apos;re up on the house over the window — worth a look.
+          </p>
+          {pulse && pulse.topPlayers.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ color: "var(--text-dim)" }}>
+                    <th className="pb-2 text-left font-medium">Player</th>
+                    <th className="pb-2 text-right font-medium">Rounds</th>
+                    <th className="pb-2 text-right font-medium">Volume</th>
+                    <th className="pb-2 text-right font-medium">Net</th>
+                    <th className="pb-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pulse.topPlayers.map((p) => (
+                    <tr key={p.wallet} className="table-row">
+                      <td className="py-1.5 pr-3 mono text-xs">{shortWallet(p.wallet)}</td>
+                      <td className="py-1.5 text-right">{p.rounds.toLocaleString()}</td>
+                      <td className="py-1.5 text-right">{p.volume.toLocaleString()}</td>
+                      <td
+                        className={`py-1.5 text-right stat-number ${
+                          p.net > 0 ? "text-neon" : "text-fog"
+                        }`}
+                      >
+                        {p.net > 0 ? "+" : ""}
+                        {p.net.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right">
+                        <button
+                          className="btn btn-ghost !text-xs !min-h-[1.8rem]"
+                          onClick={() => {
+                            setPlayerWallet(p.wallet);
+                            lookupPlayer(p.wallet);
+                            document
+                              .getElementById("player-lookup")
+                              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          }}
+                        >
+                          look up
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-fog">No table play in the last 7 days yet.</p>
+          )}
+        </div>
       </div>
 
       {/* House controls — live, admin-tunable parameters */}
@@ -1240,7 +1343,7 @@ export default function AdminPage() {
       </div>
 
       {/* Player management */}
-      <div className="mt-8">
+      <div className="mt-8" id="player-lookup">
         <div className="kicker mb-3">Player management</div>
         <div className="panel p-5">
           <div className="flex flex-wrap gap-2 mb-4">
