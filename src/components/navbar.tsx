@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WalletButton } from "./wallet-button";
 import { useSession } from "./session";
+import { NotificationBell } from "./notification-bell";
+import { useNotifications } from "./use-notifications";
 import { SealMark } from "./seal";
 
 const LINKS = [
@@ -19,6 +21,7 @@ const LINKS = [
 export function Navbar() {
   const pathname = usePathname();
   const { me } = useSession();
+  const { adminTotal } = useNotifications();
 
   return (
     <header
@@ -71,11 +74,13 @@ export function Navbar() {
               }`}
             >
               Admin
+              <AdminBadge n={adminTotal} />
             </Link>
           )}
         </nav>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1.5">
+          <NotificationBell />
           <WalletButton />
         </div>
       </div>
@@ -101,11 +106,26 @@ export function Navbar() {
           </Link>
         ))}
         {me.isAdmin && (
-          <Link href="/admin" className="px-3 py-1 text-[0.82rem] text-portal">
+          <Link href="/admin" className="px-3 py-1 text-[0.82rem] text-portal whitespace-nowrap">
             Admin
+            <AdminBadge n={adminTotal} />
           </Link>
         )}
       </nav>
     </header>
+  );
+}
+
+/** Red count of admin action-items, inline so it never clips in the mobile
+    horizontal-scroll nav. Renders nothing when the queue is empty. */
+function AdminBadge({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return (
+    <span
+      className="ml-1.5 inline-grid place-items-center min-w-[16px] h-4 px-1 rounded-full text-[0.6rem] font-bold align-middle"
+      style={{ background: "var(--color-danger)", color: "white" }}
+    >
+      {n > 9 ? "9+" : n}
+    </span>
   );
 }

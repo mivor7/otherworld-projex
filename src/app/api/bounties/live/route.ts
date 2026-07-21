@@ -68,14 +68,52 @@ export const GET = handler(async (req: Request) => {
     return ok({ games: byGame });
   }
 
+  const session = await getSession();
+
+  // A bounty for this game that settled in the last few minutes — surfaced so a
+  // player who was racing sees the OUTCOME (won #N / it paid out) instead of the
+  // strip silently vanishing. Included whether or not a fresh bounty is now open
+  // (arcade weeklies renew the instant the old one pays).
+  const RECENT_MS = 15 * 60 * 1000;
+  const recentPaid = await prisma.bounty.findFirst({
+    where: { game, status: "paid", paidAt: { gte: new Date(Date.now() - RECENT_MS) } },
+    orderBy: { paidAt: "desc" },
+  });
+  let justEnded: {
+    id: string;
+    title: string;
+    prizeRibbit: number;
+    winners: number;
+    you: { won: boolean; rank: number | null; amountRibbit: number } | null;
+  } | null = null;
+  if (recentPaid) {
+    const awards = await prisma.bountyAward.findMany({
+      where: { bountyId: recentPaid.id },
+      orderBy: { rank: "asc" },
+    });
+    let mine: { won: boolean; rank: number | null; amountRibbit: number } | null = null;
+    if (session) {
+      const a = awards.find((x) => x.userId === session.userId);
+      mine = a
+        ? { won: true, rank: a.rank, amountRibbit: Math.round(fromRaw(a.amountRaw)) }
+        : { won: false, rank: null, amountRibbit: 0 };
+    }
+    justEnded = {
+      id: recentPaid.id,
+      title: recentPaid.title,
+      prizeRibbit: fromRaw(recentPaid.prizeRibbit),
+      winners: awards.length,
+      you: mine,
+    };
+  }
+
   const bounty = await prisma.bounty.findFirst({
     where: { status: "open", game },
     orderBy: { prizeRibbit: "desc" },
   });
-  if (!bounty) return ok({ bounty: null, entries: [], you: null });
+  if (!bounty) return ok({ bounty: null, entries: [], you: null, justEnded });
 
   const standings = await cachedStandings(bounty);
-  const session = await getSession();
 
   const entries = standings.map((e) => ({
     rank: e.rank,
@@ -158,5 +196,6 @@ export const GET = handler(async (req: Request) => {
     },
     entries,
     you,
+    justEnded,
   });
 });

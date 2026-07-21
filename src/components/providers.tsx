@@ -8,6 +8,7 @@ import {
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 import { SessionProvider } from "./session";
+import { NotificationsProvider } from "./use-notifications";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -18,7 +19,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ConnectionProvider endpoint={CLIENT_CONFIG.rpcUrl}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-          <SessionProvider>{children}</SessionProvider>
+          <SessionProvider>
+            <NotificationsProvider>{children}</NotificationsProvider>
+          </SessionProvider>
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
