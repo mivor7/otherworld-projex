@@ -408,7 +408,7 @@ export default function AdminPage() {
           rendered only at the top is invisible from the create forms. */}
       {msg && (
         <div
-          className="fixed bottom-4 right-4 z-[90] max-w-md shadow-xl cursor-pointer"
+          className="fixed top-20 left-1/2 -translate-x-1/2 sm:top-auto sm:left-auto sm:translate-x-0 sm:bottom-4 sm:right-4 z-[90] max-w-[92vw] sm:max-w-md shadow-xl cursor-pointer"
           onClick={() => setMsg(null)}
           title="Dismiss"
         >
@@ -1589,9 +1589,19 @@ export default function AdminPage() {
                       {r.bounty.status}
                     </span>
                     {r.verified ? (
-                      <span className="badge badge-live">replay-verified</span>
+                      <span
+                        className="badge badge-live"
+                        title="Every run was re-simulated server-side from its inputs — scores here are cryptographically trustworthy."
+                      >
+                        replay-verified
+                      </span>
                     ) : (
-                      <span className="badge">heuristic checks</span>
+                      <span
+                        className="badge"
+                        title="Table results pass heuristic checks, not full replay — eyeball unusually large wins before paying."
+                      >
+                        heuristic checks
+                      </span>
                     )}
                     <span className="kicker !text-[0.6rem] ml-auto">{r.unit}</span>
                   </div>

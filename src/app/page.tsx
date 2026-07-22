@@ -168,6 +168,9 @@ export default async function Home() {
             <Reveal key={w.href} delay={i * 70}>
               <Link href={w.href} className="lot-card h-full group">
                 <div className="card-media">
+                  {w.href === "/auctions" && (
+                    <span className="badge badge-urgent absolute top-2 right-2 z-10">Beta</span>
+                  )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={w.image} alt="" loading="lazy" />
                 </div>

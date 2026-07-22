@@ -54,6 +54,9 @@ export function WalletButton() {
             {shortWallet(publicKey.toBase58())}
           </button>
         </div>
+        <span className="text-[0.65rem] text-fog text-right leading-tight max-w-[15rem]">
+          Signing in is free — a signature that proves you own this wallet, not a transaction.
+        </span>
         {signInError && (
           <span className="text-[0.7rem] text-danger max-w-[16rem] text-right leading-tight">
             {signInError}
@@ -119,6 +122,11 @@ export function WalletButton() {
               <span className="stat-number">{fmtRibbit(me.ribbitLocked ?? 0)}</span>
             </div>
           </div>
+
+          <p className="text-[0.65rem] leading-snug mb-4" style={{ color: "var(--text-dim)" }}>
+            Credits are your in-game chips. Bidding balance is $RIBBIT you&apos;ve
+            deposited for auctions; locked is the part tied up in active bids.
+          </p>
 
           <div className="grid gap-1.5 mb-4">
             <Link href="/games" className="btn btn-primary w-full !justify-start" onClick={() => setOpen(false)}>
