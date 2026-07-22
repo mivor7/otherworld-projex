@@ -85,6 +85,8 @@ export default function AuctionDetailPage({
   const suggested =
     bid !== null && Number.isFinite(bid) ? bid : Math.ceil(fromRawClient(minNext));
   const bidValid = Number.isFinite(suggested) && suggested > 0;
+  const needsDeposit =
+    me.signedIn && bidValid && suggested > fromRawClient(me.ribbitAvailable ?? 0);
   const youAreHigh = auction.bids.some((b) => b.status === "active" && b.isYou);
 
   const placeBid = async () => {
@@ -211,9 +213,9 @@ export default function AuctionDetailPage({
                   <button
                     className="btn btn-primary"
                     onClick={placeBid}
-                    disabled={busy || !me.signedIn || youAreHigh || !bidValid}
+                    disabled={busy || !me.signedIn || youAreHigh || !bidValid || needsDeposit}
                   >
-                    {busy ? "…" : "Place bid"}
+                    {busy ? "…" : needsDeposit ? "Deposit to bid" : "Place bid"}
                   </button>
                 </div>
                 <div className="flex gap-1.5 mt-2.5">
@@ -245,6 +247,15 @@ export default function AuctionDetailPage({
                     ({fmtRibbit(me.ribbitAvailable ?? 0)} available)
                   </p>
                   <p>Bids in the final 2 minutes extend the hammer by 2 minutes.</p>
+                  {me.signedIn && needsDeposit && (
+                    <p className="text-gold">
+                      Not enough bidding balance —{" "}
+                      <Link href="/auctions" className="text-neon hover:underline">
+                        deposit $RIBBIT
+                      </Link>{" "}
+                      to place this bid.
+                    </p>
+                  )}
                   {!me.signedIn && (
                     <p className="text-gold">Sign in with your wallet (top right) to bid.</p>
                   )}

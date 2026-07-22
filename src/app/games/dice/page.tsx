@@ -113,7 +113,13 @@ export default function DicePage() {
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
-      <div className="panel panel-glow game-stage p-5 sm:p-6">        <div className="flex items-center justify-between mb-6">
+      <div className="panel panel-glow game-stage p-5 sm:p-6">
+        {!sandbox && house.gamesPaused && (
+          <div className="mb-4">
+            <Notice kind="info">Live tables are paused by the house right now — the sandbox above still works.</Notice>
+          </div>
+        )}
+        <div className="flex items-center justify-between mb-6">
           <div className="chips">
             <button className={`chip ${!sandbox ? "active" : ""}`} aria-pressed={!sandbox} onClick={() => setSandbox(false)}>
               Live table
@@ -248,7 +254,7 @@ export default function DicePage() {
           <button
             className="btn btn-primary text-lg px-12 py-3"
             onClick={play}
-            disabled={rolling || !canPlay || wager < house.minWager || (!sandbox && balance < wager)}
+            disabled={rolling || !canPlay || wager < house.minWager || (!sandbox && (house.gamesPaused || balance < wager))}
           >
             {rolling ? "Rolling…" : sandbox ? "Roll (practice)" : "Roll"}
           </button>

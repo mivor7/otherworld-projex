@@ -300,7 +300,13 @@ export default function BlackjackPage() {
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
-      <div className="panel panel-glow panel-etched game-stage p-6 sm:p-8">        <div className="flex items-center justify-between mb-6">
+      <div className="panel panel-glow panel-etched game-stage p-6 sm:p-8">
+        {!sandbox && house.gamesPaused && (
+          <div className="mb-4">
+            <Notice kind="info">Live tables are paused by the house right now — the sandbox above still works.</Notice>
+          </div>
+        )}
+        <div className="flex items-center justify-between mb-6">
           <div className="chips">
             <button
               className={`chip ${!sandbox ? "active" : ""}`}
@@ -442,7 +448,7 @@ export default function BlackjackPage() {
             <button
               className="btn btn-primary btn-lg px-10"
               onClick={dealNew}
-              disabled={busy || wager < house.minWager || (!sandbox && (!me.signedIn || balance < wager))}
+              disabled={busy || wager < house.minWager || (!sandbox && (house.gamesPaused || !me.signedIn || balance < wager))}
             >
               {busy ? "Dealing…" : done ? "Deal again" : sandbox ? "Deal (practice)" : "Deal"}
             </button>
