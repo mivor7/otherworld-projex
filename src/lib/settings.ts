@@ -115,7 +115,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "rankedMinWindowBurnedRibbit",
     label: "In-window spend to rank",
-    desc: "Whole $RIBBIT spent inside the board/bounty window. Sybils must re-spend every window. 0 disables.",
+    desc: "Whole $RIBBIT spent inside the board/bounty window. Repeat abusers must re-spend every window. 0 disables.",
     group: "Eligibility",
     kind: "number",
     min: 0,

@@ -49,6 +49,19 @@ export const GET = handler(async () => {
     getWalletBalances(CONFIG.payoutWallet),
   ]);
 
+  // Winner wallets for the fulfillment queue — so the operator can see who to
+  // ship to (winnerUserId is a loose field, not a relation, so resolve it here).
+  const winnerIds = unfulfilled
+    .map((a) => a.winnerUserId)
+    .filter((x): x is string => !!x);
+  const winnerWallets = winnerIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: winnerIds } },
+        select: { id: true, wallet: true },
+      })
+    : [];
+  const winnerWalletById = new Map(winnerWallets.map((u) => [u.id, u.wallet]));
+
   return ok({
     applications,
     withdrawals: withdrawals.map((w) => ({
@@ -66,6 +79,7 @@ export const GET = handler(async () => {
       title: a.title,
       currentRaw: a.currentRaw,
       winnerUserId: a.winnerUserId,
+      winnerWallet: a.winnerUserId ? winnerWalletById.get(a.winnerUserId) ?? null : null,
       bids: a._count.bids,
     })),
     stats: {

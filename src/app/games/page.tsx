@@ -230,7 +230,7 @@ export default function GamesPage() {
       />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
-        <div className="grid sm:grid-cols-2 gap-4 content-start">
+        <div className="grid sm:grid-cols-2 gap-4 content-start order-2 lg:order-1">
           <div className="sm:col-span-2">
             <div className="kicker">Casino tables</div>
             <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
@@ -285,7 +285,7 @@ export default function GamesPage() {
         </div>
 
         {/* Credits rail */}
-        <aside className="panel panel-glow panel-etched p-5 h-fit lg:sticky lg:top-24">
+        <aside className="panel panel-glow panel-etched p-5 h-fit lg:sticky lg:top-24 order-1 lg:order-2">
           <div className="kicker mb-2">Play credits</div>
           <div className="stat-number text-[2.2rem] text-neon leading-none mb-5">
             {me.signedIn ? (me.credits ?? 0) : "—"}

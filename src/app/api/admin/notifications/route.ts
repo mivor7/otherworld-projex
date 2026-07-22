@@ -39,7 +39,7 @@ export const GET = handler(async () => {
       id: "bounties",
       count: bounties,
       title: `${plural(bounties, "bounty", "bounties")} to settle`,
-      href: "/admin",
+      href: "/admin#settle",
       tone: "gold",
     });
   if (withdrawals > 0)
@@ -47,7 +47,7 @@ export const GET = handler(async () => {
       id: "withdrawals",
       count: withdrawals,
       title: `${plural(withdrawals, "payout")} to process`,
-      href: "/admin",
+      href: "/admin#payouts",
       tone: "gold",
     });
   if (applications > 0)
@@ -55,7 +55,7 @@ export const GET = handler(async () => {
       id: "applications",
       count: applications,
       title: `${plural(applications, "listing application")} to review`,
-      href: "/admin",
+      href: "/admin#applications",
       tone: "portal",
     });
   if (unfulfilled > 0)
@@ -63,7 +63,7 @@ export const GET = handler(async () => {
       id: "fulfillment",
       count: unfulfilled,
       title: `${plural(unfulfilled, "won lot")} awaiting delivery`,
-      href: "/admin",
+      href: "/admin#deliver",
       tone: "neon",
     });
 

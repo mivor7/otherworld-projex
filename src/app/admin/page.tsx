@@ -32,6 +32,7 @@ type Overview = {
     title: string;
     currentRaw: string;
     winnerUserId: string | null;
+    winnerWallet: string | null;
     bids: number;
   }[];
   stats: {
@@ -415,6 +416,30 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* What needs action right now — jump straight to the queue */}
+      {data && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <span className="kicker">Needs action</span>
+          {(() => {
+            const acts = [
+              { n: data.withdrawals.length, label: "payouts", href: "#payouts" },
+              { n: data.applications.length, label: "applications", href: "#applications" },
+              { n: manage.filter((b) => b.status === "closed").length, label: "bounties to settle", href: "#settle" },
+              { n: data.unfulfilled.length, label: "to deliver", href: "#deliver" },
+            ].filter((a) => a.n > 0);
+            return acts.length === 0 ? (
+              <span className="text-sm text-fog">All clear — nothing waiting.</span>
+            ) : (
+              acts.map((a) => (
+                <a key={a.label} href={a.href} className="badge badge-gold" style={{ cursor: "pointer" }}>
+                  {a.n} {a.label}
+                </a>
+              ))
+            );
+          })()}
+        </div>
+      )}
+
       {loadErr && (
         <div className="mb-6">
           <Notice kind="err">
@@ -677,7 +702,7 @@ export default function AdminPage() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="panel p-6">
-          <h3 className="font-bold mb-4">Pending listing applications</h3>
+          <h3 className="font-bold mb-4" id="applications" style={{ scrollMarginTop: "6rem" }}>Pending listing applications</h3>
           {!data ? (
             <p className="text-fog text-sm">{loadErr ? "Couldn’t load — retry." : "Loading…"}</p>
           ) : data.applications.length === 0 ? (
@@ -726,7 +751,7 @@ export default function AdminPage() {
 
         <div className="panel p-6">
           <div className="flex items-baseline justify-between mb-4">
-            <h3 className="font-bold">Payout queue</h3>
+            <h3 className="font-bold" id="payouts" style={{ scrollMarginTop: "6rem" }}>Payout queue</h3>
             {data && data.withdrawals.length > 0 && (
               <span className="stat-number text-gold text-sm">
                 {fmtRibbit(
@@ -1192,7 +1217,7 @@ export default function AdminPage() {
           </div>
 
           <div className="panel p-6">
-            <h3 className="font-bold mb-4">Awaiting delivery</h3>
+            <h3 className="font-bold mb-4" id="deliver" style={{ scrollMarginTop: "6rem" }}>Awaiting delivery</h3>
             {!data ? (
               <p className="text-fog text-sm">{loadErr ? "Couldn’t load — retry." : "Loading…"}</p>
             ) : data.unfulfilled.length === 0 ? (
@@ -1208,8 +1233,24 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <p className="text-xs text-fog mb-3">
-                      won by {a.winnerUserId ? "a hunter" : "—"} · {a.bids} bids · coordinate
-                      delivery, then mark it below
+                      won by{" "}
+                      {a.winnerWallet ? (
+                        <button
+                          className="mono text-neon hover:underline"
+                          onClick={() => {
+                            setPlayerWallet(a.winnerWallet!);
+                            lookupPlayer(a.winnerWallet!);
+                            document
+                              .getElementById("player-lookup")
+                              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          }}
+                        >
+                          {shortWallet(a.winnerWallet)}
+                        </button>
+                      ) : (
+                        "—"
+                      )}{" "}
+                      · {a.bids} bids · coordinate delivery, then mark it below
                     </p>
                     <button
                       className="btn btn-primary text-xs"
@@ -1504,7 +1545,7 @@ export default function AdminPage() {
 
       {/* Bounty payouts */}
       <div className="mt-8">
-        <div className="kicker mb-3">Bounty payouts</div>
+        <div className="kicker mb-3" id="settle" style={{ scrollMarginTop: "6rem" }}>Bounty payouts</div>
         {pool && (
           <div className="panel p-4 text-sm flex flex-wrap items-baseline gap-x-6 gap-y-1 mb-4">
             <span>
