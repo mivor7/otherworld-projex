@@ -313,7 +313,7 @@ export default function BountiesPage() {
             {house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT
             spent on credits lifetime and{" "}
             {house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside
-            the board week. Anyone can play free; only spenders collect.
+            the board week (a rolling 7 days). Anyone can play free; only spenders collect.
           </p>
         </aside>
       </div>

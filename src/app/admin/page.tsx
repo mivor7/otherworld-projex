@@ -7,6 +7,15 @@ import { Notice, SectionTitle, StatCard } from "@/components/ui";
 import { ImageUploadField } from "@/components/image-upload";
 import { CLIENT_CONFIG, fmtRibbit, shortWallet } from "@/lib/client-config";
 
+// Relative time for "changed X ago" on overridden settings (module-level so it
+// stays outside the component's render-purity analysis).
+const ago = (iso: string) => {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+};
+
 type Overview = {
   applications: {
     id: string;
@@ -233,6 +242,7 @@ export default function AdminPage() {
   const [settings, setSettings] = useState<HouseSettingRow[]>([]);
   const [settingDrafts, setSettingDrafts] = useState<Record<string, string>>({});
   const [pulse, setPulse] = useState<Pulse | null>(null);
+  const [appHours, setAppHours] = useState<Record<string, number>>({});
 
   const load = useCallback(() => {
     fetch("/api/admin/overview")
@@ -615,9 +625,17 @@ export default function AdminPage() {
                       <div key={row.key} className="panel p-4">
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <span className="font-medium tracking-tight text-sm">{row.label}</span>
-                          <span className="flex gap-1.5 shrink-0">
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            {row.overridden && row.updatedAt && (
+                              <span className="text-[0.6rem]" style={{ color: "var(--text-dim)" }}>
+                                {ago(row.updatedAt)}
+                              </span>
+                            )}
                             {row.overridden && (
-                              <span className="badge badge-gold" title={`Set by ${row.updatedBy ?? "?"}`}>
+                              <span
+                                className="badge badge-gold"
+                                title={`Set by ${row.updatedBy ?? "?"}${row.updatedAt ? ` — ${new Date(row.updatedAt).toLocaleString()}` : ""}`}
+                              >
                                 override
                               </span>
                             )}
@@ -720,18 +738,33 @@ export default function AdminPage() {
                     seller {shortWallet(a.user.wallet)} · ask {fmtRibbit(a.askRaw)} RIBBIT
                     {a.contact && ` · ${a.contact}`}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <label className="text-[0.65rem] text-fog">Run for</label>
+                    <input
+                      type="number"
+                      className="input !text-xs max-w-16"
+                      min={1}
+                      max={336}
+                      value={appHours[a.id] ?? 72}
+                      onChange={(e) =>
+                        setAppHours((p) => ({
+                          ...p,
+                          [a.id]: Math.max(1, Math.min(336, Math.floor(Number(e.target.value)) || 72)),
+                        }))
+                      }
+                    />
+                    <span className="text-[0.65rem] text-fog">h</span>
                     <button
                       className="btn btn-primary text-xs"
                       disabled={busy}
                       onClick={() =>
                         act(`/api/admin/applications/${a.id}`, {
                           action: "approve",
-                          durationHours: 72,
+                          durationHours: appHours[a.id] ?? 72,
                         })
                       }
                     >
-                      Approve → 72h auction
+                      Approve → {appHours[a.id] ?? 72}h auction
                     </button>
                     <button
                       className="btn btn-ghost text-xs"

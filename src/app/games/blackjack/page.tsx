@@ -106,12 +106,19 @@ const RESULT_COPY: Record<string, string> = {
 };
 
 export default function BlackjackPage() {
-  const { me, refresh } = useSession();
+  const { me, refresh, loading } = useSession();
   const [round, setRound] = useState<View | null>(null);
   const [wager, setWager] = useState(10);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sandbox, setSandbox] = useState(false);
+  // Guests default to the playable Sandbox (Live table needs a signed-in
+  // wallet). Fires once the session resolves; a manual toggle isn't a dep, so
+  // it never overrides the player's own choice.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!loading && !me.signedIn) setSandbox(true);
+  }, [loading, me.signedIn]);
   const house = useHouseConfig();
   const practice = usePractice();
   const practiceRef = useRef<PracticeRound | null>(null);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PageHero } from "@/components/hero";
 import { Notice, StatCard } from "@/components/ui";
 import { fmtRibbit } from "@/lib/client-config";
+import { RowSkeleton } from "@/components/skeletons";
 
 type TreasuryData = {
   chain: {
@@ -87,7 +88,11 @@ export default function TreasuryPage() {
       />
 
       {!data && !loadError && (
-        <p className="mt-8 text-center text-fog text-sm">Loading vault balances…</p>
+        <div className="mt-8 space-y-2" aria-label="Loading vault data">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <RowSkeleton key={i} />
+          ))}
+        </div>
       )}
       {loadError && (
         <div className="mt-6">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
@@ -23,7 +23,7 @@ type FlipResult = {
 };
 
 export default function FlipPage() {
-  const { me, refresh } = useSession();
+  const { me, refresh, loading } = useSession();
   const [side, setSide] = useState<"frog" | "fly">("frog");
   const [wager, setWager] = useState(5);
   const [spinning, setSpinning] = useState(false);
@@ -33,6 +33,13 @@ export default function FlipPage() {
   const [result, setResult] = useState<FlipResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sandbox, setSandbox] = useState(false);
+  // Guests default to the playable Sandbox (Live table needs a signed-in
+  // wallet). Fires once the session resolves; a manual toggle isn't a dep, so
+  // it never overrides the player's own choice.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!loading && !me.signedIn) setSandbox(true);
+  }, [loading, me.signedIn]);
   // Double-or-nothing streak: after a win you may cash the pot or re-flip it.
   const [streak, setStreak] = useState(0);
   const [pot, setPot] = useState(0); // winnings riding, after a win
