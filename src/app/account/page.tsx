@@ -7,6 +7,16 @@ import { useSession } from "@/components/session";
 import { Countdown, Notice, SectionTitle, StatCard } from "@/components/ui";
 import { fmtRibbit, shortWallet } from "@/lib/client-config";
 
+const GAME_LABELS: Record<string, string> = {
+  flip: "Frog Flip",
+  dice: "Pond Dice",
+  blackjack: "Blackjack",
+  hopper: "Hopper",
+  frogris: "Frogris",
+  worm: "Worm Frog",
+};
+const gameLabel = (g: string | null | undefined) => (g ? GAME_LABELS[g] ?? g : g);
+
 type MyBid = {
   id: string;
   amountRaw: string;
@@ -265,7 +275,7 @@ export default function AccountPage() {
                 >
                   <div className="flex items-baseline justify-between mb-2">
                     <div className="font-medium tracking-tight text-sm">
-                      <span className="capitalize">{p.game}</span>
+                      <span>{gameLabel(p.game)}</span>
                       <span className="text-xs ml-2" style={{ color: "var(--text-dim)" }}>
                         {p.title}
                       </span>
@@ -359,7 +369,7 @@ export default function AccountPage() {
                 {bountyWins.slice(0, 8).map((w) => (
                   <tr key={w.id} className="table-row">
                     <td className="py-2 pr-2">
-                      {w.game && <span className="capitalize">{w.game}</span>}
+                      {w.game && <span>{gameLabel(w.game)}</span>}
                       <span className="text-xs ml-2" style={{ color: "var(--text-dim)" }}>
                         {w.title}
                       </span>
@@ -517,7 +527,7 @@ export default function AccountPage() {
               <tbody>
                 {rounds.slice(0, 8).map((r) => (
                   <tr key={r.id} className="table-row">
-                    <td className="py-2 pr-2 capitalize">{r.game}</td>
+                    <td className="py-2 pr-2">{gameLabel(r.game)}</td>
                     <td className="py-2 pr-2 mono text-xs text-fog">−{r.wager}</td>
                     <td
                       className={`py-2 pr-2 mono text-xs ${r.payout > 0 ? "text-neon" : ""}`}

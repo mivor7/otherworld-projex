@@ -414,17 +414,19 @@ export default function GamesPage() {
                 border: "1px solid oklch(0.78 0.12 85 / 0.25)",
               }}
             >
-              <span className="text-gold">🏆 Buying makes you bounty-eligible.</span> To
-              win prizes you need{" "}
+              <span className="text-gold">🏆 Two steps to win prizes.</span>{" "}
+              <b>1) Buy credits to become eligible</b> — you need{" "}
               {Math.ceil(
                 house.rankedMinBurnedRibbit / (house.ribbitPerCredit || 1)
               ).toLocaleString()}{" "}
-              credits ({house.rankedMinBurnedRibbit.toLocaleString()} $RIBBIT) bought in
-              total, plus{" "}
+              credits ({house.rankedMinBurnedRibbit.toLocaleString()} $RIBBIT) bought
+              lifetime, plus{" "}
               {Math.ceil(
                 house.rankedMinWindowBurnedRibbit / (house.ribbitPerCredit || 1)
               ).toLocaleString()}{" "}
-              credits during each bounty you enter. Every credit counts.
+              during each bounty you enter. <b>2) Play the game</b> — that&apos;s what
+              fills the shared pool everyone splits. (Table games also need enough
+              wagering inside the bounty window.)
             </div>
           )}
 

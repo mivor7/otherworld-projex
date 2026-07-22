@@ -57,19 +57,24 @@ export default function BountiesPage() {
   const house = useHouseConfig();
 
   useEffect(() => {
-    fetch("/api/bounties")
-      .then((r) => r.json())
-      .then((d) => {
-        setOpen(d.open ?? []);
-        setClosed(d.closed ?? []);
-        setTotals(d.totals ?? null);
-        setLoaded(true);
-      })
-      .catch(() => {
-        setOpen([]);
-        setClosed([]);
-        setLoaded(true);
-      });
+    const load = () =>
+      fetch("/api/bounties")
+        .then((r) => r.json())
+        .then((d) => {
+          setOpen(d.open ?? []);
+          setClosed(d.closed ?? []);
+          setTotals(d.totals ?? null);
+          setLoaded(true);
+        })
+        .catch(() => {
+          setOpen([]);
+          setClosed([]);
+          setLoaded(true);
+        });
+    load();
+    // Poll so progress bars and countdowns stay live, like the other surfaces.
+    const t = setInterval(load, 15_000);
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {

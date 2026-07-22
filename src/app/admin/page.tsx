@@ -188,7 +188,9 @@ export default function AdminPage() {
   const { me } = useSession();
   const { payRibbit } = useChain();
   const [data, setData] = useState<Overview | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ tone: "ok" | "err" | "info"; text: string } | null>(null);
+  const flash = (text: string, tone: "ok" | "err" | "info" = "info") => setMsg({ tone, text });
+  const [loadErr, setLoadErr] = useState(false);
   const [busy, setBusy] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [showSig, setShowSig] = useState<Record<string, boolean>>({});
@@ -233,9 +235,12 @@ export default function AdminPage() {
 
   const load = useCallback(() => {
     fetch("/api/admin/overview")
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setData)
-      .catch(() => {});
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("overview"))))
+      .then((d) => {
+        setData(d);
+        setLoadErr(false);
+      })
+      .catch(() => setLoadErr(true));
     fetch("/api/admin/bounty-review")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -276,7 +281,7 @@ export default function AdminPage() {
     try {
       const res = await payRibbit(destination, BigInt(amountRaw));
       if (!res.ok) {
-        setMsg(res.error);
+        flash(res.error, "err");
         return;
       }
       const sig = res.data.signature as string;
@@ -285,11 +290,18 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "mark_sent", signature: sig }),
       });
-      const d = await marked.json();
-      setMsg(marked.ok ? `Paid — sent on-chain (${sig.slice(0, 8)}…).` : (d.error ?? "Paid, but couldn't record it — use the signature field."));
+      await marked.json().catch(() => {});
+      // On record-failure the money HAS moved — surface the FULL signature so the
+      // operator can reconcile the row via "Paid elsewhere?" instead of losing it.
+      flash(
+        marked.ok
+          ? `Paid — sent on-chain (${sig.slice(0, 8)}…).`
+          : `Sent on-chain but couldn't auto-record. Paste this signature into “Paid elsewhere?” for this row: ${sig}`,
+        marked.ok ? "ok" : "err"
+      );
       load();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Payout failed");
+      flash(e instanceof Error ? e.message : "Payout failed", "err");
     } finally {
       setPayingId(null);
     }
@@ -317,10 +329,14 @@ export default function AdminPage() {
   );
 
   const setSetting = async (row: HouseSettingRow, value: number | boolean | "reset") => {
-    const danger = row.danger
+    // Confirm anything that moves live money/behaviour: the danger switches AND
+    // in-range Economy numbers (a fat-fingered price re-prices for everyone).
+    const confirmMsg = row.danger
       ? `${row.label}: this changes live house behaviour immediately. Continue?`
-      : undefined;
-    if (danger && !confirm(danger)) return;
+      : row.group === "Economy" && typeof value === "number"
+        ? `Change ${row.label} from ${row.effective} to ${value}? This applies live for every player.`
+        : undefined;
+    if (confirmMsg && !confirm(confirmMsg)) return;
     setBusy(true);
     const res = await fetch("/api/admin/settings", {
       method: "POST",
@@ -330,10 +346,11 @@ export default function AdminPage() {
       ),
     });
     const d = await res.json();
-    setMsg(
+    flash(
       res.ok
         ? `${row.label} → ${String(d.effective)}${value === "reset" ? " (env default)" : ""}`
-        : (d.error ?? "Failed")
+        : (d.error ?? "Failed"),
+      res.ok ? "ok" : "err"
     );
     setBusy(false);
     load();
@@ -360,7 +377,7 @@ export default function AdminPage() {
       body: JSON.stringify(body),
     });
     const d = await res.json();
-    setMsg(res.ok ? (d.status ? `Done — ${d.status}.` : "Done.") : (d.error ?? "Failed"));
+    flash(res.ok ? (d.status ? `Done — ${d.status}.` : "Done.") : (d.error ?? "Failed"), res.ok ? "ok" : "err");
     setBusy(false);
     load();
   };
@@ -394,8 +411,15 @@ export default function AdminPage() {
           onClick={() => setMsg(null)}
           title="Dismiss"
         >
-          <Notice kind={/fail|error|must|denied|refus|invalid|least|under|between/i.test(msg) ? "err" : "info"}>
-            {msg}
+          <Notice kind={msg.tone}>{msg.text}</Notice>
+        </div>
+      )}
+
+      {loadErr && (
+        <div className="mb-6">
+          <Notice kind="err">
+            Couldn’t load console data (session expired or a network hiccup). Panels
+            may look empty — refresh the page, or reconnect your wallet.
           </Notice>
         </div>
       )}
@@ -654,7 +678,9 @@ export default function AdminPage() {
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="panel p-6">
           <h3 className="font-bold mb-4">Pending listing applications</h3>
-          {!data || data.applications.length === 0 ? (
+          {!data ? (
+            <p className="text-fog text-sm">{loadErr ? "Couldn’t load — retry." : "Loading…"}</p>
+          ) : data.applications.length === 0 ? (
             <p className="text-fog text-sm">Nothing waiting for review.</p>
           ) : (
             <div className="space-y-4">
@@ -699,17 +725,35 @@ export default function AdminPage() {
         </div>
 
         <div className="panel p-6">
-          <h3 className="font-bold mb-4">Payout queue</h3>
-          {!data || data.withdrawals.length === 0 ? (
+          <div className="flex items-baseline justify-between mb-4">
+            <h3 className="font-bold">Payout queue</h3>
+            {data && data.withdrawals.length > 0 && (
+              <span className="stat-number text-gold text-sm">
+                {fmtRibbit(
+                  data.withdrawals.reduce((s, w) => s + BigInt(w.amountRaw), 0n).toString()
+                )}{" "}
+                RIBBIT owed
+              </span>
+            )}
+          </div>
+          {!data ? (
+            <p className="text-fog text-sm">{loadErr ? "Couldn’t load — retry." : "Loading…"}</p>
+          ) : data.withdrawals.length === 0 ? (
             <p className="text-fog text-sm">Queue is empty.</p>
           ) : (
             <div className="space-y-3">
               {data.withdrawals.map((w) => (
                 <div key={w.id} className="panel p-4">
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="text-sm">
-                      <span className="stat-number text-neon">{fmtRibbit(w.amountRaw)}</span>{" "}
-                      RIBBIT → {shortWallet(w.destination)}
+                    <div className="text-sm min-w-0">
+                      <span className="stat-number text-neon">{fmtRibbit(w.amountRaw)}</span> RIBBIT
+                      <span
+                        className="block mono text-[0.7rem] break-all mt-0.5"
+                        style={{ color: "var(--text-dim)" }}
+                        title={w.destination}
+                      >
+                        → {w.destination}
+                      </span>
                     </div>
                     <div className="flex gap-1.5">
                       <span className={`badge ${w.kind === "bounty" ? "badge-gold" : ""}`}>
@@ -1149,7 +1193,9 @@ export default function AdminPage() {
 
           <div className="panel p-6">
             <h3 className="font-bold mb-4">Awaiting delivery</h3>
-            {!data || data.unfulfilled.length === 0 ? (
+            {!data ? (
+              <p className="text-fog text-sm">{loadErr ? "Couldn’t load — retry." : "Loading…"}</p>
+            ) : data.unfulfilled.length === 0 ? (
               <p className="text-fog text-sm">Nothing to fulfil — settled lots are all delivered.</p>
             ) : (
               <div className="space-y-3">

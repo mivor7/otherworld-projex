@@ -262,6 +262,14 @@ export default function DicePage() {
             </Link>
           </p>
         )}
+        {!sandbox && me.signedIn && balance < wager && (
+          <p className="text-fog text-sm mt-4 text-center">
+            Not enough credits.{" "}
+            <Link href="/games" className="text-neon hover:underline">
+              Get more credits →
+            </Link>
+          </p>
+        )}
         {error && (
           <div className="mt-4">
             <Notice kind="err">{error}</Notice>
