@@ -28,6 +28,21 @@ function check(name, cond, extra = "") {
 }
 const api = (p) => fetch(BASE + p).then(async (r) => ({ status: r.status, data: await r.json().catch(() => null) }));
 
+// Lazy settlement runs on reads, but two guards throttle it to ~once/5s: the
+// /api/bounties response is cached 5s, and autoSettleBounties() itself skips if
+// it swept <5s ago. That's a sub-poll-cycle delay in production; here we span
+// the window so a real sweep is guaranteed to fire. Uses the UNCACHED live
+// route to trigger the full sweep, and returns a fresh /api/bounties list.
+async function settleSweep() {
+  let last;
+  for (let i = 0; i < 4; i++) {
+    await api("/api/bounties/live"); // uncached → runs the full autoSettle sweep
+    last = await api("/api/bounties");
+    if (i < 3) await new Promise((r) => setTimeout(r, 2000));
+  }
+  return last;
+}
+
 const bountyIds = [];
 const userIds = [];
 // The suite seeds real wagers in the shared DB — park EVERY standing open
@@ -130,7 +145,7 @@ try {
   const wA = await makeWinner("b2a", 300, halfVol, b2.startsAt); // net 300
   const wB = await makeWinner("b2b", 100, halfVol, b2.startsAt); // net 100
   // combined wager ~1.2× the trigger → fires
-  const trig = await api("/api/bounties");
+  const trig = await settleSweep();
   check("bounties endpoint ok", trig.status === 200);
   let b2r = await prisma.bounty.findUnique({ where: { id: b2.id } });
   check("bounty auto-marked paid once threshold crossed", b2r.status === "paid" && b2r.paidAt,
@@ -171,7 +186,7 @@ try {
   bountyIds.push(b3.id);
   const progVol = Math.max(1, Math.floor(req3 * 0.2)); // ~20% of the meter
   await makeWinner("b3a", 50, progVol, b3.startsAt);
-  const list = await api("/api/bounties");
+  const list = await settleSweep();
   const b3v = list.data.open.find((b) => b.id === b3.id);
   check("open bounty exposes credit progress toward the derived trigger",
     b3v?.progress?.mode === "credit" && b3v.progress.threshold === req3 &&
@@ -246,7 +261,7 @@ try {
   await prisma.burnEvent.create({ data: { userId: wc.id, signature: `econ-fl-${wc.id}`, amountRaw: 2000n * RAW, credits: 20, createdAt: new Date(Date.now() - 40 * 864e5) } });
   await prisma.burnEvent.create({ data: { userId: wc.id, signature: `econ-fw-${wc.id}`, amountRaw: 200n * RAW, credits: 2, createdAt: new Date(b4.startsAt.getTime() + 500) } });
   await prisma.arcadeScore.create({ data: { userId: wc.id, game: "worm", score: 500, runToken: `econ-r-${wc.id}`, createdAt: new Date(b4.startsAt.getTime() + 1000) } });
-  await api("/api/bounties");
+  await settleSweep();
   const b4r = await prisma.bounty.findUnique({ where: { id: b4.id } });
   const b4awards = await prisma.bountyAward.count({ where: { bountyId: b4.id } });
   check("past-due free-game bounty auto-pays its winner", b4r.status === "paid" && b4awards === 1,
@@ -263,7 +278,7 @@ try {
     },
   });
   bountyIds.push(b7.id);
-  await api("/api/bounties");
+  await settleSweep();
   const b7r = await prisma.bounty.findUnique({ where: { id: b7.id } });
   const successor = await prisma.bounty.findFirst({
     where: { title: "ECON weekly renew", status: "open" },
@@ -284,14 +299,14 @@ try {
     },
   });
   bountyIds.push(b8.id);
-  await api("/api/bounties");
+  await settleSweep();
   const b8r = await prisma.bounty.findUnique({ where: { id: b8.id } });
   check("credit bounty past deadline with unfilled meter closes unpaid",
     b8r.status === "closed" && !b8r.paidAt, `status ${b8r.status}`);
   // Even a trivially-reachable trigger must not revive it: closed is final
   // for the automat (only an explicit admin award can pay it now).
   await prisma.bounty.update({ where: { id: b8.id }, data: { triggerCreditVolume: 1 } });
-  await api("/api/bounties");
+  await settleSweep();
   const b8r2 = await prisma.bounty.findUnique({ where: { id: b8.id } });
   const b8awards = await prisma.bountyAward.count({ where: { bountyId: b8.id } });
   check("closed bounty never auto-pays", b8r2.status === "closed" && b8awards === 0,

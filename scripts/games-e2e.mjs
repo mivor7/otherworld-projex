@@ -26,6 +26,11 @@ const { PrismaClient } = require_("@prisma/client");
 
 const BASE = process.argv[2] ?? "http://localhost:3000";
 const prisma = new PrismaClient();
+
+// Invite-only gate support: throwaway wallets are NEW users, so sign-ins pass
+// a suite-minted code (server ignores it when the gate is off — suites stay
+// green in both states). Minted in the try block, deleted in cleanup.
+const E2E_INVITE = `OWP-E2E-${Date.now().toString(36).toUpperCase()}`;
 const RAW = 10n ** 6n; // 6 decimals
 
 let passed = 0;
@@ -63,7 +68,7 @@ function makeClient() {
     const sig = nacl.sign.detached(new TextEncoder().encode(n.data.message), kp.secretKey);
     const v = await api("/api/auth/verify", {
       method: "POST",
-      body: JSON.stringify({ wallet, signature: bs58.encode(Buffer.from(sig)) }),
+      body: JSON.stringify({ wallet, signature: bs58.encode(Buffer.from(sig)), inviteCode: E2E_INVITE }),
     });
     if (v.status !== 200) throw new Error("sign-in failed");
   }
@@ -425,6 +430,9 @@ const cleanup = { auctionIds: [], userWallets: [A.wallet, B.wallet] };
 
 try {
   console.log(`player A ${A.wallet.slice(0,8)}… · player B ${B.wallet.slice(0,8)}… → ${BASE}\n`);
+  await prisma.inviteCode.create({
+    data: { code: E2E_INVITE, maxUses: 50, note: "games-e2e (auto-cleaned)" },
+  });
   await A.signIn();
   await B.signIn();
   const userA = await prisma.user.findUnique({ where: { wallet: A.wallet } });
@@ -708,6 +716,7 @@ try {
   );
 } finally {
   console.log("\ncleaning test data…");
+  await prisma.inviteCode.deleteMany({ where: { code: { startsWith: "OWP-E2E-" } } });
   for (const w of cleanup.userWallets) {
     const u = await prisma.user.findUnique({ where: { wallet: w } });
     if (!u) continue;

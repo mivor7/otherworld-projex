@@ -22,6 +22,11 @@ const { PrismaClient } = require_("@prisma/client");
 
 const BASE = process.argv[2] ?? "http://localhost:3000";
 const prisma = new PrismaClient();
+
+// Invite-only gate support: throwaway wallets are NEW users, so sign-ins pass
+// a suite-minted code (server ignores it when the gate is off). Minted in the
+// try block, deleted in cleanup.
+const E2E_INVITE = `OWP-E2E-${Date.now().toString(36).toUpperCase()}`;
 const RAW = 10n ** 6n;
 
 // Mirror of the app's requiredCreditSpend, read from live house config (same
@@ -69,7 +74,7 @@ function client(kp) {
     const sig = nacl.sign.detached(new TextEncoder().encode(n.data.message), kp.secretKey);
     const v = await api("/api/auth/verify", {
       method: "POST",
-      body: JSON.stringify({ wallet, signature: bs58.encode(Buffer.from(sig)) }),
+      body: JSON.stringify({ wallet, signature: bs58.encode(Buffer.from(sig)), inviteCode: E2E_INVITE }),
     });
     if (v.status !== 200) throw new Error(`sign-in failed for ${wallet.slice(0,6)}`);
     return v.data;
@@ -118,8 +123,37 @@ async function seedEligible(userId, score, windowStart) {
   });
 }
 
+// Settings this suite writes. Snapshot the OWNER'S current overrides up front
+// so cleanup can restore them exactly — a blanket delete would silently revert
+// live house pricing to env defaults on the production DB.
+const TOUCHED_SETTINGS = ["houseEdge", "minWager", "gamesPaused", "buyBurnShare"];
+const preSettings = await prisma.houseSetting.findMany({
+  where: { key: { in: TOUCHED_SETTINGS } },
+});
+
+// The suite creates bounties on these games; the app enforces one open bounty
+// per game, so the owner's live bounties on them would make our creates 409.
+// Park them (→ closed) for the run and restore in finally — the board is left
+// EXACTLY as we found it.
+const SUITE_GAMES = ["dice", "worm", "blackjack"];
+let parkedBountyIds = [];
+
 try {
   console.log(`admin ${admin.wallet.slice(0,8)}… → ${BASE}\n`);
+  await prisma.inviteCode.create({
+    data: { code: E2E_INVITE, maxUses: 50, note: "admin-e2e (auto-cleaned)" },
+  });
+  const toPark = await prisma.bounty.findMany({
+    where: { status: "open", game: { in: SUITE_GAMES } },
+    select: { id: true },
+  });
+  parkedBountyIds = toPark.map((b) => b.id);
+  if (parkedBountyIds.length) {
+    await prisma.bounty.updateMany({
+      where: { id: { in: parkedBountyIds } },
+      data: { status: "closed" },
+    });
+  }
   const av = await admin.signIn();
   check("test admin recognized (isAdmin)", av.isAdmin === true,
     "is ADMIN_WALLETS set to the test wallet on the dev server?");
@@ -319,8 +353,10 @@ try {
   const eb = await admin.api("/api/admin/bounties", {
     method: "POST",
     body: JSON.stringify({
+      // Blackjack (also a credit game → same trigger math) so it doesn't hit
+      // the one-open-per-game guard against the dice auto-bounty above.
       title: "ADM editable", description: "e2e edit/delete test",
-      game: "dice", prizeRibbit: 5000, durationDays: 7, autoPay: true,
+      game: "blackjack", prizeRibbit: 5000, durationDays: 7, autoPay: true,
     }),
   });
   if (eb.data?.id) bountyIds.push(eb.data.id);
@@ -529,7 +565,8 @@ try {
     where: { kind: "config", ref: "houseEdge" }, orderBy: { createdAt: "desc" },
   });
   check("config changes audited on the treasury ledger",
-    !!audit && audit.note.includes("0.06") && audit.note.includes(admin.wallet.slice(0, 8)));
+    !!audit && audit.note.includes("0.06") && audit.note.includes(admin.wallet.slice(0, 4)),
+    audit ? audit.note : "no config audit event");
 
   const resetEdge = await admin.api("/api/admin/settings", {
     method: "POST", body: JSON.stringify({ key: "houseEdge", action: "reset" }),
@@ -550,12 +587,25 @@ try {
     typeof ov.data.stats?.creditsOutstanding === "number");
 } finally {
   console.log("\ncleaning test data…");
-  // Settings overrides touched by this suite go back to env defaults even on
-  // a crash — they'd otherwise change live house behaviour in prod.
-  const touchedSettings = ["houseEdge", "minWager", "gamesPaused", "buyBurnShare"];
-  await prisma.houseSetting.deleteMany({ where: { key: { in: touchedSettings } } });
+  await prisma.inviteCode.deleteMany({ where: { code: { startsWith: "OWP-E2E-" } } });
+  // Un-park the owner's live bounties we closed for the run.
+  if (parkedBountyIds.length) {
+    await prisma.bounty.updateMany({
+      where: { id: { in: parkedBountyIds } },
+      data: { status: "open" },
+    });
+  }
+  // Restore the settings this suite touched to EXACTLY their pre-run state —
+  // the owner may have live overrides (e.g. buyBurnShare) that a blanket
+  // delete would silently revert to env defaults on the production DB.
+  await prisma.houseSetting.deleteMany({ where: { key: { in: TOUCHED_SETTINGS } } });
+  for (const row of preSettings) {
+    await prisma.houseSetting.create({
+      data: { key: row.key, value: row.value, updatedBy: row.updatedBy },
+    });
+  }
   await prisma.treasuryEvent.deleteMany({
-    where: { kind: "config", ref: { in: touchedSettings } },
+    where: { kind: "config", ref: { in: TOUCHED_SETTINGS } },
   });
   // A transient failure can leave an undefined id in these arrays — filter it
   // so cleanup itself never crashes and always runs to completion.

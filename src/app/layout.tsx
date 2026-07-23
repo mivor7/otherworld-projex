@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Other World Projex — $RIBBIT Bounty Arcade",
     description:
-      "Token holders become bounty hunters. The hunt is always open.",
+      "Token holders become bounty hunters. Provably fair, paid in $RIBBIT.",
     images: ["/og.png"],
   },
 };
