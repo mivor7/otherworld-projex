@@ -10,7 +10,7 @@ import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { fromRaw, toRaw } from "@/lib/config";
-import { ARCADE_GAMES, autoSettleBounties, bountyProgress, bountyStandings } from "@/lib/bounty";
+import { ARCADE_GAMES, autoSettleBounties, bountyProgress, cachedBountyStandings } from "@/lib/bounty";
 import { burnTotals } from "@/lib/ranked";
 import { houseConfig } from "@/lib/settings";
 
@@ -19,26 +19,10 @@ export const dynamic = "force-dynamic";
 
 const short = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 
-// Standings are the expensive part (ranking + eligibility aggregates) and
-// every game page polls this route every 10s — cache the SHARED ranked list
-// per bounty for a few seconds. The caller-specific "you" block is derived
-// from the cached list, so nothing user-specific is ever shared.
-type Standings = Awaited<ReturnType<typeof bountyStandings>>;
-const standingsCache = new Map<string, { at: number; value: Standings }>();
-const STANDINGS_TTL_MS = 5_000;
-
-async function cachedStandings(bounty: Parameters<typeof bountyStandings>[0]): Promise<Standings> {
-  const hit = standingsCache.get(bounty.id);
-  if (hit && Date.now() - hit.at < STANDINGS_TTL_MS) return hit.value;
-  const value = await bountyStandings(bounty);
-  standingsCache.set(bounty.id, { at: Date.now(), value });
-  // Drop stale entries so the map stays tiny.
-  for (const [k, v] of standingsCache) {
-    if (Date.now() - v.at > STANDINGS_TTL_MS * 10) standingsCache.delete(k);
-  }
-  return value;
-}
-
+// Standings caching lives in lib/bounty.cachedBountyStandings — shared with
+// the account-page positions route so all pollers reuse one computation. The
+// caller-specific "you" block is derived from the cached list, so nothing
+// user-specific is ever shared.
 export const GET = handler(async (req: Request) => {
   // Fire any due triggers first, so standings reflect only still-open bounties.
   await autoSettleBounties();
@@ -113,7 +97,7 @@ export const GET = handler(async (req: Request) => {
   });
   if (!bounty) return ok({ bounty: null, entries: [], you: null, justEnded });
 
-  const standings = await cachedStandings(bounty);
+  const standings = await cachedBountyStandings(bounty);
 
   const entries = standings.map((e) => ({
     rank: e.rank,

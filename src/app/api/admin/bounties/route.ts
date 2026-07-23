@@ -10,7 +10,7 @@ const body = z.object({
   target: z.string().max(80).optional(),
   game: z.enum(["hopper", "frogris", "worm", "flip", "dice", "blackjack"]).optional(),
   kind: z.enum(["leaderboard", "challenge"]).default("leaderboard"),
-  prizeRibbit: z.number().positive(),
+  prizeRibbit: z.number().positive().max(1_000_000_000),
   prizeText: z.string().max(120).optional(),
   durationDays: z.number().int().min(1).max(90),
   autoPay: z.boolean().default(false),

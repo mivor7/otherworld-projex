@@ -44,17 +44,44 @@ const INTERVAL_MS = Number(process.env.PAYOUT_INTERVAL_MS ?? 15_000);
 // Keep only a working float in it, topped up from the treasury (ideally a
 // cold/multisig). That way the treasury key never lives on this box, and the
 // most this process could ever move is the hot-wallet balance.
-const keypairPath = process.env.PAYOUT_KEYPAIR_PATH;
-if (!keypairPath) {
+//
+// Key material, in order of preference (never log it, never write it back out):
+//   1. PAYOUT_WALLET_KEY        — the keypair JSON array itself, via env /
+//                                 secrets manager / `systemd-creds` (no plain
+//                                 key file on disk — preferred).
+//   2. CREDENTIALS_DIRECTORY    — systemd LoadCredential=payout-wallet:… drops
+//                                 the decrypted secret here at service start.
+//   3. PAYOUT_KEYPAIR_PATH      — a keypair JSON file (legacy; keep it chmod
+//                                 600 and OUT of any repo/backup).
+function loadSecretKey() {
+  if (process.env.PAYOUT_WALLET_KEY) return process.env.PAYOUT_WALLET_KEY;
+  const credDir = process.env.CREDENTIALS_DIRECTORY;
+  if (credDir && fs.existsSync(`${credDir}/payout-wallet`)) {
+    return fs.readFileSync(`${credDir}/payout-wallet`, "utf8");
+  }
+  if (process.env.PAYOUT_KEYPAIR_PATH) {
+    return fs.readFileSync(process.env.PAYOUT_KEYPAIR_PATH, "utf8");
+  }
+  return null;
+}
+const secretJson = loadSecretKey();
+if (!secretJson) {
   console.error(
-    "Set PAYOUT_KEYPAIR_PATH to the payout HOT WALLET keypair JSON file " +
-      "(a separate wallet from the treasury — fund it from the treasury)."
+    "No payout hot-wallet key. Provide ONE of: PAYOUT_WALLET_KEY (the keypair " +
+      "JSON array, via env/secrets manager), a systemd credential named " +
+      "'payout-wallet' (LoadCredential), or PAYOUT_KEYPAIR_PATH (key file). " +
+      "Use a SEPARATE hot wallet funded from the treasury — never the treasury key."
   );
   process.exit(1);
 }
-const signer = Keypair.fromSecretKey(
-  Uint8Array.from(JSON.parse(fs.readFileSync(keypairPath, "utf8")))
-);
+let signer;
+try {
+  signer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(secretJson)));
+} catch {
+  // Deliberately no echo of the value — it's key material.
+  console.error("Payout wallet key is not a valid keypair JSON array.");
+  process.exit(1);
+}
 
 const prisma = new PrismaClient();
 const connection = new Connection(RPC, "confirmed");

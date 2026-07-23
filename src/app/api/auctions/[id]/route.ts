@@ -24,6 +24,14 @@ export const GET = handler(
     const session = await getSession();
     return ok({
       ...auction,
+      // Public payload: shorten the seller (full pubkeys deanonymize
+      // consignors) and drop internal/operational fields — bidders below are
+      // already shortened.
+      sellerWallet: auction.sellerWallet
+        ? `${auction.sellerWallet.slice(0, 4)}…${auction.sellerWallet.slice(-4)}`
+        : null,
+      winnerUserId: undefined,
+      fulfillmentNote: undefined,
       bids: auction.bids.map((b) => ({
         id: b.id,
         amountRaw: b.amountRaw,

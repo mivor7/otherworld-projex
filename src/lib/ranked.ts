@@ -43,10 +43,13 @@ export async function burnTotals(
 /**
  * Which of these users rank on prize boards for a window starting at
  * `windowStart`. Omitting the window skips the active-burner rule.
+ * Callers that already hold the spend totals (the ranking computes them for
+ * display anyway) can pass them via `pre` to skip re-running the groupBys.
  */
 export async function eligibleBurners(
   userIds: string[],
-  windowStart?: Date
+  windowStart?: Date,
+  pre?: { lifetime?: Map<string, bigint>; window?: Map<string, bigint> }
 ): Promise<Set<string>> {
   if (userIds.length === 0) return new Set();
   const cfg = await houseConfig();
@@ -54,7 +57,7 @@ export async function eligibleBurners(
 
   if (cfg.rankedMinBurnedRibbit > 0) {
     const threshold = toRaw(cfg.rankedMinBurnedRibbit);
-    const totals = await burnTotals(userIds);
+    const totals = pre?.lifetime ?? (await burnTotals(userIds));
     eligible = new Set(
       [...eligible].filter((id) => (totals.get(id) ?? 0n) >= threshold)
     );
@@ -62,7 +65,10 @@ export async function eligibleBurners(
 
   if (windowStart && cfg.rankedMinWindowBurnedRibbit > 0 && eligible.size > 0) {
     const threshold = toRaw(cfg.rankedMinWindowBurnedRibbit);
-    const windowTotals = await burnTotals([...eligible], windowStart);
+    // A precomputed window map may cover the full id set — a superset of the
+    // survivors — which filters identically.
+    const windowTotals =
+      pre?.window ?? (await burnTotals([...eligible], windowStart));
     eligible = new Set(
       [...eligible].filter((id) => (windowTotals.get(id) ?? 0n) >= threshold)
     );

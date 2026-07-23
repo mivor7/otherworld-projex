@@ -8,61 +8,19 @@
 // projected-split table still lives below the game (see BountyStandings); this
 // is just the at-a-glance header. Polls so it stays live, and refreshes the
 // instant a round settles.
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import { useSession } from "./session";
 import { QualifyStatus } from "./qualify-status";
-import { BountyEndedCard, type JustEnded } from "./bounty-ended-card";
-
-type Entry = { rank: number; isYou: boolean };
-type Progress =
-  | { mode: "credit"; spent: number; threshold: number; pct: number }
-  | { mode: "time"; endsAt: string }
-  | null;
-type Live = {
-  bounty: {
-    id: string;
-    title: string;
-    prizeRibbit: number;
-    prizeText: string | null;
-    progress: Progress;
-  } | null;
-  entries: Entry[];
-  you: {
-    inRunning: boolean;
-    value: number;
-    unit: "net credits" | "best score";
-    projectedRibbit: number;
-    spendEligible: boolean;
-    lifetimeEligible: boolean;
-    windowEligible: boolean;
-    lifetimeSpent: number;
-    windowSpent: number;
-  } | null;
-  justEnded?: JustEnded | null;
-};
+import { BountyEndedCard } from "./bounty-ended-card";
+import { useBountyLive } from "./use-bounty-live";
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 export function GameBountyStrip({ game }: { game: string }) {
   const { me } = useSession();
-  const [live, setLive] = useState<Live | null>(null);
-
-  const load = useCallback(() => {
-    fetch(`/api/bounties/live?game=${game}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setLive(d))
-      .catch(() => {});
-  }, [game]);
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 8_000);
-    const onRound = () => load();
-    window.addEventListener("owp:round", onRound);
-    return () => {
-      clearInterval(t);
-      window.removeEventListener("owp:round", onRound);
-    };
-  }, [load]);
+  // Shared per-game poll — the standings panel on the same page consumes the
+  // identical subscription instead of double-fetching.
+  const live = useBountyLive(game);
 
   const b = live?.bounty;
   const justEnded = live?.justEnded ?? null;

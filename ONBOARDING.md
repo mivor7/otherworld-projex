@@ -210,8 +210,13 @@ funds. Internalize these — they are non-negotiable:
    shown publicly at `/treasury`.
 3. **Payout hot wallet = a SEPARATE wallet** with only a working float, topped up
    from the treasury as it drains. The off-server payout worker
-   (`scripts/payout-worker.mjs`) signs from THIS wallet via `PAYOUT_KEYPAIR_PATH`.
-   The worst this process can ever move is the hot-wallet balance.
+   (`scripts/payout-worker.mjs`) signs from THIS wallet. Give it the key via
+   **one** of (preferred first): `PAYOUT_WALLET_KEY` (the keypair JSON array
+   itself, from an env var / secrets manager), a systemd credential named
+   `payout-wallet` (`LoadCredential=` — encrypted at rest, decrypted only for
+   the service), or `PAYOUT_KEYPAIR_PATH` (legacy key file — `chmod 600`, never
+   in a repo or backup). The worst this process can ever move is the hot-wallet
+   balance.
    **Never put the treasury key on the ops box. Never put any private key in
    Vercel** — only the *public* address (`PAYOUT_WALLET`) so `/admin` can show
    the float.

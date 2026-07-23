@@ -2,10 +2,19 @@ import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { ARCADE_GAMES, autoSettleBounties, bountyProgress } from "@/lib/bounty";
 
-// Live data — never cache; always read current DB state.
+// Live data — no CDN caching; a short in-process TTL below collapses the
+// per-viewer polling (bounties board, every 15s) to ~one DB pass per window.
 export const dynamic = "force-dynamic";
 
+// Board content is identical for every viewer. The lazy-settlement side
+// effects still run on every cache MISS (≤ once per TTL per instance), and
+// autoSettleBounties is additionally self-throttled.
+type Cached = { at: number; value: unknown };
+let cache: Cached | null = null;
+const TTL_MS = 5_000;
+
 export const GET = handler(async () => {
+  if (cache && Date.now() - cache.at < TTL_MS) return ok(cache.value);
   const now = new Date();
   // Non-auto bounties simply close at their deadline; auto bounties settle
   // themselves when their trigger fires (lazy, like auction settlement).
@@ -48,5 +57,7 @@ export const GET = handler(async () => {
     paidOutRaw: paidAgg._sum.amountRaw ?? 0n,
   };
 
-  return ok({ open: openWithProgress, closed, totals });
+  const payload = { open: openWithProgress, closed, totals };
+  cache = { at: Date.now(), value: payload };
+  return ok(payload);
 });

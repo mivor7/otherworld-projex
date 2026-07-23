@@ -5,51 +5,18 @@
 // signed-in player's own standing. Renders nothing when there's no open bounty,
 // so the card is just a plain leaderboard then. This replaces the old two-card
 // arrangement (a separate bounty panel above the leaderboard) with one card.
-import { useCallback, useEffect, useState } from "react";
 import { useSession } from "./session";
 import { QualifyStatus } from "./qualify-status";
-import { BountyEndedCard, type JustEnded } from "./bounty-ended-card";
-
-type Live = {
-  bounty: { prizeRibbit: number; prizeText: string | null } | null;
-  entries: { rank: number; isYou: boolean }[];
-  you: {
-    inRunning: boolean;
-    value: number;
-    projectedRibbit: number;
-    spendEligible: boolean;
-    lifetimeEligible: boolean;
-    windowEligible: boolean;
-    lifetimeSpent: number;
-    windowSpent: number;
-  } | null;
-  justEnded?: JustEnded | null;
-};
+import { BountyEndedCard } from "./bounty-ended-card";
+import { useBountyLive } from "./use-bounty-live";
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 export function ArcadeBountyHeader({ game }: { game: string }) {
   const { me } = useSession();
-  const [live, setLive] = useState<Live | null>(null);
-
-  const load = useCallback(() => {
-    fetch(`/api/bounties/live?game=${game}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setLive(d))
-      .catch(() => {});
-  }, [game]);
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 8_000);
-    // Refresh right after a run posts so the header reflects the new score and
-    // standing immediately, not only on the next poll tick.
-    const onRound = () => load();
-    window.addEventListener("owp:round", onRound);
-    return () => {
-      clearInterval(t);
-      window.removeEventListener("owp:round", onRound);
-    };
-  }, [load]);
+  // Shared per-game poll (also refreshes on the owp:round signal a submitted
+  // score fires, so the header updates the moment a run posts).
+  const live = useBountyLive(game);
 
   const b = live?.bounty;
   const justEnded = live?.justEnded ?? null;

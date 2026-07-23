@@ -21,9 +21,20 @@ export const GET = handler(async () => {
     prisma.withdrawal.count({ where: { status: { in: ["pending", "processing"] } } }),
     prisma.listingApplication.count({ where: { status: "pending" } }),
     prisma.auction.count({ where: { status: "settled", fulfilled: false } }),
-    // Leaderboard bounties that ended unpaid — need a manual award (or cancel)
-    // in the Payout review section. Self-clears when settled.
-    prisma.bounty.count({ where: { status: "closed", kind: "leaderboard" } }),
+    // Leaderboard bounties needing a human in Payout review: closed-unpaid,
+    // PLUS manual (non-auto) bounties past their deadline — those never
+    // transition on their own, they sit "open" until an admin awards or closes
+    // them, so counting only "closed" would leave exactly the bounties that
+    // require manual action un-flagged. Self-clears when settled.
+    prisma.bounty.count({
+      where: {
+        kind: "leaderboard",
+        OR: [
+          { status: "closed" },
+          { status: "open", autoPay: false, endsAt: { lte: new Date() } },
+        ],
+      },
+    }),
   ]);
 
   const items: {

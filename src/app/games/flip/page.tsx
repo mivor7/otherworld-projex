@@ -34,11 +34,15 @@ export default function FlipPage() {
   const [error, setError] = useState<string | null>(null);
   const [sandbox, setSandbox] = useState(false);
   // Guests default to the playable Sandbox (Live table needs a signed-in
-  // wallet). Fires once the session resolves; a manual toggle isn't a dep, so
-  // it never overrides the player's own choice.
+  // wallet). ONCE, when the session first resolves — never again, so a
+  // transient session blip mid-play can't yank a live player into practice,
+  // and a manual toggle is never overridden.
+  const sandboxDefaulted = useRef(false);
   useEffect(() => {
+    if (loading || sandboxDefaulted.current) return;
+    sandboxDefaulted.current = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!loading && !me.signedIn) setSandbox(true);
+    if (!me.signedIn) setSandbox(true);
   }, [loading, me.signedIn]);
   // Double-or-nothing streak: after a win you may cash the pot or re-flip it.
   const [streak, setStreak] = useState(0);
@@ -122,7 +126,10 @@ export default function FlipPage() {
   const balance = sandbox ? practice.credits : me.credits ?? 0;
   const canPlay = sandbox || me.signedIn;
   const potNext = Math.floor(pot * flipMult);
-  const canDouble = pot >= house.minWager && pot <= house.maxWager && (sandbox || balance >= pot);
+  const canDouble =
+    pot >= house.minWager &&
+    pot <= house.maxWager &&
+    (sandbox || (balance >= pot && !house.gamesPaused));
 
   return (
     <div className="pt-6 max-w-2xl lg:max-w-5xl mx-auto">

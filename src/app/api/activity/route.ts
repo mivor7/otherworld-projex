@@ -3,8 +3,14 @@ import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { fromRaw } from "@/lib/config";
 
-// Live data — never cache; always read current DB state.
+// Live data — no CDN caching; a short in-process TTL below collapses the
+// per-viewer polling (home ticker, every 30s) to ~one DB pass per window.
 export const dynamic = "force-dynamic";
+
+// The feed is identical for every viewer — cache the computed events briefly.
+type Cached = { at: number; value: unknown };
+let cache: Cached | null = null;
+const TTL_MS = 5_000;
 
 const short = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 const GAME_NAMES: Record<string, string> = {
@@ -14,6 +20,7 @@ const GAME_NAMES: Record<string, string> = {
 };
 
 export const GET = handler(async () => {
+  if (cache && Date.now() - cache.at < TTL_MS) return ok(cache.value);
   const [rounds, bids, burns, scores, awards] = await Promise.all([
     prisma.gameRound.findMany({
       where: { settled: true },
@@ -93,5 +100,6 @@ export const GET = handler(async () => {
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, 18);
 
+  cache = { at: Date.now(), value: events };
   return ok(events);
 });

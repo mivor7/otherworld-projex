@@ -79,8 +79,7 @@ export async function rankBountyEntries(
   }
 
   const ids = rows.map((r) => r.userId);
-  const [eligible, burns, windowBurns, users, cfg] = await Promise.all([
-    eligibleBurners(ids, bounty.startsAt),
+  const [burns, windowBurns, users, cfg] = await Promise.all([
     burnTotals(ids),
     burnTotals(ids, bounty.startsAt),
     prisma.user.findMany({
@@ -89,6 +88,13 @@ export async function rankBountyEntries(
     }),
     houseConfig(),
   ]);
+  // The totals are already in hand for display — hand them to the eligibility
+  // filter so it doesn't re-run the exact same groupBys (2-4 queries saved on
+  // the hottest inner function in the app).
+  const eligible = await eligibleBurners(ids, bounty.startsAt, {
+    lifetime: burns,
+    window: windowBurns,
+  });
   const userById = new Map(users.map((u) => [u.id, u]));
 
   return rows
@@ -242,6 +248,29 @@ export async function bountyStandings(bounty: {
   return ranked.map((e, i) => ({ ...e, projectedRaw: shares[i] }));
 }
 
+// Standings are the expensive part (ranking + eligibility aggregates) and are
+// user-independent, so every concurrent viewer/poller of the same bounty can
+// share one computation. 5s keeps "watch your projection move" feeling live
+// while collapsing N pollers to ~one pass per window per instance. Used by
+// BOTH live routes (game pages and the account page's positions).
+type Standings = Awaited<ReturnType<typeof bountyStandings>>;
+const standingsCache = new Map<string, { at: number; value: Standings }>();
+const STANDINGS_TTL_MS = 5_000;
+
+export async function cachedBountyStandings(
+  bounty: Parameters<typeof bountyStandings>[0]
+): Promise<Standings> {
+  const hit = standingsCache.get(bounty.id);
+  if (hit && Date.now() - hit.at < STANDINGS_TTL_MS) return hit.value;
+  const value = await bountyStandings(bounty);
+  standingsCache.set(bounty.id, { at: Date.now(), value });
+  // Drop stale entries so the map stays tiny.
+  for (const [k, v] of standingsCache) {
+    if (Date.now() - v.at > STANDINGS_TTL_MS * 10) standingsCache.delete(k);
+  }
+  return value;
+}
+
 export type AwardResult = {
   bountyId: string;
   paid: { rank: number; wallet: string; amountRaw: string }[];
@@ -380,7 +409,19 @@ async function renewWeeklyBounty(b: {
  * Called on reads like the bounties list, mirroring lazy auction settlement.
  * Gated by the bounty auto-pay switch so nothing pays until the owner enables it.
  */
+// Lazy settlement is triggered from hot read endpoints that clients poll every
+// few seconds — without a floor, every concurrent viewer re-runs the same
+// sweep (a findMany + per-bounty aggregates) for no benefit. One pass per few
+// seconds per instance is plenty: triggers are weekly deadlines / slow-filling
+// spend meters, and the updateMany claim guards make concurrent passes safe —
+// this is purely a cost throttle, not a correctness gate.
+let lastSettleSweep = 0;
+const SETTLE_SWEEP_MIN_MS = 5_000;
+
 export async function autoSettleBounties(): Promise<void> {
+  const nowMs = Date.now();
+  if (nowMs - lastSettleSweep < SETTLE_SWEEP_MIN_MS) return;
+  lastSettleSweep = nowMs;
   if (!(await houseConfig()).bountyAutoPay) return;
   const now = new Date();
   const candidates = await prisma.bounty.findMany({

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/session";
+import { useNotifications } from "@/components/use-notifications";
 import { useChain } from "@/components/use-chain";
 import { Notice, SectionTitle, StatCard } from "@/components/ui";
 import { ImageUploadField } from "@/components/image-upload";
@@ -196,6 +197,7 @@ function previewShares(prize: number, splits: number[], winners: number): number
 
 export default function AdminPage() {
   const { me } = useSession();
+  const { adminItems } = useNotifications();
   const { payRibbit } = useChain();
   const [data, setData] = useState<Overview | null>(null);
   const [msg, setMsg] = useState<{ tone: "ok" | "err" | "info"; text: string } | null>(null);
@@ -204,6 +206,9 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [showSig, setShowSig] = useState<Record<string, boolean>>({});
+  // Rows that were PAID on-chain but whose auto-record failed — "Pay now" must
+  // stay locked on them (a second click would double-pay real $RIBBIT).
+  const [recordFailed, setRecordFailed] = useState<Record<string, boolean>>({});
   const [auctionForm, setAuctionForm] = useState({
     title: "",
     description: "",
@@ -302,14 +307,21 @@ export default function AdminPage() {
         body: JSON.stringify({ action: "mark_sent", signature: sig }),
       });
       await marked.json().catch(() => {});
-      // On record-failure the money HAS moved — surface the FULL signature so the
-      // operator can reconcile the row via "Paid elsewhere?" instead of losing it.
-      flash(
-        marked.ok
-          ? `Paid — sent on-chain (${sig.slice(0, 8)}…).`
-          : `Sent on-chain but couldn't auto-record. Paste this signature into “Paid elsewhere?” for this row: ${sig}`,
-        marked.ok ? "ok" : "err"
-      );
+      if (marked.ok) {
+        flash(`Paid — sent on-chain (${sig.slice(0, 8)}…).`, "ok");
+      } else {
+        // The money HAS moved but the row is still "pending" — re-arming "Pay
+        // now" here risks a double on-chain payment. Lock that row's button,
+        // open its manual field pre-filled with the signature, and tell the
+        // operator the one click that reconciles it.
+        setRecordFailed((p) => ({ ...p, [id]: true }));
+        setShowSig((p) => ({ ...p, [id]: true }));
+        setSigInputs((p) => ({ ...p, [id]: sig }));
+        flash(
+          "Sent on-chain but couldn't auto-record. The signature is pre-filled on that row — click “Mark sent” to reconcile. Do NOT pay it again.",
+          "err"
+        );
+      }
       load();
     } catch (e) {
       flash(e instanceof Error ? e.message : "Payout failed", "err");
@@ -426,27 +438,21 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* What needs action right now — jump straight to the queue */}
+      {/* What needs action right now — jump straight to the queue. Rendered
+          from the SAME feed as the navbar bell (useNotifications), so the bar,
+          the bell and the linked sections can never disagree. */}
       {data && (
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <span className="kicker">Needs action</span>
-          {(() => {
-            const acts = [
-              { n: data.withdrawals.length, label: "payouts", href: "#payouts" },
-              { n: data.applications.length, label: "applications", href: "#applications" },
-              { n: manage.filter((b) => b.status === "closed").length, label: "bounties to settle", href: "#settle" },
-              { n: data.unfulfilled.length, label: "to deliver", href: "#deliver" },
-            ].filter((a) => a.n > 0);
-            return acts.length === 0 ? (
-              <span className="text-sm text-fog">All clear — nothing waiting.</span>
-            ) : (
-              acts.map((a) => (
-                <a key={a.label} href={a.href} className="badge badge-gold" style={{ cursor: "pointer" }}>
-                  {a.n} {a.label}
-                </a>
-              ))
-            );
-          })()}
+          {adminItems.length === 0 ? (
+            <span className="text-sm text-fog">All clear — nothing waiting.</span>
+          ) : (
+            adminItems.map((a) => (
+              <a key={a.id} href={a.href} className="badge badge-gold" style={{ cursor: "pointer" }}>
+                {a.title}
+              </a>
+            ))
+          )}
         </div>
       )}
 
@@ -825,11 +831,15 @@ export default function AdminPage() {
                   <div className="flex gap-2 items-center flex-wrap">
                     <button
                       className="btn btn-primary text-xs"
-                      disabled={busy || payingId === w.id || w.status === "processing"}
+                      disabled={busy || payingId === w.id || w.status === "processing" || recordFailed[w.id]}
                       onClick={() => payNow(w.id, w.destination, w.amountRaw)}
-                      title="Send from your connected wallet and mark it sent"
+                      title={
+                        recordFailed[w.id]
+                          ? "Already paid on-chain — use “Mark sent” below to reconcile"
+                          : "Send from your connected wallet and mark it sent"
+                      }
                     >
-                      {payingId === w.id ? "Approve in wallet…" : "Pay now"}
+                      {payingId === w.id ? "Approve in wallet…" : recordFailed[w.id] ? "Paid — record it ↓" : "Pay now"}
                     </button>
                     <button
                       className="btn btn-ghost text-xs"

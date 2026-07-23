@@ -6,77 +6,43 @@
 // estimate that shifts as people play and locks when the trigger fires. Polls
 // so it feels live. Renders nothing when the game has no open bounty.
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
 import { useSession } from "./session";
 import { QualifyStatus } from "./qualify-status";
-
-type Entry = {
-  rank: number;
-  wallet: string;
-  value: number;
-  projectedRibbit: number;
-  isYou: boolean;
-};
-type Progress =
-  | { mode: "credit"; spent: number; threshold: number; pct: number }
-  | { mode: "time"; endsAt: string }
-  | null;
-type Live = {
-  bounty: {
-    id: string;
-    title: string;
-    prizeRibbit: number;
-    prizeText: string | null;
-    autoPay: boolean;
-    unit: string;
-    progress: Progress;
-  } | null;
-  entries: Entry[];
-  you: {
-    inRunning: boolean;
-    value: number;
-    unit: "net credits" | "best score";
-    projectedRibbit: number;
-    spendEligible: boolean;
-    lifetimeEligible: boolean;
-    windowEligible: boolean;
-    lifetimeSpent: number;
-    windowSpent: number;
-  } | null;
-};
+import { BountyEndedCard } from "./bounty-ended-card";
+import { useBountyLive } from "./use-bounty-live";
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 export function BountyStandings({ game }: { game: string }) {
   const { me } = useSession();
-  const [live, setLive] = useState<Live | null>(null);
-
-  const load = useCallback(() => {
-    fetch(`/api/bounties/live?game=${game}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setLive(d))
-      .catch(() => {});
-  }, [game]);
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 8_000);
-    // Refresh immediately after each round so the player sees the meter and
-    // their rank/projection move as they play — not only every poll tick.
-    const onRound = () => load();
-    window.addEventListener("owp:round", onRound);
-    return () => {
-      clearInterval(t);
-      window.removeEventListener("owp:round", onRound);
-    };
-  }, [load]);
+  // Shared per-game poll — same subscription as the strip above the game, so
+  // the page issues one request per tick instead of two. Refreshes on
+  // owp:round so rank/projection move the moment a round settles.
+  const live = useBountyLive(game);
 
   const b = live?.bounty;
-  if (!b) return null;
+  const justEnded = live?.justEnded ?? null;
+  if (!b && !justEnded) return null;
+
+  // Desktop players see the settled-bounty outcome here (the mobile-only strip
+  // above the game covers phones — hence lg-only, so it never shows twice).
+  if (!b) {
+    return justEnded ? (
+      <aside className="hidden lg:block h-fit lg:sticky lg:top-24">
+        <BountyEndedCard data={justEnded} />
+      </aside>
+    ) : null;
+  }
 
   const prize = b.prizeText ?? `${fmt(b.prizeRibbit)} $RIBBIT`;
 
   return (
     <aside className="panel panel-glow p-5 h-fit lg:sticky lg:top-24">
+      {justEnded && (
+        <div className="hidden lg:block">
+          <BountyEndedCard data={justEnded} />
+        </div>
+      )}
       <div className="flex items-center gap-2 mb-1.5">
         <span className="badge badge-live">
           <span className="live-dot" /> live bounty

@@ -1,5 +1,6 @@
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
+import { rateLimit } from "@/lib/ratelimit";
 import { rotateSeed } from "@/lib/fairness";
 import { forceSettle } from "@/lib/blackjack";
 
@@ -8,6 +9,9 @@ import { forceSettle } from "@/lib/blackjack";
 // (>10 min) are auto-stood so they settle fairly first.
 export const POST = handler(async () => {
   const session = await requireSession();
+  // Each rotation writes two seed rows — cap scripted spam (a verifying player
+  // rotates once per session, not continuously).
+  rateLimit(`rotate:${session.userId}`, 6, 60_000);
 
   const open = await prisma.gameRound.findMany({
     where: { userId: session.userId, settled: false },

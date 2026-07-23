@@ -6,6 +6,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -128,9 +129,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [publicKey, me.signedIn, me.wallet, signOut]);
 
-  return (
-    <Ctx.Provider value={{ me, loading, signingIn, signInError, refresh, signIn, signOut }}>
-      {children}
-    </Ctx.Provider>
+  // Memoize the context value — a fresh object every render would re-render
+  // every useSession consumer app-wide whenever the provider re-renders.
+  const value = useMemo(
+    () => ({ me, loading, signingIn, signInError, refresh, signIn, signOut }),
+    [me, loading, signingIn, signInError, refresh, signIn, signOut]
   );
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

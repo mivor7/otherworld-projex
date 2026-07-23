@@ -11,7 +11,7 @@ import {
   ARCADE_GAMES,
   autoSettleBounties,
   bountyProgress,
-  bountyStandings,
+  cachedBountyStandings,
 } from "@/lib/bounty";
 import { burnTotals } from "@/lib/ranked";
 import { houseConfig } from "@/lib/settings";
@@ -71,7 +71,11 @@ export const GET = handler(async () => {
     if (idx === -1) continue; // player hasn't played this bounty
     const value = ranking[idx].v;
 
-    const standings = await bountyStandings(b);
+    // Shared 5s cache — standings are user-independent, and this loop is the
+    // most expensive path in the app when polled (one full ranking per bounty
+    // the player has touched). The cache collapses all pollers to ~one
+    // computation per bounty per window.
+    const standings = await cachedBountyStandings(b);
     const mine = standings.find((e) => e.userId === uid);
 
     const windowSpent = (await burnTotals([uid], b.startsAt)).get(uid) ?? 0n;

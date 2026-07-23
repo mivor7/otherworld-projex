@@ -97,14 +97,16 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (!me.signedIn) return;
+    // On failure return null (not []) so a transient 5xx/401 keeps the data we
+    // already show instead of blanking every ledger to its empty state.
     const grab = <T,>(url: string, set: (v: T[]) => void) =>
       fetch(url)
-        .then((r) => (r.ok ? r.json() : []))
+        .then((r) => (r.ok ? r.json() : null))
         .then((rows) => Array.isArray(rows) && set(rows))
         .catch(() => {});
     grab<MyBid>("/api/me/bids", setBids);
-    grab<Withdrawal>("/api/withdrawals", setWithdrawals);
-    grab<BountyWin>("/api/me/bounties", setBountyWins);
+    // withdrawals + bounty wins load in the polling effect below (immediately
+    // on mount, then every tick) — fetching them here too was a duplicate.
     grab<Application>("/api/listings/apply", setApplications);
     grab<Round>("/api/games/history", setRounds);
     grab<Badge>("/api/me/badges", setBadges);
@@ -114,22 +116,27 @@ export default function AccountPage() {
   // playing still has a share riding on the pool, and can see it move here.
   useEffect(() => {
     if (!me.signedIn) return;
+    // On failure return null (not []) — never blank real data on a bad poll.
     const grab = <T,>(url: string, set: (v: T[]) => void) =>
       fetch(url)
-        .then((r) => (r.ok ? r.json() : []))
+        .then((r) => (r.ok ? r.json() : null))
         .then((rows) => Array.isArray(rows) && set(rows))
         .catch(() => {});
     const load = () => {
       grab<LivePosition>("/api/me/bounties/live", setLivePositions);
-      // Poll the status-changing data too, so a prize going pending→paid, a new
-      // win landing, or a balance change shows up here without a manual refresh.
+      // Poll the status-changing data too, so a prize going pending→paid or a
+      // new win landing shows up here without a manual refresh.
       grab<Withdrawal>("/api/withdrawals", setWithdrawals);
       grab<BountyWin>("/api/me/bounties", setBountyWins);
-      refresh(); // balances (credits / $RIBBIT available)
     };
     load();
-    const t = setInterval(load, 10_000);
-    const onFocus = () => load();
+    refresh(); // balances — on mount/focus/withdraw, NOT per tick: a per-tick
+    // refresh re-sets the session context and re-renders the whole app.
+    const t = setInterval(load, 30_000);
+    const onFocus = () => {
+      load();
+      refresh();
+    };
     window.addEventListener("focus", onFocus);
     return () => {
       clearInterval(t);

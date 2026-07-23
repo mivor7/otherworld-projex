@@ -123,7 +123,7 @@ export const POST = handler(async (req: Request) => {
         kind: "config",
         amount: 0n,
         asset: "CONFIG",
-        note: `${def.label}: ${before} → ${after} (by ${admin.wallet.slice(0, 8)}${
+        note: `${def.label}: ${before} → ${after} (by ${admin.wallet.slice(0, 4)}…${admin.wallet.slice(-4)}${
           data.action === "reset" ? ", reset to default" : ""
         }${rederived > 0 ? `; re-derived ${rederived} bounty trigger${rederived === 1 ? "" : "s"}` : ""})`,
         ref: def.key,

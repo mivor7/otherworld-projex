@@ -37,11 +37,18 @@ export function BountyEndedCard({ data }: { data: JustEnded }) {
   }, [data.id]);
 
   useEffect(() => {
-    if (won && !celebrated.current && !dismissed) {
-      celebrated.current = true;
-      celebrate();
+    if (!won || celebrated.current || dismissed) return;
+    // Re-check storage synchronously: on a remount (navigating back within the
+    // window) the dismissed-restore effect hasn't committed yet, and confetti
+    // must not re-fire for a card the player already dismissed.
+    try {
+      if (sessionStorage.getItem(KEY(data.id))) return;
+    } catch {
+      /* ignore */
     }
-  }, [won, dismissed]);
+    celebrated.current = true;
+    celebrate();
+  }, [won, dismissed, data.id]);
 
   if (dismissed) return null;
 

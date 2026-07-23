@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { getSession, isAdminWallet, type Session } from "./session";
 import { jsonSafe, prisma } from "./db";
@@ -49,6 +50,15 @@ export function handler<A extends unknown[]>(
       if (e instanceof InsufficientCredits) return err("Insufficient credits", 400);
       if (e instanceof ZodError)
         return err(e.issues.map((i) => i.message).join("; "), 422);
+      // Unique-constraint race (two truly-concurrent submits of the same tx
+      // signature): the DB guard holds — no double credit — so answer with a
+      // friendly conflict instead of a generic 500.
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === "P2002"
+      ) {
+        return err("Already processed — this was submitted before", 409);
+      }
       console.error(e);
       return err("Internal error", 500);
     }

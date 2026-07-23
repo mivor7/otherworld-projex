@@ -109,6 +109,10 @@ check("admin settings w/o session → 401", (await post("/api/admin/settings", {
 check("withdrawal w/o session → 401", (await post("/api/withdrawals", { amountRaw: "1000000" })) === 401);
 const adminOverview = await get("/api/admin/overview");
 check("admin overview w/o session → 401", adminOverview.status === 401, `status ${adminOverview.status}`);
+for (const p of ["/api/me/notifications", "/api/admin/notifications", "/api/admin/pulse"]) {
+  const r = await get(p);
+  check(`${p} w/o session → 401`, r.status === 401, `status ${r.status}`);
+}
 const faucet = await post("/api/dev/faucet", {});
 check("dev faucet disabled in prod", faucet === 401 || faucet === 403 || faucet === 404, `status ${faucet}`);
 

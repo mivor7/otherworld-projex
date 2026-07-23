@@ -17,7 +17,7 @@ const body = z.object({
   title: z.string().min(3).max(80).optional(),
   description: z.string().min(10).max(2000).optional(),
   target: z.string().max(80).nullable().optional(),
-  prizeRibbit: z.number().positive().optional(),
+  prizeRibbit: z.number().positive().max(1_000_000_000).optional(),
   prizeText: z.string().max(120).nullable().optional(),
   autoPay: z.boolean().optional(),
   // Extend (or shorten, negative) the deadline by this many days.

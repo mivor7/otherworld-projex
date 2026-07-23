@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { celebrate } from "@/components/confetti";
@@ -31,11 +31,15 @@ export default function DicePage() {
   const [error, setError] = useState<string | null>(null);
   const [sandbox, setSandbox] = useState(false);
   // Guests default to the playable Sandbox (Live table needs a signed-in
-  // wallet). Fires once the session resolves; a manual toggle isn't a dep, so
-  // it never overrides the player's own choice.
+  // wallet). ONCE, when the session first resolves — never again, so a
+  // transient session blip mid-play can't yank a live player into practice,
+  // and a manual toggle is never overridden.
+  const sandboxDefaulted = useRef(false);
   useEffect(() => {
+    if (loading || sandboxDefaulted.current) return;
+    sandboxDefaulted.current = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!loading && !me.signedIn) setSandbox(true);
+    if (!me.signedIn) setSandbox(true);
   }, [loading, me.signedIn]);
   const practice = usePractice();
   const { seed: clientSeed } = useClientSeed();
