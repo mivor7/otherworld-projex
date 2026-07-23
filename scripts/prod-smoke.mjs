@@ -105,6 +105,7 @@ const post = async (p, body) => {
 };
 check("flip round w/o session → 401", (await post("/api/games/flip", { side: "frog", wager: 5, clientSeed: "x" })) === 401);
 check("admin bounty create w/o session → 401", (await post("/api/admin/bounties", { title: "x", description: "xxxxxxxxxxx", game: "dice", prizeRibbit: 100, durationDays: 7 })) === 401);
+check("admin invites w/o session → 401", (await post("/api/admin/invites", { action: "create" })) === 401);
 check("admin settings w/o session → 401", (await post("/api/admin/settings", { key: "houseEdge", value: 0.05 })) === 401);
 check("withdrawal w/o session → 401", (await post("/api/withdrawals", { amountRaw: "1000000" })) === 401);
 const adminOverview = await get("/api/admin/overview");

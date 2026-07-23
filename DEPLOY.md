@@ -47,7 +47,7 @@ schema changes apply on every deploy. No manual migration step.
    never the treasury. Top it up from the treasury as it drains; the worst the
    worker can ever move is the hot-wallet balance, and payouts above
    `MAX_PAYOUT_RIBBIT` wait for a human in `/admin`.
-4. Point `otherworldprojex.com` at the Vercel project (Settings → Domains).
+4. Point `otherworldprojex.xyz` at the Vercel project (Settings → Domains).
 5. Upload `brand/avatar-800.png` and `brand/banner-x-1500x500.png` to X, and
    `brand/icon-512.png` to the token profile.
 

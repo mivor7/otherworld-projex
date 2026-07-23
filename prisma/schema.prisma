@@ -17,6 +17,9 @@ model User {
   id            String   @id @default(cuid())
   wallet        String   @unique // base58 Solana pubkey
   createdAt     DateTime @default(now())
+  // Invite code this wallet joined with (invite-only launch); null = joined
+  // while the gate was off, or pre-dates it.
+  invitedVia    String?
   // Play credits earned by burning $RIBBIT (integer, smallest unit = 1 credit)
   credits       Int      @default(0)
   // Auction balance: $RIBBIT deposited to the treasury for bidding (raw token units)
@@ -298,6 +301,21 @@ model TreasuryEvent {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// Invite codes for the invite-only launch gate. A NEW wallet can only create
+// an account by presenting a live code (existing users sign in freely). Uses
+// are consumed atomically (uses < maxUses guard); the gate itself is the
+// live-tunable "inviteRequired" house switch.
+model InviteCode {
+  id        String   @id @default(cuid())
+  code      String   @unique // human-shareable, stored uppercase
+  maxUses   Int      @default(1)
+  uses      Int      @default(0)
+  note      String? // who/what this batch was for
+  disabled  Boolean  @default(false)
+  createdBy String? // admin wallet that minted it
+  createdAt DateTime @default(now())
 }
 
 // Admin-tunable house parameters. Each row overrides the env default for one

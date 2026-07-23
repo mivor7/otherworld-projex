@@ -10,6 +10,7 @@ import nacl from "tweetnacl";
 import bs58 from "bs58";
 import { prisma } from "./db";
 import { CONFIG, requireSessionSecret } from "./config";
+import { houseConfig } from "./settings";
 
 const SESSION_COOKIE = "owp_session";
 const NONCE_COOKIE = "owp_nonce";
@@ -47,21 +48,29 @@ export async function issueNonce(wallet: string): Promise<string> {
   return nonce;
 }
 
+export type SignInResult =
+  | { ok: true; userId: string; wallet: string }
+  | {
+      ok: false;
+      reason: "bad-signature" | "banned" | "invite-required" | "invite-invalid";
+    };
+
 export async function verifySignInAndCreateSession(
   wallet: string,
-  signatureB58: string
-): Promise<{ userId: string; wallet: string } | null> {
+  signatureB58: string,
+  inviteCode?: string
+): Promise<SignInResult> {
   const jar = await cookies();
   const nonceJwt = jar.get(NONCE_COOKIE)?.value;
-  if (!nonceJwt) return null;
+  if (!nonceJwt) return { ok: false, reason: "bad-signature" };
 
   let nonce: string;
   try {
     const { payload } = await jwtVerify(nonceJwt, secretKey());
-    if (payload.wallet !== wallet) return null;
+    if (payload.wallet !== wallet) return { ok: false, reason: "bad-signature" };
     nonce = String(payload.nonce);
   } catch {
-    return null;
+    return { ok: false, reason: "bad-signature" };
   }
 
   const message = new TextEncoder().encode(buildSignInMessage(wallet, nonce));
@@ -73,16 +82,38 @@ export async function verifySignInAndCreateSession(
       bs58.decode(wallet)
     );
   } catch {
-    return null;
+    return { ok: false, reason: "bad-signature" };
   }
-  if (!ok) return null;
+  if (!ok) return { ok: false, reason: "bad-signature" };
 
-  const user = await prisma.user.upsert({
-    where: { wallet },
-    create: { wallet },
-    update: {},
-  });
-  if (user.isBanned) return null;
+  // Invite-only gate: only the CREATION of a new account needs a code —
+  // existing players (and the admins) sign in unaffected, and flipping the
+  // switch off later opens the doors without a deploy.
+  let user = await prisma.user.findUnique({ where: { wallet } });
+  if (!user) {
+    if ((await houseConfig()).inviteRequired) {
+      const code = (inviteCode ?? "").trim().toUpperCase();
+      if (!code) return { ok: false, reason: "invite-required" };
+      // Atomic consume: the uses<maxUses guard lives INSIDE the UPDATE (same
+      // column-to-column pattern as the escrow guards), so the last seat of a
+      // code can never be double-claimed by concurrent sign-ups.
+      const claimed = await prisma.$executeRaw`
+        UPDATE "InviteCode" SET "uses" = "uses" + 1
+        WHERE "code" = ${code} AND "disabled" = false AND "uses" < "maxUses"
+      `;
+      if (claimed === 0) return { ok: false, reason: "invite-invalid" };
+      try {
+        user = await prisma.user.create({ data: { wallet, invitedVia: code } });
+      } catch {
+        // Ultra-rare: the same new wallet raced itself — the row now exists.
+        user = await prisma.user.findUnique({ where: { wallet } });
+        if (!user) return { ok: false, reason: "bad-signature" };
+      }
+    } else {
+      user = await prisma.user.create({ data: { wallet } });
+    }
+  }
+  if (user.isBanned) return { ok: false, reason: "banned" };
 
   const session = await new SignJWT({ uid: user.id, wallet })
     .setProtectedHeader({ alg: "HS256" })
@@ -96,7 +127,7 @@ export async function verifySignInAndCreateSession(
     maxAge: 7 * 24 * 3600,
     path: "/",
   });
-  return { userId: user.id, wallet };
+  return { ok: true, userId: user.id, wallet };
 }
 
 export type Session = { userId: string; wallet: string };

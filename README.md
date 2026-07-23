@@ -85,7 +85,7 @@ Money out (never from the web server):
    `.env.example` — at minimum `SESSION_SECRET`, a **paid RPC URL** (both the
    server and `NEXT_PUBLIC_` variants), `TREASURY_WALLET`, `ADMIN_WALLETS`.
    The `vercel-build` script runs `prisma migrate deploy` on every deploy.
-3. **Domain**: point `otherworldprojex.com` at the Vercel project
+3. **Domain**: point `otherworldprojex.xyz` at the Vercel project
    (Settings → Domains; update the DNS A/CNAME records at the registrar).
 4. **Treasury**: deploy `program/` (see its README), make a
    [Squads](https://squads.so) multisig the admin, set `TREASURY_WALLET` to the

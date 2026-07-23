@@ -78,6 +78,9 @@ export const CONFIG = {
   // free-game bounties pay weekly — every eligible winner pro-rata. Off by
   // default so nothing pays until the owner sets prizes + thresholds.
   bountyAutoPayEnabled: process.env.BOUNTY_AUTO_PAY === "true",
+  // Invite-only sign-ups (new wallets need a code). Env default only — the
+  // live switch is the "inviteRequired" house setting.
+  inviteRequired: process.env.INVITE_REQUIRED === "true",
 
   // Auto-derived trigger: a credit-game bounty's required credit-spend is set
   // so the house's real $RIBBIT revenue from selling those credits (the

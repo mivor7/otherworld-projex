@@ -12,9 +12,10 @@ import { fmtRibbit, shortWallet } from "@/lib/client-config";
 export function WalletButton() {
   const { publicKey, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
-  const { me, signIn, signOut, signingIn, signInError } = useSession();
+  const { me, signIn, signOut, signingIn, signInError, needsInvite } = useSession();
   const ribbit = useRibbitBalance();
   const [open, setOpen] = useState(false);
+  const [invite, setInvite] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,20 +43,43 @@ export function WalletButton() {
   if (!me.signedIn) {
     return (
       <div className="flex flex-col items-end gap-1">
-        <div className="flex items-center gap-2">
-          <button className="btn btn-primary" onClick={signIn} disabled={signingIn}>
-            {signingIn ? "Check your wallet…" : "Sign in"}
-          </button>
-          <button
-            className="btn btn-ghost mono !text-xs"
-            onClick={() => disconnect()}
-            title={`${publicKey.toBase58()} — click to disconnect`}
-          >
-            {shortWallet(publicKey.toBase58())}
-          </button>
-        </div>
+        {needsInvite ? (
+          // Invite-only launch: this wallet is new — one code redeems a seat.
+          <div className="flex items-center gap-2">
+            <input
+              className="input !text-xs mono max-w-36"
+              placeholder="INVITE CODE"
+              value={invite}
+              autoFocus
+              onChange={(e) => setInvite(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === "Enter" && invite.trim() && signIn(invite)}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={() => signIn(invite)}
+              disabled={signingIn || !invite.trim()}
+            >
+              {signingIn ? "Check your wallet…" : "Join"}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button className="btn btn-primary" onClick={() => signIn()} disabled={signingIn}>
+              {signingIn ? "Check your wallet…" : "Sign in"}
+            </button>
+            <button
+              className="btn btn-ghost mono !text-xs"
+              onClick={() => disconnect()}
+              title={`${publicKey.toBase58()} — click to disconnect`}
+            >
+              {shortWallet(publicKey.toBase58())}
+            </button>
+          </div>
+        )}
         <span className="text-[0.65rem] text-fog text-right leading-tight max-w-[15rem]">
-          Signing in is free — a signature that proves you own this wallet, not a transaction.
+          {needsInvite
+            ? "Invite-only for now — enter your code, then approve the free signature."
+            : "Signing in is free — a signature that proves you own this wallet, not a transaction."}
         </span>
         {signInError && (
           <span className="text-[0.7rem] text-danger max-w-[16rem] text-right leading-tight">

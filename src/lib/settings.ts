@@ -136,6 +136,15 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   },
   // ---- Switches ----
   {
+    key: "inviteRequired",
+    label: "Invite-only sign-ups",
+    desc: "New wallets need a valid invite code to create an account. Existing players sign in unaffected. Mint codes in the Invite codes panel.",
+    group: "Switches",
+    kind: "bool",
+    danger: true,
+    envDefault: CONFIG.inviteRequired,
+  },
+  {
     key: "bountyAutoPay",
     label: "Bounty auto-pay",
     desc: "Master switch for automatic bounty settlement. Off = pools keep filling but nothing pays until re-enabled or awarded by hand.",
@@ -184,6 +193,7 @@ export type HouseConfig = {
   rankedMinBurnedRibbit: number;
   rankedMinWindowBurnedRibbit: number;
   rankedMinTableVolume: number;
+  inviteRequired: boolean;
   bountyAutoPay: boolean;
   gamesPaused: boolean;
   creditSalesPaused: boolean;

@@ -29,8 +29,10 @@ type SessionCtx = {
   loading: boolean;
   signingIn: boolean;
   signInError: string | null;
+  /** Server asked for an invite code (invite-only launch) — show the input. */
+  needsInvite: boolean;
   refresh: () => Promise<void>;
-  signIn: () => Promise<boolean>;
+  signIn: (inviteCode?: string) => Promise<boolean>;
   signOut: () => Promise<void>;
 };
 
@@ -48,6 +50,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
+  const [needsInvite, setNeedsInvite] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -66,7 +69,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     refresh();
   }, [refresh]);
 
-  const signIn = useCallback(async (): Promise<boolean> => {
+  const signIn = useCallback(async (inviteCode?: string): Promise<boolean> => {
     setSignInError(null);
     if (!publicKey || !signMessage) {
       setSignInError("Connect a wallet that can sign messages first.");
@@ -89,17 +92,30 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const verifyRes = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet, signature: bs58.encode(signature) }),
+        body: JSON.stringify({
+          wallet,
+          signature: bs58.encode(signature),
+          ...(inviteCode?.trim() ? { inviteCode: inviteCode.trim() } : {}),
+        }),
       });
       if (!verifyRes.ok) {
         const d = await verifyRes.json().catch(() => null);
+        const msg: string = d?.error ?? "";
+        // Invite-only launch: a new wallet needs a code — flip the UI into
+        // invite mode instead of treating it as a failure.
+        if (verifyRes.status === 403 && /invite/i.test(msg)) {
+          setNeedsInvite(true);
+          setSignInError(msg);
+          return false;
+        }
         setSignInError(
           verifyRes.status === 403
-            ? (d?.error ?? "This wallet is suspended.")
+            ? (msg || "This wallet is suspended.")
             : "Sign-in failed — signature couldn't be verified. Try again."
         );
         return false;
       }
+      setNeedsInvite(false);
       await refresh();
       return true;
     } catch (e) {
@@ -132,8 +148,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // Memoize the context value — a fresh object every render would re-render
   // every useSession consumer app-wide whenever the provider re-renders.
   const value = useMemo(
-    () => ({ me, loading, signingIn, signInError, refresh, signIn, signOut }),
-    [me, loading, signingIn, signInError, refresh, signIn, signOut]
+    () => ({ me, loading, signingIn, signInError, needsInvite, refresh, signIn, signOut }),
+    [me, loading, signingIn, signInError, needsInvite, refresh, signIn, signOut]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { useNotifications } from "@/components/use-notifications";
+import { CopyChip } from "@/components/copy-chip";
 import { useChain } from "@/components/use-chain";
 import { Notice, SectionTitle, StatCard } from "@/components/ui";
 import { ImageUploadField } from "@/components/image-upload";
@@ -63,6 +64,16 @@ type Overview = {
       wallet: string | null;
     };
   };
+};
+
+type InviteRow = {
+  id: string;
+  code: string;
+  maxUses: number;
+  uses: number;
+  note: string | null;
+  disabled: boolean;
+  createdAt: string;
 };
 
 type Pulse = {
@@ -209,6 +220,8 @@ export default function AdminPage() {
   // Rows that were PAID on-chain but whose auto-record failed — "Pay now" must
   // stay locked on them (a second click would double-pay real $RIBBIT).
   const [recordFailed, setRecordFailed] = useState<Record<string, boolean>>({});
+  const [invites, setInvites] = useState<InviteRow[]>([]);
+  const [inviteForm, setInviteForm] = useState({ count: 5, maxUses: 1, note: "" });
   const [auctionForm, setAuctionForm] = useState({
     title: "",
     description: "",
@@ -286,6 +299,10 @@ export default function AdminPage() {
     fetch("/api/admin/pulse")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setPulse(d))
+      .catch(() => {});
+    fetch("/api/admin/invites")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((rows) => Array.isArray(rows) && setInvites(rows))
       .catch(() => {});
   }, []);
 
@@ -1581,6 +1598,109 @@ export default function AdminPage() {
                   Apply credits
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Invite codes — the invite-only launch gate */}
+      <div className="mt-8">
+        <div className="kicker mb-3">Invite codes</div>
+        <div className="panel p-5">
+          <p className="text-xs mb-4 max-w-2xl leading-relaxed" style={{ color: "var(--text-dim)" }}>
+            New wallets need a live code to join while <b>Invite-only sign-ups</b> is
+            on (House controls · Switches). Existing players are unaffected. A code
+            is spent when its uses run out; disable one to kill it instantly.
+          </p>
+          <div className="flex flex-wrap items-end gap-2 mb-5">
+            <div>
+              <label className="text-[0.65rem] text-fog">Codes</label>
+              <input className="input !text-xs max-w-20" type="number" min={1} max={50}
+                value={inviteForm.count || ""}
+                onChange={(e) => setInviteForm({ ...inviteForm, count: Math.max(1, Math.min(50, Math.floor(Number(e.target.value)) || 1)) })} />
+            </div>
+            <div>
+              <label className="text-[0.65rem] text-fog">Uses each</label>
+              <input className="input !text-xs max-w-20" type="number" min={1} max={1000}
+                value={inviteForm.maxUses || ""}
+                onChange={(e) => setInviteForm({ ...inviteForm, maxUses: Math.max(1, Math.min(1000, Math.floor(Number(e.target.value)) || 1)) })} />
+            </div>
+            <input className="input !text-xs flex-1 min-w-40" placeholder="Note (e.g. 'X giveaway wave 1')"
+              value={inviteForm.note}
+              onChange={(e) => setInviteForm({ ...inviteForm, note: e.target.value })} />
+            <button
+              className="btn btn-primary text-xs"
+              disabled={busy}
+              onClick={() =>
+                act("/api/admin/invites", {
+                  action: "create",
+                  count: inviteForm.count,
+                  maxUses: inviteForm.maxUses,
+                  ...(inviteForm.note.trim() ? { note: inviteForm.note.trim() } : {}),
+                })
+              }
+            >
+              Mint {inviteForm.count} code{inviteForm.count === 1 ? "" : "s"}
+            </button>
+          </div>
+          {invites.length === 0 ? (
+            <p className="text-fog text-sm">No codes yet — mint a batch above.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ color: "var(--text-dim)" }}>
+                    <th className="pb-2 text-left font-medium">Code</th>
+                    <th className="pb-2 text-right font-medium">Used</th>
+                    <th className="pb-2 text-left font-medium pl-4">Note</th>
+                    <th className="pb-2 text-right font-medium">Status</th>
+                    <th className="pb-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {invites.map((c) => {
+                    const spent = c.uses >= c.maxUses;
+                    return (
+                      <tr key={c.id} className="table-row">
+                        <td className="py-1.5 pr-3">
+                          <span className="inline-flex items-center gap-2">
+                            <span className={`mono text-xs ${c.disabled || spent ? "line-through" : ""}`}
+                              style={c.disabled || spent ? { color: "var(--text-dim)" } : undefined}>
+                              {c.code}
+                            </span>
+                            {!c.disabled && !spent && <CopyChip text={c.code} label="copy" />}
+                          </span>
+                        </td>
+                        <td className="py-1.5 text-right mono text-xs">{c.uses}/{c.maxUses}</td>
+                        <td className="py-1.5 pl-4 text-xs text-fog">{c.note ?? "—"}</td>
+                        <td className="py-1.5 text-right">
+                          {c.disabled ? (
+                            <span className="badge !text-danger">disabled</span>
+                          ) : spent ? (
+                            <span className="badge">spent</span>
+                          ) : (
+                            <span className="badge badge-live">live</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 text-right">
+                          <button
+                            className="btn btn-ghost !text-xs !min-h-[1.8rem]"
+                            disabled={busy}
+                            onClick={() =>
+                              act("/api/admin/invites", {
+                                action: c.disabled ? "enable" : "disable",
+                                id: c.id,
+                              })
+                            }
+                          >
+                            {c.disabled ? "enable" : "disable"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

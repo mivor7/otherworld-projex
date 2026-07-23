@@ -48,9 +48,11 @@ placeholders. (This once locked the owner out of `/admin` by clobbering
 vars are baked in at **build** time, so changing them requires a redeploy to take
 effect.
 
-### 1.4 The Vercel **git webhook is unreliable** — deploy via CLI
-Pushing to GitHub does **not** reliably trigger a production deploy. Always deploy
-explicitly (see §7). Don't assume a push shipped.
+### 1.4 Deploys: push to `main` auto-deploys — but always verify
+The repo is git-connected to Vercel; pushing `main` builds and ships production
+(this is the normal path). After EVERY deploy run `node scripts/prod-smoke.mjs`
+— never assume. The CLI (`npx vercel deploy --prod --yes`) remains available to
+ship a build without pushing (e.g. for review) or if the webhook ever misses.
 
 ### 1.5 Live-data GET routes need `export const dynamic = "force-dynamic"`
 Any route that reads current DB state must opt out of static caching or it will
@@ -249,7 +251,7 @@ from any low test value to a meaningful bar.
 
 The git webhook is unreliable, so deploys are explicit. The Vercel CLI is authed
 as **uwxsgs**, project **uwxsgs-projects/otherworld-projex**, production alias
-**otherworld-projex.vercel.app** (custom domain: otherworldprojex.com).
+**otherworld-projex.vercel.app** (custom domain: otherworldprojex.xyz).
 
 ```bash
 # 1. Verify locally first
