@@ -91,7 +91,7 @@ export default function BountiesPage() {
         image="/art/art-bounty.jpg"
         imagePosition="center 48%"
         kicker="Wing III — the board"
-        badge="The hunt is always open"
+        badge={house.inviteRequired ? "Invite-only beta" : "The hunt is always open"}
         title="Bounties &"
         titleAccent="competitions"
         subtitle="Fixed $RIBBIT pools, pre-funded by the house. Table bounties unlock as their game gets played; free episodes pay weekly. Every eligible winner shares the pool — paid automatically."

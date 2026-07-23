@@ -18,6 +18,7 @@ export type LiveHouseConfig = {
   rankedMinTableVolume: number;
   gamesPaused: boolean;
   creditSalesPaused: boolean;
+  inviteRequired: boolean;
 };
 
 const FALLBACK: LiveHouseConfig = {
@@ -31,6 +32,7 @@ const FALLBACK: LiveHouseConfig = {
   rankedMinTableVolume: 100,
   gamesPaused: false,
   creditSalesPaused: false,
+  inviteRequired: false,
 };
 
 export function useHouseConfig(): LiveHouseConfig {

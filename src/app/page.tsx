@@ -70,13 +70,12 @@ function ago(d: Date): string {
 const shortWallet = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 
 export default async function Home() {
-  const [chain, burnAgg, buyBurnAgg, roundCount, liveAuctions, openBounties, awards, paidAgg, gameBounties, openPrizeAgg] =
+  const [chain, burnAgg, buyBurnAgg, roundCount, openBounties, awards, paidAgg, gameBounties, openPrizeAgg] =
     await Promise.all([
       getTreasuryStats(),
       prisma.burnEvent.aggregate({ _sum: { amountRaw: true } }),
       prisma.creditPurchase.aggregate({ _sum: { burnedRaw: true } }),
       prisma.gameRound.count(),
-      prisma.auction.count({ where: { status: "live" } }),
       prisma.bounty.count({ where: { status: "open" } }),
       prisma.bountyAward.findMany({
         orderBy: { createdAt: "desc" },
@@ -115,7 +114,7 @@ export default async function Home() {
         imagePosition="center 42%"
         interactive
         kicker="Decentralized bounty arcade · Solana"
-        badge="The hunt is always open"
+        badge={houseCfg.inviteRequired ? "Invite-only beta" : "The hunt is always open"}
         title="Token holders become"
         titleAccent="bounty hunters."
         subtitle={
@@ -146,7 +145,7 @@ export default async function Home() {
             label: "$RIBBIT burned",
           },
           { value: roundCount.toLocaleString(), label: "Rounds settled" },
-          { value: `${liveAuctions} · ${openBounties}`, label: "Lots · bounties" },
+          { value: openBounties.toLocaleString(), label: "Open bounties" },
         ]}
         brand
       />

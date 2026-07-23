@@ -23,5 +23,6 @@ export const GET = handler(async () => {
     rankedMinTableVolume: cfg.rankedMinTableVolume,
     gamesPaused: cfg.gamesPaused,
     creditSalesPaused: cfg.creditSalesPaused,
+    inviteRequired: cfg.inviteRequired,
   });
 });

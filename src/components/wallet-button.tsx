@@ -7,6 +7,7 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useSession } from "./session";
 import { CopyChip } from "./copy-chip";
 import { useRibbitBalance } from "./use-ribbit-balance";
+import { useHouseConfig } from "./use-house-config";
 import { fmtRibbit, shortWallet } from "@/lib/client-config";
 
 export function WalletButton() {
@@ -14,6 +15,7 @@ export function WalletButton() {
   const { setVisible } = useWalletModal();
   const { me, signIn, signOut, signingIn, signInError, needsInvite } = useSession();
   const ribbit = useRibbitBalance();
+  const house = useHouseConfig();
   const [open, setOpen] = useState(false);
   const [invite, setInvite] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -50,6 +52,7 @@ export function WalletButton() {
               className="input !text-xs mono max-w-36"
               placeholder="INVITE CODE"
               value={invite}
+              maxLength={20}
               autoFocus
               onChange={(e) => setInvite(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === "Enter" && invite.trim() && signIn(invite)}
@@ -60,6 +63,13 @@ export function WalletButton() {
               disabled={signingIn || !invite.trim()}
             >
               {signingIn ? "Check your wallet…" : "Join"}
+            </button>
+            <button
+              className="btn btn-ghost mono !text-xs"
+              onClick={() => disconnect()}
+              title={`${publicKey.toBase58()} — click to disconnect`}
+            >
+              {shortWallet(publicKey.toBase58())}
             </button>
           </div>
         ) : (
@@ -79,7 +89,9 @@ export function WalletButton() {
         <span className="text-[0.65rem] text-fog text-right leading-tight max-w-[15rem]">
           {needsInvite
             ? "Invite-only for now — enter your code, then approve the free signature."
-            : "Signing in is free — a signature that proves you own this wallet, not a transaction."}
+            : house.inviteRequired
+              ? "Invite-only beta — signing in is free; new hunters are asked for an invite code."
+              : "Signing in is free — a signature that proves you own this wallet, not a transaction."}
         </span>
         {signInError && (
           <span className="text-[0.7rem] text-danger max-w-[16rem] text-right leading-tight">
