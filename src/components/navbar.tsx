@@ -35,7 +35,7 @@ export function Navbar() {
         <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
           <SealMark size={38} />
           <span
-            className="font-semibold tracking-tight text-[0.95rem] truncate"
+            className="font-semibold tracking-tight text-[0.95rem] truncate hidden min-[330px]:block"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Other World Projex
