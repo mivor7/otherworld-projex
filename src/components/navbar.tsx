@@ -32,14 +32,15 @@ export function Navbar() {
       }}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-5">
-        <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
-          <SealMark size={38} />
-          <span
-            className="font-semibold tracking-tight text-[0.95rem] truncate hidden min-[330px]:block"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Other World Projex
-          </span>
+        {/* Brand = the seal alone (owner call): the wordmark truncated badly in
+            tight layouts, and a mark that always renders beats text that
+            sometimes doesn't. */}
+        <Link
+          href="/"
+          className="flex items-center shrink-0 group"
+          aria-label="Other World Projex — home"
+        >
+          <SealMark size={46} />
         </Link>
 
         <nav className="hidden md:flex items-center gap-0.5 ml-6 flex-1">

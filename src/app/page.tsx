@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { PageHero } from "@/components/hero";
 import { Reveal } from "@/components/reveal";
-import { VaultIntro } from "@/components/vault-intro";
 import { ActivityTicker } from "@/components/activity-ticker";
 import { CopyChip } from "@/components/copy-chip";
 import { MatteMedia } from "@/components/matte-media";
@@ -108,7 +107,6 @@ export default async function Home() {
 
   return (
     <div className="pt-6">
-      <VaultIntro />
       <PageHero
         image="/art/hero-flagship.jpg"
         imagePosition="center 42%"

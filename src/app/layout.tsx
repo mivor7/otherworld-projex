@@ -6,6 +6,7 @@ import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { InteractiveFX, ScrollProgress } from "@/components/fx";
 import { PwaRegister } from "@/components/pwa-register";
+import { VaultIntro } from "@/components/vault-intro";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://otherworldprojex.xyz"),
@@ -59,6 +60,13 @@ export default function RootLayout({
             __html: `try{if(location.pathname==="/"&&!sessionStorage.getItem("owp-intro")&&!matchMedia("(prefers-reduced-motion: reduce)").matches){document.documentElement.setAttribute("data-intro","1");sessionStorage.setItem("owp-intro","1")}}catch(e){}`,
           }}
         />
+        {/* The vault-intro overlay lives HERE — in the layout's first streamed
+            chunk — not in the homepage, whose chunk waits on treasury RPC + DB
+            aggregates. In the page it painted seconds late (homepage flash,
+            then doors). The pathname gate in the script above still makes it
+            homepage-only; on other routes data-intro is never set and CSS
+            keeps it display:none. */}
+        <VaultIntro />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] btn btn-primary"
