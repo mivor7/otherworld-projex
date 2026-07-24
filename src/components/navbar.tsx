@@ -52,7 +52,7 @@ export function Navbar() {
             <Link
               key={l.href}
               href={l.href}
-              className={`px-3 py-1.5 rounded-md text-[0.85rem] font-medium tracking-tight transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-[0.85rem] font-medium tracking-tight transition-colors whitespace-nowrap ${
                 pathname.startsWith(l.href)
                   ? "text-frost"
                   : "text-fog hover:text-frost"

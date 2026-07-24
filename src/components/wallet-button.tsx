@@ -38,29 +38,28 @@ export function WalletButton() {
     // Invite-only: the code field is visible BEFORE any wallet interaction, so
     // an invitee knows exactly where their code goes. It's optional here —
     // existing players just connect — and whatever is typed is carried through
-    // connect → sign-in automatically.
+    // connect → sign-in automatically. ONE compact row: the navbar band is a
+    // fixed 64px, so helper copy lives in the tooltip, never below the row.
     return (
-      <div className="flex flex-col items-end gap-1">
-        <div className="flex items-center gap-2">
-          {house.inviteRequired && (
-            <input
-              className="input !text-xs mono w-24 sm:w-36"
-              placeholder="INVITE CODE"
-              aria-label="Invite code"
-              value={invite}
-              maxLength={20}
-              onChange={(e) => setInvite(e.target.value.toUpperCase())}
-            />
-          )}
-          <button className="btn btn-primary" onClick={() => setVisible(true)}>
-            Connect wallet
-          </button>
-        </div>
+      <div className="flex items-center gap-2">
         {house.inviteRequired && (
-          <span className="text-[0.65rem] text-fog text-right leading-tight max-w-[15rem]">
-            Invite-only beta — enter your code, then connect. Existing players just connect.
-          </span>
+          <input
+            className="input !text-xs mono w-24 md:w-32"
+            placeholder="INVITE CODE"
+            aria-label="Invite code"
+            title="Invite-only beta — enter your code, then connect. Existing players just connect."
+            value={invite}
+            maxLength={20}
+            onChange={(e) => setInvite(e.target.value.toUpperCase())}
+          />
         )}
+        <button
+          className="btn btn-primary whitespace-nowrap"
+          onClick={() => setVisible(true)}
+          title={house.inviteRequired ? "Invite-only beta — existing players just connect" : undefined}
+        >
+          Connect wallet
+        </button>
       </div>
     );
   }
@@ -70,48 +69,54 @@ export function WalletButton() {
     // code typed before connecting rides along into sign-in. It stays optional
     // until the server actually asks for one (needsInvite) — existing players
     // sign in with it blank; a new wallet's code is consumed on join.
+    // Single row so the 64px navbar never bulges; the invite prompt / errors
+    // float in a popover UNDER the bar instead of inflating it.
     const showInvite = house.inviteRequired || needsInvite;
+    const notice =
+      signInError ??
+      (needsInvite
+        ? "This wallet is new here — enter your invite code, then approve the free signature."
+        : null);
     return (
-      <div className="flex flex-col items-end gap-1">
-        <div className="flex items-center gap-2">
-          {showInvite && (
-            <input
-              className="input !text-xs mono w-24 sm:w-36"
-              placeholder="INVITE CODE"
-              aria-label="Invite code"
-              value={invite}
-              maxLength={20}
-              autoFocus={needsInvite}
-              onChange={(e) => setInvite(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === "Enter" && !signingIn && signIn(invite)}
-            />
-          )}
-          <button
-            className="btn btn-primary"
-            onClick={() => signIn(invite)}
-            disabled={signingIn || (needsInvite && !invite.trim())}
+      <div className="relative flex items-center gap-2">
+        {showInvite && (
+          <input
+            className="input !text-xs mono w-24 md:w-32"
+            placeholder="INVITE CODE"
+            aria-label="Invite code"
+            title="Only used if this wallet is new — existing players sign in without it."
+            value={invite}
+            maxLength={20}
+            autoFocus={needsInvite}
+            onChange={(e) => setInvite(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === "Enter" && !signingIn && signIn(invite)}
+          />
+        )}
+        <button
+          className="btn btn-primary whitespace-nowrap"
+          onClick={() => signIn(invite)}
+          disabled={signingIn || (needsInvite && !invite.trim())}
+          title="Signing is free — a signature that proves you own this wallet, not a transaction."
+        >
+          {signingIn ? "Check your wallet…" : needsInvite ? "Join" : "Sign in"}
+        </button>
+        <button
+          className={`btn btn-ghost mono !text-xs ${showInvite ? "hidden lg:inline-flex" : ""}`}
+          onClick={() => disconnect()}
+          title={`${publicKey.toBase58()} — click to disconnect`}
+        >
+          {shortWallet(publicKey.toBase58())}
+        </button>
+        {notice && (
+          <div
+            className="absolute right-0 top-full mt-2 z-50 rounded-lg px-3 py-2 text-[0.7rem] leading-snug shadow-xl w-max max-w-[18rem] text-right"
+            style={{
+              background: "oklch(0.13 0.008 270 / 0.98)",
+              border: "1px solid var(--hairline-strong)",
+            }}
           >
-            {signingIn ? "Check your wallet…" : needsInvite ? "Join" : "Sign in"}
-          </button>
-          <button
-            className={`btn btn-ghost mono !text-xs ${showInvite ? "hidden sm:inline-flex" : ""}`}
-            onClick={() => disconnect()}
-            title={`${publicKey.toBase58()} — click to disconnect`}
-          >
-            {shortWallet(publicKey.toBase58())}
-          </button>
-        </div>
-        <span className="text-[0.65rem] text-fog text-right leading-tight max-w-[15rem]">
-          {needsInvite
-            ? "This wallet is new here — enter your invite code, then approve the free signature."
-            : house.inviteRequired
-              ? "Invite-only beta — the code is only used if this wallet is new. Signing is free."
-              : "Signing in is free — a signature that proves you own this wallet, not a transaction."}
-        </span>
-        {signInError && (
-          <span className="text-[0.7rem] text-danger max-w-[16rem] text-right leading-tight">
-            {signInError}
-          </span>
+            <span className={signInError ? "text-danger" : "text-fog"}>{notice}</span>
+          </div>
         )}
       </div>
     );
