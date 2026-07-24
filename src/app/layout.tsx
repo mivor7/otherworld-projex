@@ -5,6 +5,7 @@ import { StaleBundleReload } from "@/components/stale-bundle-reload";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { InteractiveFX, ScrollProgress } from "@/components/fx";
+import { PwaRegister } from "@/components/pwa-register";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://otherworldprojex.xyz"),
@@ -24,6 +25,12 @@ export const metadata: Metadata = {
     description:
       "Token holders become bounty hunters. Provably fair, paid in $RIBBIT.",
     images: ["/og.png"],
+  },
+  // Installed-PWA chrome on iOS (Android reads the manifest).
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "OWP",
   },
 };
 
@@ -60,6 +67,7 @@ export default function RootLayout({
         </a>
         <Providers>
           <StaleBundleReload />
+          <PwaRegister />
           <InteractiveFX />
           <ScrollProgress />
           <Navbar />

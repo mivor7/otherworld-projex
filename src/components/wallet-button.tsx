@@ -35,32 +35,16 @@ export function WalletButton() {
   }, [open]);
 
   if (!publicKey) {
-    // Invite-only: the code field is visible BEFORE any wallet interaction, so
-    // an invitee knows exactly where their code goes. It's optional here —
-    // existing players just connect — and whatever is typed is carried through
-    // connect → sign-in automatically. ONE compact row: the navbar band is a
-    // fixed 64px, so helper copy lives in the tooltip, never below the row.
+    // Clean bar until someone actually starts connecting — the invite field
+    // appears at the NEXT step (wallet connected, not yet signed in).
     return (
-      <div className="flex items-center gap-2">
-        {house.inviteRequired && (
-          <input
-            className="input !text-xs mono w-24 md:w-32"
-            placeholder="INVITE CODE"
-            aria-label="Invite code"
-            title="Invite-only beta — enter your code, then connect. Existing players just connect."
-            value={invite}
-            maxLength={20}
-            onChange={(e) => setInvite(e.target.value.toUpperCase())}
-          />
-        )}
-        <button
-          className="btn btn-primary whitespace-nowrap"
-          onClick={() => setVisible(true)}
-          title={house.inviteRequired ? "Invite-only beta — existing players just connect" : undefined}
-        >
-          Connect wallet
-        </button>
-      </div>
+      <button
+        className="btn btn-primary whitespace-nowrap"
+        onClick={() => setVisible(true)}
+        title={house.inviteRequired ? "Invite-only beta — you'll enter your code after connecting" : undefined}
+      >
+        Connect wallet
+      </button>
     );
   }
 
