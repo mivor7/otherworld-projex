@@ -32,18 +32,29 @@ export function Navbar() {
       }}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-5">
-        {/* Brand = the seal alone (owner call): the wordmark truncated badly in
-            tight layouts, and a mark that always renders beats text that
-            sometimes doesn't. */}
+        {/* Responsive brand lockup: full name where there's room (lg+), the
+            OWP monogram below that — a 3-letter wordmark can never truncate
+            into 'O…'. shrink-0: the brand is never the thing that gets
+            squeezed. */}
         <Link
           href="/"
-          className="flex items-center shrink-0 group"
+          className="flex items-center gap-2.5 shrink-0 group"
           aria-label="Other World Projex — home"
         >
-          <SealMark size={46} />
+          <SealMark size={40} />
+          <span
+            className="font-semibold tracking-tight text-[0.95rem] whitespace-nowrap"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            <span className="hidden min-[300px]:inline lg:hidden">OWP</span>
+            <span className="hidden lg:inline">Other World Projex</span>
+          </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-0.5 ml-6 flex-1">
+        {/* Inline nav only from lg — at md widths (768–1024) links + brand +
+            wallet never actually fit (the old truncation was masking it);
+            tablets use the scrollable nav row below instead. */}
+        <nav className="hidden lg:flex items-center gap-0.5 ml-6 flex-1">
           {LINKS.map((l) => (
             <Link
               key={l.href}
@@ -82,7 +93,7 @@ export function Navbar() {
       </div>
 
       <nav
-        className="md:hidden flex gap-0.5 px-3 pb-2 overflow-x-auto mobile-nav-scroll"
+        className="lg:hidden flex gap-0.5 px-3 pb-2 overflow-x-auto mobile-nav-scroll"
         aria-label="Sections"
       >
         {LINKS.map((l) => (

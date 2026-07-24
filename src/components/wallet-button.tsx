@@ -85,7 +85,7 @@ export function WalletButton() {
           {signingIn ? "Check your wallet…" : needsInvite ? "Join" : "Sign in"}
         </button>
         <button
-          className={`btn btn-ghost mono !text-xs ${showInvite ? "hidden lg:inline-flex" : ""}`}
+          className={`btn btn-ghost mono !text-xs ${showInvite ? "hidden xl:inline-flex" : ""}`}
           onClick={() => disconnect()}
           title={`${publicKey.toBase58()} — click to disconnect`}
         >
