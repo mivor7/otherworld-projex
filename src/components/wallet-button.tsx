@@ -35,62 +35,77 @@ export function WalletButton() {
   }, [open]);
 
   if (!publicKey) {
+    // Invite-only: the code field is visible BEFORE any wallet interaction, so
+    // an invitee knows exactly where their code goes. It's optional here —
+    // existing players just connect — and whatever is typed is carried through
+    // connect → sign-in automatically.
     return (
-      <button className="btn btn-primary" onClick={() => setVisible(true)}>
-        Connect wallet
-      </button>
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-2">
+          {house.inviteRequired && (
+            <input
+              className="input !text-xs mono w-24 sm:w-36"
+              placeholder="INVITE CODE"
+              aria-label="Invite code"
+              value={invite}
+              maxLength={20}
+              onChange={(e) => setInvite(e.target.value.toUpperCase())}
+            />
+          )}
+          <button className="btn btn-primary" onClick={() => setVisible(true)}>
+            Connect wallet
+          </button>
+        </div>
+        {house.inviteRequired && (
+          <span className="text-[0.65rem] text-fog text-right leading-tight max-w-[15rem]">
+            Invite-only beta — enter your code, then connect. Existing players just connect.
+          </span>
+        )}
+      </div>
     );
   }
 
   if (!me.signedIn) {
+    // The invite field persists from the pre-connect step (same state), so a
+    // code typed before connecting rides along into sign-in. It stays optional
+    // until the server actually asks for one (needsInvite) — existing players
+    // sign in with it blank; a new wallet's code is consumed on join.
+    const showInvite = house.inviteRequired || needsInvite;
     return (
       <div className="flex flex-col items-end gap-1">
-        {needsInvite ? (
-          // Invite-only launch: this wallet is new — one code redeems a seat.
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {showInvite && (
             <input
-              className="input !text-xs mono max-w-36"
+              className="input !text-xs mono w-24 sm:w-36"
               placeholder="INVITE CODE"
+              aria-label="Invite code"
               value={invite}
               maxLength={20}
-              autoFocus
+              autoFocus={needsInvite}
               onChange={(e) => setInvite(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === "Enter" && invite.trim() && signIn(invite)}
+              onKeyDown={(e) => e.key === "Enter" && !signingIn && signIn(invite)}
             />
-            <button
-              className="btn btn-primary"
-              onClick={() => signIn(invite)}
-              disabled={signingIn || !invite.trim()}
-            >
-              {signingIn ? "Check your wallet…" : "Join"}
-            </button>
-            <button
-              className="btn btn-ghost mono !text-xs"
-              onClick={() => disconnect()}
-              title={`${publicKey.toBase58()} — click to disconnect`}
-            >
-              {shortWallet(publicKey.toBase58())}
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button className="btn btn-primary" onClick={() => signIn()} disabled={signingIn}>
-              {signingIn ? "Check your wallet…" : "Sign in"}
-            </button>
-            <button
-              className="btn btn-ghost mono !text-xs"
-              onClick={() => disconnect()}
-              title={`${publicKey.toBase58()} — click to disconnect`}
-            >
-              {shortWallet(publicKey.toBase58())}
-            </button>
-          </div>
-        )}
+          )}
+          <button
+            className="btn btn-primary"
+            onClick={() => signIn(invite)}
+            disabled={signingIn || (needsInvite && !invite.trim())}
+          >
+            {signingIn ? "Check your wallet…" : needsInvite ? "Join" : "Sign in"}
+          </button>
+          <button
+            className={`btn btn-ghost mono !text-xs ${showInvite ? "hidden sm:inline-flex" : ""}`}
+            onClick={() => disconnect()}
+            title={`${publicKey.toBase58()} — click to disconnect`}
+          >
+            {shortWallet(publicKey.toBase58())}
+          </button>
+        </div>
         <span className="text-[0.65rem] text-fog text-right leading-tight max-w-[15rem]">
           {needsInvite
-            ? "Invite-only for now — enter your code, then approve the free signature."
+            ? "This wallet is new here — enter your invite code, then approve the free signature."
             : house.inviteRequired
-              ? "Invite-only beta — signing in is free; new hunters are asked for an invite code."
+              ? "Invite-only beta — the code is only used if this wallet is new. Signing is free."
               : "Signing in is free — a signature that proves you own this wallet, not a transaction."}
         </span>
         {signInError && (
