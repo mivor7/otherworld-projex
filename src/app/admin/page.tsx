@@ -312,17 +312,68 @@ export default function AdminPage() {
     setPayingId(id);
     setMsg(null);
     try {
-      const res = await payRibbit(destination, BigInt(amountRaw));
+      // Claim the row BEFORE any money moves — same discipline as the payout
+      // worker. If the worker (or another admin tab) already has it, we stop
+      // here and nothing was sent.
+      const claim = await fetch(`/api/admin/withdrawals/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "claim" }),
+      });
+      if (!claim.ok) {
+        const d = await claim.json().catch(() => null);
+        flash(d?.error ?? "Couldn't claim this payout — it may already be in flight.", "err");
+        load();
+        return;
+      }
+      let res;
+      try {
+        res = await payRibbit(destination, BigInt(amountRaw));
+      } catch (e) {
+        res = { ok: false as const, error: e instanceof Error ? e.message : "Payout failed" };
+      }
       if (!res.ok) {
-        flash(res.error, "err");
+        if ("maybeSent" in res && res.maybeSent && res.signature) {
+          // Broadcast but unconfirmed — the tx may have landed. The row STAYS
+          // claimed (processing → Pay now disabled, refresh-proof) and the
+          // signature is pre-filled so the operator verifies + marks sent.
+          setRecordFailed((p) => ({ ...p, [id]: true }));
+          setShowSig((p) => ({ ...p, [id]: true }));
+          setSigInputs((p) => ({ ...p, [id]: res.signature! }));
+          flash(res.error, "err");
+        } else {
+          // Nothing hit the chain — hand the row back to the queue/worker.
+          await fetch(`/api/admin/withdrawals/${id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "release" }),
+          }).catch(() => {});
+          flash(res.error, "err");
+        }
+        load();
         return;
       }
       const sig = res.data.signature as string;
-      const marked = await fetch(`/api/admin/withdrawals/${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "mark_sent", signature: sig }),
-      });
+      let marked: Response;
+      try {
+        marked = await fetch(`/api/admin/withdrawals/${id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "mark_sent", signature: sig }),
+        });
+      } catch {
+        // Money moved, record request never reached the server (network drop).
+        // Same protocol as record-failure: lock the row, pre-fill the sig.
+        setRecordFailed((p) => ({ ...p, [id]: true }));
+        setShowSig((p) => ({ ...p, [id]: true }));
+        setSigInputs((p) => ({ ...p, [id]: sig }));
+        flash(
+          "Paid on-chain but the record request didn't reach the server — the signature is pre-filled on that row; click “Mark sent”. Do NOT pay again.",
+          "err"
+        );
+        load();
+        return;
+      }
       await marked.json().catch(() => {});
       if (marked.ok) {
         flash(`Paid — sent on-chain (${sig.slice(0, 8)}…).`, "ok");

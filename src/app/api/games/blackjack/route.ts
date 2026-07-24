@@ -14,7 +14,9 @@ export const POST = handler(async (req: Request) => {
   const session = await requireSession();
   // Higher ceiling than flip/dice — one hand is several actions (deal, hits,
   // stand/double). Still far above any human pace; caps scripted DB load.
-  rateLimit(`round:${session.userId}`, 120, 60_000);
+  // OWN bucket: sharing flip/dice's `round:` key would let a brisk blackjack
+  // session exhaust their 60/min budget and 429 an innocent first dice roll.
+  rateLimit(`bj:${session.userId}`, 120, 60_000);
   const params = body.parse(await req.json());
   if (params.action === "deal") {
     return ok(await deal(session.userId, params.wager, params.clientSeed));

@@ -52,6 +52,8 @@ export const POST = handler(async (req: Request) => {
   }
 
   const result = await prisma.$transaction(async (tx) => {
+    // FIRST write: the shared cross-path redemption guard (see schema note).
+    await tx.redeemedSignature.create({ data: { signature, kind: "burn" } });
     await tx.burnEvent.create({
       data: { userId: session.userId, signature, amountRaw, credits },
     });

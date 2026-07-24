@@ -23,7 +23,15 @@ const TP = TOKEN_2022_PROGRAM_ID;
 
 export type ChainResult =
   | { ok: true; data: Record<string, unknown> }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      /** The tx WAS broadcast but confirmation failed/timed out — it may have
+          landed anyway. Callers must treat this as possibly-paid: surface the
+          signature and never blindly retry the payment. */
+      maybeSent?: boolean;
+      signature?: string;
+    };
 
 async function postJson(url: string, body: unknown): Promise<ChainResult> {
   const res = await fetch(url, {
@@ -374,7 +382,21 @@ export function useChain() {
           )
         );
         const signature = await sendTransaction(tx, connection);
-        await connection.confirmTransaction(signature, "confirmed");
+        // Past this point the payment is IN FLIGHT — a confirm timeout is the
+        // most common mainnet hiccup and the tx usually lands anyway. Never
+        // collapse that into a generic failure that loses the signature (the
+        // operator would retry and double-pay).
+        try {
+          await connection.confirmTransaction(signature, "confirmed");
+        } catch {
+          return {
+            ok: false,
+            maybeSent: true,
+            signature,
+            error:
+              "Broadcast, but confirmation timed out — it may have landed anyway. Do NOT pay again; verify the signature and mark it sent.",
+          };
+        }
         return { ok: true, data: { signature } };
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "Payout failed" };

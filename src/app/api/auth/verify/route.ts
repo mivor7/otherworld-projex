@@ -28,7 +28,12 @@ const REASON_MSG: Record<string, { msg: string; status: number }> = {
 export const POST = handler(async (req: Request) => {
   // Unauthenticated + does real crypto work (ed25519 verify + upsert) —
   // throttle per IP like the nonce endpoint. A real user signs in once.
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "?";
+  // x-real-ip is platform-set (not client-forgeable), unlike the leftmost
+  // x-forwarded-for token.
+  const ip =
+    req.headers.get("x-real-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "?";
   rateLimit(`verify:${ip}`, 20, 60_000);
   const { wallet, signature, inviteCode } = body.parse(await req.json());
   const result = await verifySignInAndCreateSession(wallet, signature, inviteCode);

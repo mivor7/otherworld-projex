@@ -33,6 +33,11 @@ export const POST = handler(async (req: Request) => {
   }
 
   const user = await prisma.$transaction(async (tx) => {
+    // FIRST write: the cross-path redemption guard. A buy tx's treasury leg
+    // also passes deposit verification, and the pre-checks above are
+    // check-then-act — this PK write is what makes one payment redeemable
+    // exactly once even under concurrent buy+deposit submits.
+    await tx.redeemedSignature.create({ data: { signature, kind: "deposit" } });
     await tx.deposit.create({
       data: { userId: session.userId, signature, amountRaw },
     });

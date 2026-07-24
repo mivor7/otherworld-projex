@@ -23,7 +23,20 @@ export const POST = handler(async (req: Request) => {
   const amountRaw = BigInt(raw);
   if (amountRaw <= 0n) return err("Amount must be positive");
   if (amountRaw < toRaw(MIN_WITHDRAW_RIBBIT)) {
-    return err(`Minimum withdrawal is ${MIN_WITHDRAW_RIBBIT} $RIBBIT`);
+    // The floor exists to stop dust-spam (each payout costs the house a real
+    // tx fee) — but a FULL sweep of a sub-floor balance can't be spammed (it
+    // zeroes the balance) and refusing it strands real money. Allow exactly
+    // the full-unlocked-balance sweep; anything smaller stays rejected.
+    const u = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { ribbitBalance: true, ribbitLocked: true },
+    });
+    const unlocked = (u?.ribbitBalance ?? 0n) - (u?.ribbitLocked ?? 0n);
+    if (amountRaw < unlocked) {
+      return err(
+        `Minimum withdrawal is ${MIN_WITHDRAW_RIBBIT} $RIBBIT — or withdraw your full balance in one go`
+      );
+    }
   }
   rateLimit(`withdraw:${session.userId}`, 10, 3_600_000);
 

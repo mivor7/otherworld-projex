@@ -94,23 +94,36 @@ export async function verifySignInAndCreateSession(
     if ((await houseConfig()).inviteRequired) {
       const code = (inviteCode ?? "").trim().toUpperCase();
       if (!code) return { ok: false, reason: "invite-required" };
-      // Atomic consume: the uses<maxUses guard lives INSIDE the UPDATE (same
-      // column-to-column pattern as the escrow guards), so the last seat of a
-      // code can never be double-claimed by concurrent sign-ups.
-      const claimed = await prisma.$executeRaw`
-        UPDATE "InviteCode" SET "uses" = "uses" + 1
-        WHERE "code" = ${code} AND "disabled" = false AND "uses" < "maxUses"
-      `;
-      if (claimed === 0) return { ok: false, reason: "invite-invalid" };
       try {
-        user = await prisma.user.create({ data: { wallet, invitedVia: code } });
+        // Consume + create in ONE transaction: the uses<maxUses guard lives
+        // INSIDE the UPDATE (same column-to-column pattern as the escrow
+        // guards) so the last seat can't be double-claimed — and if the user
+        // create fails for ANY reason, the rollback un-burns the seat.
+        user = await prisma.$transaction(async (tx) => {
+          const claimed = await tx.$executeRaw`
+            UPDATE "InviteCode" SET "uses" = "uses" + 1
+            WHERE "code" = ${code} AND "disabled" = false AND "uses" < "maxUses"
+          `;
+          if (claimed === 0) return null;
+          return tx.user.create({ data: { wallet, invitedVia: code } });
+        });
       } catch {
-        // Ultra-rare: the same new wallet raced itself — the row now exists.
+        // The same new wallet raced itself: the loser's create hit the unique
+        // constraint, its transaction rolled back (seat returned), and the row
+        // now exists from the winner.
+        user = await prisma.user.findUnique({ where: { wallet } });
+        if (!user) return { ok: false, reason: "invite-invalid" };
+      }
+      if (!user) return { ok: false, reason: "invite-invalid" };
+    } else {
+      try {
+        user = await prisma.user.create({ data: { wallet } });
+      } catch {
+        // First sign-in raced itself (two tabs / double click): the loser's
+        // create hits the unique wallet constraint — the row now exists.
         user = await prisma.user.findUnique({ where: { wallet } });
         if (!user) return { ok: false, reason: "bad-signature" };
       }
-    } else {
-      user = await prisma.user.create({ data: { wallet } });
     }
   }
   if (user.isBanned) return { ok: false, reason: "banned" };

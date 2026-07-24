@@ -57,6 +57,9 @@ export function handler<A extends unknown[]>(
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === "P2002"
       ) {
+        // Keep conflicts visible in logs — a future unique constraint hit by a
+        // real logic bug must not vanish into a polite 409.
+        console.warn("unique-constraint conflict (409):", e.meta?.target ?? "");
         return err("Already processed — this was submitted before", 409);
       }
       console.error(e);

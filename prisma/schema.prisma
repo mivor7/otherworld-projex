@@ -303,6 +303,20 @@ model TreasuryEvent {
   @@index([createdAt])
 }
 
+// One row per on-chain signature EVER redeemed for value, across every
+// redemption path (credit buy, auction deposit, pure burn). This is the shared
+// uniqueness guard the per-table @unique indexes can't provide: a buy tx's
+// treasury-transfer leg also passes deposit verification, and the cross-table
+// pre-checks are check-then-act — two CONCURRENT requests could each pass and
+// commit to different tables, redeeming one payment twice. Every redemption
+// transaction writes here FIRST; the second committer hits the PK conflict and
+// its whole transaction rolls back.
+model RedeemedSignature {
+  signature String   @id
+  kind      String // "buy" | "deposit" | "burn"
+  createdAt DateTime @default(now())
+}
+
 // Invite codes for the invite-only launch gate. A NEW wallet can only create
 // an account by presenting a live code (existing users sign in freely). Uses
 // are consumed atomically (uses < maxUses guard); the gate itself is the

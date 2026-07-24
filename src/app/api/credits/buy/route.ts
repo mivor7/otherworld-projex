@@ -59,6 +59,11 @@ export const POST = handler(async (req: Request) => {
   }
 
   const balance = await prisma.$transaction(async (tx) => {
+    // FIRST write: the cross-path redemption guard. The pre-checks above are
+    // check-then-act — a concurrent /api/deposits/verify with the same
+    // signature could pass them too. This PK write makes exactly one
+    // redemption commit; the loser's whole transaction rolls back (409).
+    await tx.redeemedSignature.create({ data: { signature, kind: "buy" } });
     await tx.creditPurchase.create({
       data: {
         userId: session.userId,
