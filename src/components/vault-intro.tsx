@@ -1,22 +1,58 @@
 "use client";
 
 // One-time-per-session entrance: the house vault unlocks and parts to reveal
-// the page. Zero-delay by design — a pre-paint inline script in the layout
-// sets <html data-intro="1"> on a first visit, this markup is in the server
-// HTML, and the whole sequence is pure CSS animation. Nothing waits for
-// hydration; the closed vault is the very first painted frame. JS here only
-// handles click-to-skip and removing the flag when the show ends.
+// the page. Two-phase choreography, all CSS:
+//   · data-intro     — set PRE-PAINT by an inline script at the top of the
+//     layout; shows the closed vault (engrave, wheel turn) from the very
+//     first frame. A body::before curtain guarantees nothing else can paint
+//     first, even before this markup streams.
+//   · data-intro-go  — set by an inline script at the END of the body (so the
+//     page content above it has streamed, with a 1.15s minimum) and starts
+//     the reveal: seam bloom, doors part onto the REAL page, overlay fades.
+// JS here only handles click-to-skip, a hydration fallback for the go flag,
+// and removing the flags once the show ends.
 import { useEffect } from "react";
 import { SealMark } from "./seal";
 
-const DISMISS = () => document.documentElement.removeAttribute("data-intro");
+const DISMISS = () => {
+  const h = document.documentElement;
+  h.removeAttribute("data-intro");
+  h.removeAttribute("data-intro-go");
+};
 
 export function VaultIntro() {
   useEffect(() => {
-    // The CSS finishes (and hides itself) at ~2.8s; drop the flag shortly
-    // after so the overlay leaves the tree state entirely.
-    const t = setTimeout(DISMISS, 3200);
-    return () => clearTimeout(t);
+    const h = document.documentElement;
+    if (h.getAttribute("data-intro") !== "1") return; // not playing this session
+
+    let endTimer: ReturnType<typeof setTimeout> | null = null;
+    // The reveal runs ~1.8s after the go flag lands — clean up shortly after.
+    const armEnd = () => {
+      if (!endTimer) endTimer = setTimeout(DISMISS, 2100);
+    };
+    if (h.getAttribute("data-intro-go") === "1") armEnd();
+    const mo = new MutationObserver(() => {
+      if (h.getAttribute("data-intro-go") === "1") armEnd();
+    });
+    mo.observe(h, { attributes: true, attributeFilter: ["data-intro-go"] });
+
+    // Fallback: hydration itself proves the page exists — if the end-of-body
+    // script somehow didn't run, set the flag from here on the same clock.
+    const goFallback = setTimeout(
+      () => {
+        if (h.getAttribute("data-intro") === "1") h.setAttribute("data-intro-go", "1");
+      },
+      Math.max(0, 1150 - performance.now())
+    );
+    // Absolute cap — the overlay can never hold the page hostage.
+    const hardCap = setTimeout(DISMISS, 8000);
+
+    return () => {
+      mo.disconnect();
+      if (endTimer) clearTimeout(endTimer);
+      clearTimeout(goFallback);
+      clearTimeout(hardCap);
+    };
   }, []);
 
   return (

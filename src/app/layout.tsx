@@ -84,6 +84,15 @@ export default function RootLayout({
           </main>
           <Footer />
         </Providers>
+        {/* Vault-intro "go" flag. This script sits at the END of the body, so
+            the parser can only reach it after the page content above has
+            streamed — i.e. the doors are cleared to open onto a real page.
+            The 1.15s floor keeps the wheel moment on fast loads. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var h=document.documentElement;if(h.getAttribute("data-intro")==="1"){setTimeout(function(){h.setAttribute("data-intro-go","1")},Math.max(0,1150-performance.now()))}}catch(e){}`,
+          }}
+        />
       </body>
     </html>
   );
