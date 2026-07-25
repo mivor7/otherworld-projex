@@ -36,14 +36,11 @@ export function VaultIntro() {
     });
     mo.observe(h, { attributes: true, attributeFilter: ["data-intro-go"] });
 
-    // Fallback: hydration itself proves the page exists — if the end-of-body
-    // script somehow didn't run, set the flag from here on the same clock.
-    const goFallback = setTimeout(
-      () => {
-        if (h.getAttribute("data-intro") === "1") h.setAttribute("data-intro-go", "1");
-      },
-      Math.max(0, 1150 - performance.now())
-    );
+    // True fallback only: if the in-page go script never ran (page errored,
+    // stream stalled), force the reveal at 4s rather than hold a black vault.
+    const goFallback = setTimeout(() => {
+      if (h.getAttribute("data-intro") === "1") h.setAttribute("data-intro-go", "1");
+    }, 4000);
     // Absolute cap — the overlay can never hold the page hostage.
     const hardCap = setTimeout(DISMISS, 8000);
 

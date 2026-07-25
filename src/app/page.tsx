@@ -409,6 +409,18 @@ export default async function Home() {
           </div>
         </Reveal>
       </section>
+
+      {/* Vault-intro "go" flag — lives INSIDE the page so it streams WITH the
+          content it vouches for (App Router streams the layout shell out of
+          order, so an end-of-body script in the layout runs too early). When
+          the parser executes this, the homepage markup above it is in the
+          DOM: the doors are cleared to open onto a real page. The 1.15s floor
+          keeps the wheel moment on fast loads. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `try{var h=document.documentElement;if(h.getAttribute("data-intro")==="1"){setTimeout(function(){h.setAttribute("data-intro-go","1")},Math.max(0,1150-performance.now()))}}catch(e){}`,
+        }}
+      />
     </div>
   );
 }
