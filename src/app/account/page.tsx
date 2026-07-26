@@ -42,7 +42,7 @@ type BountyWin = {
   createdAt: string;
 };
 type LiveProgress =
-  | { mode: "credit"; spent: number; threshold: number; pct: number }
+  | { mode: "credit"; spent: number; threshold: number; pct: number; potRibbit?: number; targetRibbit?: number }
   | { mode: "time"; endsAt: string }
   | null;
 type LivePosition = {

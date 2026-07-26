@@ -21,7 +21,7 @@ type Bounty = {
   status: string;
   endsAt: string;
   progress?:
-    | { mode: "credit"; spent: number; threshold: number; pct: number }
+    | { mode: "credit"; spent: number; threshold: number; pct: number; potRibbit?: number; targetRibbit?: number; seedRibbit?: number }
     | { mode: "time"; endsAt: string }
     | null;
 };
@@ -200,8 +200,9 @@ export default function BountiesPage() {
                       Prize unlocks as {GAME_LABELS[b.game ?? ""] ?? "the game"} is played
                     </span>
                     <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
-                      {b.progress.spent.toLocaleString()} /{" "}
-                      {b.progress.threshold.toLocaleString()} credits · {b.progress.pct}%
+                      {b.progress.potRibbit != null
+                        ? `pot ${b.progress.potRibbit.toLocaleString()} / ${b.progress.targetRibbit?.toLocaleString()} $RIBBIT · ${b.progress.pct}%`
+                        : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} credits · ${b.progress.pct}%`}
                     </span>
                   </div>
                   <div
@@ -218,9 +219,10 @@ export default function BountiesPage() {
                     />
                   </div>
                   <p className="text-xs mt-1.5" style={{ color: "var(--text-dim)" }}>
-                    Every credit wagered here fills the bar. The moment it&apos;s full, the{" "}
-                    {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`} pays out automatically —
-                    split across all eligible winners by how well they did.
+                    The pot grows with every credit wagered — its share of the house edge. The
+                    moment it reaches {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`} it pays
+                    out automatically, split across all eligible winners by how well they did — and a
+                    fresh pot opens.
                   </p>
                 </div>
               )}

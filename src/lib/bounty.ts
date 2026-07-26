@@ -152,11 +152,37 @@ export function splitPrize(prizeRaw: bigint, splits: number[]): bigint[] {
  * Changing the credit price or buy-split re-derives it; the house edge never
  * enters into it.
  */
-export async function requiredCreditSpend(prizeRaw: bigint): Promise<number> {
+/**
+ * $RIBBIT the pot gains per credit wagered — the pot's share of the edge the
+ * house realizes on that wager, valued at what a sold credit actually nets
+ * the house: potShare × houseEdge × (1 − burnShare) × ribbitPerCredit.
+ * (At defaults: 0.5 × 0.04 × 0.95 × 100 = 1.9 $RIBBIT per credit wagered.)
+ */
+export async function potRatePerCredit(): Promise<number> {
   const cfg = await houseConfig();
-  const houseRibbitPerCredit = (1 - cfg.buyBurnShare) * cfg.ribbitPerCredit;
-  const need = (fromRaw(prizeRaw) * (1 + cfg.bountyHouseMargin)) / houseRibbitPerCredit;
-  return Math.max(1, Math.ceil(need));
+  return (
+    cfg.bountyPotShare *
+    cfg.houseEdge *
+    (1 - cfg.buyBurnShare) *
+    cfg.ribbitPerCredit
+  );
+}
+
+/**
+ * Credits that must be wagered before a pot pays: the seed covers the head
+ * start, play funds the rest at potRatePerCredit. Solvent by construction —
+ * when the meter fills, the house has (in expectation) collected the funded
+ * portion 1/potShare times over, so every fill leaves the house ahead by
+ * (prize − seed)·(1−potShare)/potShare … minus only the seed it chose to give.
+ */
+export async function requiredCreditSpend(
+  prizeRaw: bigint,
+  seedRaw: bigint = 0n
+): Promise<number> {
+  const rate = await potRatePerCredit();
+  const funded = Math.max(0, fromRaw(prizeRaw) - fromRaw(seedRaw));
+  if (funded === 0) return 1; // fully-seeded pot pays on the first wager
+  return Math.max(1, Math.ceil(funded / rate));
 }
 
 /**
@@ -188,25 +214,42 @@ export async function bountyProgress(bounty: {
   game: string | null;
   autoPay: boolean;
   prizeRibbit: bigint;
+  seedRibbit?: bigint;
   triggerCreditVolume: number | null;
   startsAt: Date;
   endsAt: Date;
 }): Promise<
-  | { mode: "credit"; spent: number; threshold: number; pct: number }
+  | {
+      mode: "credit";
+      spent: number;
+      threshold: number;
+      pct: number;
+      /** The live pot in whole $RIBBIT: seed + what play has earned it. */
+      potRibbit: number;
+      targetRibbit: number;
+      seedRibbit: number;
+    }
   | { mode: "time"; endsAt: Date }
   | null
 > {
   if (!bounty.autoPay || !bounty.game) return null;
   if (!ARCADE_GAMES.has(bounty.game) && bounty.triggerCreditVolume) {
-    const [spent, threshold] = await Promise.all([
+    const seedRaw = bounty.seedRibbit ?? 0n;
+    const [spent, threshold, rate] = await Promise.all([
       creditSpendForGame(bounty.game, bounty.startsAt),
-      requiredCreditSpend(bounty.prizeRibbit),
+      requiredCreditSpend(bounty.prizeRibbit, seedRaw),
+      potRatePerCredit(),
     ]);
+    const target = fromRaw(bounty.prizeRibbit);
+    const pot = Math.min(target, fromRaw(seedRaw) + spent * rate);
     return {
       mode: "credit",
       spent,
       threshold,
-      pct: threshold > 0 ? Math.min(100, Math.round((spent / threshold) * 100)) : 0,
+      pct: target > 0 ? Math.min(100, Math.round((pot / target) * 100)) : 0,
+      potRibbit: Math.round(pot),
+      targetRibbit: Math.round(target),
+      seedRibbit: Math.round(fromRaw(seedRaw)),
     };
   }
   return { mode: "time", endsAt: bounty.endsAt };
@@ -370,16 +413,24 @@ export async function awardBountyProRata(bountyId: string): Promise<AwardResult 
  * when another open auto-pay bounty already covers the game (an admin may
  * have posted a special edition — never double the weekly cost silently).
  */
-async function renewWeeklyBounty(b: {
-  id: string;
-  title: string;
-  description: string;
-  target: string | null;
-  game: string | null;
-  kind: string;
-  prizeRibbit: bigint;
-  prizeText: string | null;
-}): Promise<void> {
+async function renewWeeklyBounty(
+  b: {
+    id: string;
+    title: string;
+    description: string;
+    target: string | null;
+    game: string | null;
+    kind: string;
+    prizeRibbit: bigint;
+    seedRibbit?: bigint;
+    prizeText: string | null;
+    startsAt?: Date;
+    endsAt?: Date;
+  },
+  // Successor lifetime: credit pots reuse their own duration; arcade weeklies
+  // default to 7 days.
+  durationMs = 7 * 24 * 3600 * 1000
+): Promise<void> {
   const otherOpen = await prisma.bounty.count({
     where: { game: b.game, status: "open", autoPay: true, id: { not: b.id } },
   });
@@ -392,9 +443,10 @@ async function renewWeeklyBounty(b: {
       game: b.game,
       kind: b.kind,
       prizeRibbit: b.prizeRibbit,
+      seedRibbit: b.seedRibbit ?? 0n,
       prizeText: b.prizeText,
       autoPay: true,
-      endsAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+      endsAt: new Date(Date.now() + durationMs),
     },
   });
 }
@@ -444,11 +496,21 @@ export async function autoSettleBounties(): Promise<void> {
         }
         await renewWeeklyBounty(b);
       } else if (b.triggerCreditVolume) {
-        // Credit game: pay once enough credits have been wagered on it.
+        // Credit pot: pays the moment play has funded it (seed + pot's share
+        // of the realized edge reaches the target).
         const spent = await creditSpendForGame(b.game!, b.startsAt);
-        const required = await requiredCreditSpend(b.prizeRibbit);
+        const required = await requiredCreditSpend(b.prizeRibbit, b.seedRibbit);
         if (spent >= required) {
-          await awardBountyProRata(b.id);
+          const res = await awardBountyProRata(b.id);
+          // A filled pot re-opens immediately (same prize/seed, same
+          // lifetime) — the "new pot opens the moment one pays" loop.
+          if (res) {
+            const durationMs = Math.max(
+              24 * 3600 * 1000,
+              b.endsAt.getTime() - b.startsAt.getTime()
+            );
+            await renewWeeklyBounty(b, durationMs);
+          }
         } else if (now >= b.endsAt) {
           await prisma.bounty.updateMany({
             where: { id: b.id, status: "open" },

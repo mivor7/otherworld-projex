@@ -15,7 +15,7 @@ type TreasuryData = {
   };
   ribbitMint: string;
   houseEdge: number;
-  economy: { buyBurnShare: number; bountyHouseMargin: number; ribbitPerCredit: number };
+  economy: { buyBurnShare: number; bountyPotShare: number; ribbitPerCredit: number };
   totals: {
     ribbitBurnedRaw: string;
     burnCount: number;
@@ -156,10 +156,10 @@ export default function TreasuryPage() {
                     data.houseEdge * 5,
                   ],
                   [
-                    "Every bounty pool",
-                    `pays only after enough credits are spent that the house netted the prize +${Math.round(data.economy.bountyHouseMargin * 100)}%`,
+                    "Every bounty pot",
+                    `is funded by ${Math.round(data.economy.bountyPotShare * 100)}% of the edge the house actually collects — pots only pay what play has earned them (plus any declared house seed)`,
                     "var(--color-gold)",
-                    data.economy.bountyHouseMargin,
+                    data.economy.bountyPotShare,
                   ],
                 ] as const
               ).map(([label, detail, color, frac]) => (

@@ -105,21 +105,25 @@ data. Prefer a separate Neon branch for development.
 ### 3.2 The bounty engine — read `src/lib/bounty.ts`
 This is the most-iterated, most-subtle subsystem. The final design:
 
-- A bounty has a **fixed $RIBBIT prize** set by the house. For **credit games**,
-  the prize auto-derives a **credit-spend trigger**: the pool pays out the moment
-  enough credits have been **wagered** on that game since the bounty opened.
-- The trigger (`requiredCreditSpend`) is sized from the prize so the house's
-  share of the $RIBBIT spent buying those credits covers the prize plus
-  `BOUNTY_HOUSE_MARGIN`. Creating a bounty therefore waits on nothing — the prize
-  simply isn't paid until the meter fills. The house is structurally protected.
-- **The meter counts credits SPENT (gross wager), not winnings and not net
-  take.** This is a deliberate owner decision: it makes the progress bar
-  **monotonic** (only ever rises as the game is played). The accepted trade-off:
-  because re-wagered winnings also count, wagering can rarely outrun real
-  purchases, so the house *can* in edge cases pay a prize it hasn't fully earned.
-  **Fairness and a clean always-rising meter were chosen over that edge case —
-  do not "fix" this by counting net take; that reintroduces the back-and-forth
-  meter the owner explicitly rejected.**
+- Credit-game bounties are **rake-funded pots** (owner-approved redesign,
+  2026-07-27 — it replaced a gross-wager trigger whose margin knob could never
+  track real revenue). A pot has a **prize** (the target) and an optional
+  **seed** (`Bounty.seedRibbit`, the house's declared head start = its only
+  cost per fill). The pot earns
+  `bountyPotShare × houseEdge × (1 − buyBurnShare) × ribbitPerCredit`
+  $RIBBIT per credit wagered — its share of the edge the house actually
+  collects — and pays the moment it reaches the prize, then **re-opens
+  automatically** with the same prize/seed.
+- The fill threshold (`requiredCreditSpend(prize, seed)`) is derived
+  server-side and re-derived whenever prize/seed/economy settings change.
+  Solvency is structural: when the meter fills, the house has collected the
+  funded portion `1/potShare` times over, so **every fill leaves the house
+  ahead** (minus only the seed it chose). A pot that never fills costs
+  nothing.
+- The meter still counts **gross wager** (monotonic — the bar only rises,
+  the owner's hard requirement), but each wagered credit now advances the pot
+  by its true expected revenue contribution instead of pretending volume was
+  fresh money.
 - **Eligibility (anti-sybil), in `src/lib/ranked.ts`.** To share a prize a wallet
   must (1) have spent ≥ `RANKED_MIN_BURNED_RIBBIT` on credits *lifetime*, and
   (2) spent ≥ `RANKED_MIN_WINDOW_BURNED_RIBBIT` *inside the bounty window*. "Spend"

@@ -75,15 +75,21 @@ async function seedId(userId) {
 // Mirror of the app's requiredCreditSpend (src/lib/bounty.ts), read from the
 // LIVE house config so the suite tracks price/split/margin changes instead of
 // hardcoding a derived number. Keeps the tests correct at any credit price.
-async function requiredCredits(prizeRaw) {
+// Mirrors src/lib/bounty.requiredCreditSpend (pot model): the pot earns
+// potShare × edge × (1−burn) × price per credit wagered; seed covers the head
+// start and play funds prize − seed.
+async function requiredCredits(prizeRaw, seedRaw = 0n) {
   const s = Object.fromEntries((await prisma.houseSetting.findMany()).map((x) => [x.key, x.value]));
   const num = (k, envK, def) =>
     s[k] !== undefined && s[k] !== "" ? Number(s[k]) : Number(process.env[envK] ?? def);
   const ribbitPerCredit = num("ribbitPerCredit", "RIBBIT_PER_CREDIT", 100);
   const buyBurnShare = num("buyBurnShare", "BUY_BURN_SHARE", 0.5);
-  const margin = num("bountyHouseMargin", "BOUNTY_HOUSE_MARGIN", 0.5);
-  const houseRibbitPerCredit = (1 - buyBurnShare) * ribbitPerCredit;
-  return Math.max(1, Math.ceil((Number(prizeRaw / RAW) * (1 + margin)) / houseRibbitPerCredit));
+  const potShare = num("bountyPotShare", "BOUNTY_POT_SHARE", 0.5);
+  const edge = num("houseEdge", "HOUSE_EDGE", 0.04);
+  const rate = potShare * edge * (1 - buyBurnShare) * ribbitPerCredit;
+  const funded = Math.max(0, Number((prizeRaw - seedRaw) / RAW));
+  if (funded === 0) return 1;
+  return Math.max(1, Math.ceil(funded / rate));
 }
 
 try {

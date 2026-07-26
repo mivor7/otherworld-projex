@@ -18,6 +18,7 @@ const body = z.object({
   description: z.string().min(10).max(2000).optional(),
   target: z.string().max(80).nullable().optional(),
   prizeRibbit: z.number().positive().max(1_000_000_000).optional(),
+  seedRibbit: z.number().min(0).max(1_000_000_000).optional(),
   prizeText: z.string().max(120).nullable().optional(),
   autoPay: z.boolean().optional(),
   // Extend (or shorten, negative) the deadline by this many days.
@@ -47,12 +48,17 @@ export const POST = handler(
 
       const prizeRaw =
         data.prizeRibbit !== undefined ? toRaw(data.prizeRibbit) : bounty.prizeRibbit;
+      const seedRaw =
+        data.seedRibbit !== undefined ? toRaw(data.seedRibbit) : bounty.seedRibbit;
+      if (seedRaw > 0n && seedRaw >= prizeRaw) {
+        return err("Seed must be smaller than the prize");
+      }
       const autoPay = data.autoPay ?? bounty.autoPay;
-      // Re-derive the spend trigger whenever prize/autoPay change on a
+      // Re-derive the pot trigger whenever prize/seed/autoPay change on a
       // credit-game bounty — never trust a client-supplied threshold.
       const isCreditGame = !!bounty.game && !ARCADE_GAMES.has(bounty.game);
       const triggerCreditVolume =
-        autoPay && isCreditGame ? await requiredCreditSpend(prizeRaw) : null;
+        autoPay && isCreditGame ? await requiredCreditSpend(prizeRaw, seedRaw) : null;
 
       const updated = await prisma.bounty.update({
         where: { id },
@@ -61,8 +67,11 @@ export const POST = handler(
           ...(data.description !== undefined ? { description: data.description } : {}),
           ...(data.target !== undefined ? { target: data.target } : {}),
           ...(data.prizeRibbit !== undefined ? { prizeRibbit: prizeRaw } : {}),
+          ...(data.seedRibbit !== undefined ? { seedRibbit: seedRaw } : {}),
           ...(data.prizeText !== undefined ? { prizeText: data.prizeText } : {}),
-          ...(data.autoPay !== undefined || data.prizeRibbit !== undefined
+          ...(data.autoPay !== undefined ||
+          data.prizeRibbit !== undefined ||
+          data.seedRibbit !== undefined
             ? { autoPay, triggerCreditVolume }
             : {}),
           ...(data.extendDays

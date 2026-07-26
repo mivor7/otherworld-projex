@@ -224,6 +224,10 @@ model Bounty {
   game        String? // linked game for leaderboard bounties ("hopper", "flip", "dice")
   kind        String   @default("leaderboard") // "leaderboard" | "challenge"
   prizeRibbit BigInt // prize pool in raw $RIBBIT units
+  // House-contributed head start on the pot (raw $RIBBIT). The pot opens at
+  // seed and play (the pot's share of the realized edge) funds prize − seed.
+  // This is the house's DECLARED cost per fill; 0 = fully self-funded pot.
+  seedRibbit  BigInt   @default(0)
   prizeText   String? // display override e.g. "5,000 $RIBBIT + badge"
   status      String   @default("open") // "open" | "closed" | "paid"
   paidAt      DateTime?

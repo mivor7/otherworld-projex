@@ -87,7 +87,10 @@ export const CONFIG = {
   // buy-split share) covers the prize PLUS this margin. 0.5 = the house nets
   // ~1.5× the prize before paying. Higher = more margin / slower payouts. The
   // house EDGE is unrelated to this.
-  bountyHouseMargin: nonneg(process.env.BOUNTY_HOUSE_MARGIN, 0.5),
+  // Share of the realized house edge that fills bounty pots (0.5 = pot gets
+  // half, house keeps half). Replaces the old bountyHouseMargin, which scaled
+  // a wager threshold and could never track real revenue.
+  bountyPotShare: nonneg(process.env.BOUNTY_POT_SHARE, 0.5),
 
   adminWallets: (process.env.ADMIN_WALLETS ?? "")
     .split(",")

@@ -54,9 +54,11 @@ export function BountyStandings({ game }: { game: string }) {
       {b.progress?.mode === "credit" && (
         <div className="mb-4">
           <div className="flex items-baseline justify-between mb-1.5">
-            <span className="kicker !text-[0.6rem]">Pool fills as the game is played</span>
+            <span className="kicker !text-[0.6rem]">The pot grows as the game is played</span>
             <span className="mono text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
-              {b.progress.spent.toLocaleString()} / {b.progress.threshold.toLocaleString()} credits · {b.progress.pct}%
+              {b.progress.potRibbit != null
+                ? `${b.progress.potRibbit.toLocaleString()} / ${b.progress.targetRibbit?.toLocaleString()} $RIBBIT · ${b.progress.pct}%`
+                : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} credits · ${b.progress.pct}%`}
             </span>
           </div>
           <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.01 165)" }}>

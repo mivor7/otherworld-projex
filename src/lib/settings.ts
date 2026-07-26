@@ -57,14 +57,14 @@ export const SETTING_DEFS: readonly SettingDef[] = [
     envDefault: CONFIG.houseEdge,
   },
   {
-    key: "bountyHouseMargin",
-    label: "Bounty trigger margin",
-    desc: "A credit bounty needs enough credit-spend that the house netted prize × (1 + margin) in real $RIBBIT before it pays. Higher = more house margin, slower payouts.",
+    key: "bountyPotShare",
+    label: "Bounty pot share",
+    desc: "Share of the realized house edge that fills bounty pots. 0.5 = the pot gets half of every credit the edge collects, the house keeps the other half. Higher = pots fill faster, house keeps less.",
     group: "Economy",
     kind: "share",
-    min: 0,
-    max: 5,
-    envDefault: CONFIG.bountyHouseMargin,
+    min: 0.05,
+    max: 1,
+    envDefault: CONFIG.bountyPotShare,
   },
   // ---- Limits ----
   {
@@ -186,7 +186,7 @@ export type HouseConfig = {
   buyBurnShare: number;
   ribbitPerCredit: number;
   houseEdge: number;
-  bountyHouseMargin: number;
+  bountyPotShare: number;
   minWager: number;
   maxWager: number;
   arcadeDailySubmissions: number;

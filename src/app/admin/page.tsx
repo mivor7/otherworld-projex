@@ -154,6 +154,7 @@ type ManagedBounty = {
   game: string | null;
   kind: string;
   prizeRibbit: number;
+  seedRibbit: number;
   status: string;
   autoPay: boolean;
   triggerCreditVolume: number | null;
@@ -189,15 +190,17 @@ const BOUNTY_PRESETS: {
   target: string;
   game: string;
   prizeRibbit: number;
+  seedRibbit: number;
   durationDays: number;
   autoPay: boolean;
 }[] = [
-  { label: "Hopper (weekly)", game: "hopper", title: "EP 05 — Hopper", description: "Cross the pond for the highest replay-verified score this week — every eligible hunter shares the pool.", target: "Top score", prizeRibbit: 1250, durationDays: 7, autoPay: true },
-  { label: "Frogris (weekly)", game: "frogris", title: "EP 02 — Frogris", description: "Clear lines and chase levels for the top verified score this week. Eligible top scores split the pool.", target: "Top score", prizeRibbit: 1000, durationDays: 7, autoPay: true },
-  { label: "Worm (weekly)", game: "worm", title: "EP 04 — Worm Frog", description: "Grow the longest and post the best verified score this week. Paid pro-rata to eligible hunters.", target: "Top score", prizeRibbit: 900, durationDays: 7, autoPay: true },
-  { label: "Frog Flip (table)", game: "flip", title: "Double or Nothing — Frog Flip", description: "Call the flip and ride your streak. The pool fills as the table is played and pays out the best net.", target: "Best net credits", prizeRibbit: 4000, durationDays: 7, autoPay: true },
-  { label: "Pond Dice (table)", game: "dice", title: "High Roller — Pond Dice", description: "Set your line and roll under it. The pool unlocks as dice is played and splits by net winnings.", target: "Best net credits", prizeRibbit: 5000, durationDays: 7, autoPay: true },
-  { label: "Blackjack (table)", game: "blackjack", title: "The House Edge — Blackjack", description: "Beat the dealer across the week. The pool fills as blackjack is played and pays out the best net.", target: "Best net credits", prizeRibbit: 6000, durationDays: 7, autoPay: true },
+  { label: "Hopper (weekly)", game: "hopper", title: "EP 05 — Hopper", description: "Cross the pond for the highest replay-verified score this week — every eligible hunter shares the pool.", target: "Top score", prizeRibbit: 1250, seedRibbit: 0, durationDays: 7, autoPay: true },
+  { label: "Frogris (weekly)", game: "frogris", title: "EP 02 — Frogris", description: "Clear lines and chase levels for the top verified score this week. Eligible top scores split the pool.", target: "Top score", prizeRibbit: 1000, seedRibbit: 0, durationDays: 7, autoPay: true },
+  { label: "Worm (weekly)", game: "worm", title: "EP 04 — Worm Frog", description: "Grow the longest and post the best verified score this week. Paid pro-rata to eligible hunters.", target: "Top score", prizeRibbit: 900, seedRibbit: 0, durationDays: 7, autoPay: true },
+  { label: "Frog Flip (pot)", game: "flip", title: "Double or Nothing — Frog Flip", description: "Call the flip and ride your streak. The pot grows as the table is played and pays out the best net.", target: "Best net credits", prizeRibbit: 750, seedRibbit: 250, durationDays: 14, autoPay: true },
+  { label: "Pond Dice (pot)", game: "dice", title: "High Roller — Pond Dice", description: "Set your line and roll under it. The pot grows as dice is played and splits by net winnings.", target: "Best net credits", prizeRibbit: 750, seedRibbit: 250, durationDays: 14, autoPay: true },
+  { label: "Blackjack (pot)", game: "blackjack", title: "The House Edge — Blackjack", description: "Beat the dealer. The pot grows as blackjack is played and pays out the best net.", target: "Best net credits", prizeRibbit: 1500, seedRibbit: 500, durationDays: 14, autoPay: true },
+  { label: "Blackjack FLAGSHIP", game: "blackjack", title: "The Vault Run — Blackjack", description: "The big one: a house-seeded vault pot that grows with every hand dealt. Best net splits it.", target: "Best net credits", prizeRibbit: 5000, seedRibbit: 2500, durationDays: 30, autoPay: true },
 ];
 
 function previewShares(prize: number, splits: number[], winners: number): number[] {
@@ -236,6 +239,7 @@ export default function AdminPage() {
     target: "",
     game: "hopper",
     prizeRibbit: 5000,
+    seedRibbit: 0,
     durationDays: 7,
     autoPay: true, // auto-settlement is the whole point of the system — default on
   });
@@ -243,7 +247,7 @@ export default function AdminPage() {
 
   const [manage, setManage] = useState<ManagedBounty[]>([]);
   const [editBounty, setEditBounty] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", target: "", prizeRibbit: 0, extendDays: 0, autoPay: false });
+  const [editForm, setEditForm] = useState({ title: "", target: "", prizeRibbit: 0, seedRibbit: 0, extendDays: 0, autoPay: false });
   const [editAuction, setEditAuction] = useState<string | null>(null);
   const [auctionEditForm, setAuctionEditForm] = useState({ title: "", description: "", startBidRibbit: 0, minIncrementRibbit: 0, extendHours: 0 });
   const [playerWallet, setPlayerWallet] = useState("");
@@ -403,21 +407,20 @@ export default function AdminPage() {
     const row = settings.find((x) => x.key === key);
     return row && typeof row.effective === "number" ? row.effective : fallback;
   };
-  // Mirror of the server's requiredCreditSpend: credits that must be wagered
-  // on the game before the bounty pays, derived from the prize (no house edge).
-  // One open bounty per game — flag if the selected game already has one.
+  // Mirror of the server's pot math: the pot earns potShare × edge ×
+  // (1−burn) × price per credit wagered; the seed covers the head start and
+  // play funds prize − seed. One open bounty per game — flag duplicates.
   const openForGame = manage.find(
     (b) => b.game === bountyForm.game && b.status === "open"
   );
-  const requiredCredits = Math.max(
-    1,
-    Math.ceil(
-      (bountyForm.prizeRibbit *
-        (1 + liveNum("bountyHouseMargin", CLIENT_CONFIG.bountyHouseMargin))) /
-        ((1 - liveNum("buyBurnShare", CLIENT_CONFIG.buyBurnShare)) *
-          liveNum("ribbitPerCredit", CLIENT_CONFIG.ribbitPerCredit))
-    )
-  );
+  const potRate =
+    liveNum("bountyPotShare", CLIENT_CONFIG.bountyPotShare) *
+    liveNum("houseEdge", CLIENT_CONFIG.houseEdge) *
+    (1 - liveNum("buyBurnShare", CLIENT_CONFIG.buyBurnShare)) *
+    liveNum("ribbitPerCredit", CLIENT_CONFIG.ribbitPerCredit);
+  const fundedRibbit = Math.max(0, bountyForm.prizeRibbit - bountyForm.seedRibbit);
+  const requiredCredits =
+    fundedRibbit === 0 ? 1 : Math.max(1, Math.ceil(fundedRibbit / Math.max(potRate, 1e-9)));
 
   const setSetting = async (row: HouseSettingRow, value: number | boolean | "reset") => {
     // Confirm anything that moves live money/behaviour: the danger switches AND
@@ -1046,6 +1049,7 @@ export default function AdminPage() {
                         target: p.target,
                         game: p.game,
                         prizeRibbit: p.prizeRibbit,
+                        seedRibbit: p.seedRibbit,
                         durationDays: p.durationDays,
                         autoPay: p.autoPay,
                       })
@@ -1080,6 +1084,16 @@ export default function AdminPage() {
                 <input className="input" type="number" value={bountyForm.prizeRibbit || ""}
                   onChange={(e) => setBountyForm({ ...bountyForm, prizeRibbit: Number(e.target.value) })} />
               </div>
+              {!bountyIsFree && bountyForm.autoPay && (
+                <div>
+                  <label className="text-xs text-fog" title="House head start on the pot — your declared cost per fill. Play funds the rest.">
+                    Seed RIBBIT
+                  </label>
+                  <input className="input" type="number" min={0} value={bountyForm.seedRibbit || ""}
+                    placeholder="0"
+                    onChange={(e) => setBountyForm({ ...bountyForm, seedRibbit: Math.max(0, Number(e.target.value) || 0) })} />
+                </div>
+              )}
               <div>
                 <label className="text-xs text-fog">Days</label>
                 <input className="input" type="number" value={bountyForm.durationDays || ""}
@@ -1103,7 +1117,6 @@ export default function AdminPage() {
             {/* Always explain what will happen — manual vs auto, and the
                 required credit-spend this bounty needs before it pays. */}
             {(() => {
-              const margin = liveNum("bountyHouseMargin", CLIENT_CONFIG.bountyHouseMargin);
               if (!bountyForm.autoPay) {
                 return (
                   <div className="panel p-3 text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
@@ -1128,16 +1141,18 @@ export default function AdminPage() {
               }
               return (
                 <div className="panel p-3 text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                  <span className="text-frost font-medium">Auto-pay · credit game.</span> Pays all eligible
-                  winners pro-rata once{" "}
-                  <span className="stat-number text-neon">≈ {requiredCredits.toLocaleString()} credits</span>{" "}
-                  have been wagered on {bountyForm.game}. Nothing is paid before that; creating the bounty
-                  waits on nothing.
+                  <span className="text-frost font-medium">Auto-pay · credit pot.</span> The pot opens at{" "}
+                  <span className="stat-number text-gold">{bountyForm.seedRibbit.toLocaleString()} $RIBBIT</span>{" "}
+                  (your seed{bountyForm.seedRibbit > 0 ? `, ${Math.round((bountyForm.seedRibbit / Math.max(1, bountyForm.prizeRibbit)) * 100)}% of the prize` : ""}) and
+                  grows <span className="stat-number text-neon">{potRate.toFixed(2)} $RIBBIT per credit wagered</span>{" "}
+                  — its share of the house edge. It fills at{" "}
+                  <span className="stat-number text-neon">≈ {requiredCredits.toLocaleString()} credits</span> wagered on{" "}
+                  {bountyForm.game}, then pays all eligible winners pro-rata and re-opens automatically.
                   <div className="mt-1.5">
-                    That threshold comes straight from the prize: those credits were bought with $RIBBIT,
-                    so by the time they&apos;re spent the house has already taken in more than the{" "}
-                    {bountyForm.prizeRibbit.toLocaleString()} $RIBBIT prize (+ a {Math.round(margin * 100)}%
-                    margin) — so the house can&apos;t lose. The house edge doesn&apos;t affect this.
+                    Your cost per fill is <span className="text-frost">the seed and only the seed</span> — the funded{" "}
+                    {fundedRibbit.toLocaleString()} $RIBBIT is covered by edge the house genuinely collected, so every
+                    fill leaves the house ahead. Whether it fills is up to the players — a pot that never fills costs
+                    nothing.
                   </div>
                   <div className="mt-1.5 opacity-80">
                     Requires the global <span className="text-frost">Bounty auto-pay</span> switch to be ON.
@@ -1431,6 +1446,7 @@ export default function AdminPage() {
                             title: b.title,
                             target: b.target ?? "",
                             prizeRibbit: b.prizeRibbit,
+                            seedRibbit: b.seedRibbit ?? 0,
                             extendDays: 0,
                             autoPay: b.autoPay,
                           });
@@ -1508,6 +1524,12 @@ export default function AdminPage() {
                           onChange={(e) => setEditForm({ ...editForm, prizeRibbit: Number(e.target.value) })} />
                       </div>
                       <div>
+                        <label className="text-[0.65rem] text-fog">Seed $RIBBIT</label>
+                        <input className="input !text-xs" type="number" min={0} value={editForm.seedRibbit || ""}
+                          placeholder="0"
+                          onChange={(e) => setEditForm({ ...editForm, seedRibbit: Math.max(0, Number(e.target.value) || 0) })} />
+                      </div>
+                      <div>
                         <label className="text-[0.65rem] text-fog">Extend days (±)</label>
                         <input className="input !text-xs" type="number" value={editForm.extendDays || ""}
                           onChange={(e) => setEditForm({ ...editForm, extendDays: Number(e.target.value) })} />
@@ -1520,7 +1542,7 @@ export default function AdminPage() {
                     </div>
                     <p className="text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
                       Changing the prize on an auto-pay credit bounty re-derives its
-                      spend trigger automatically (house margin preserved).
+                      fill threshold automatically (pot economics preserved).
                     </p>
                     <button
                       className="btn btn-primary text-xs"
@@ -1531,6 +1553,7 @@ export default function AdminPage() {
                           title: editForm.title,
                           target: editForm.target || null,
                           prizeRibbit: editForm.prizeRibbit,
+                          seedRibbit: editForm.seedRibbit,
                           autoPay: editForm.autoPay,
                           ...(editForm.extendDays ? { extendDays: editForm.extendDays } : {}),
                         });

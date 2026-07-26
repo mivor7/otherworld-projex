@@ -90,7 +90,7 @@ export function GameBountyStrip({ game }: { game: string }) {
                 className="mono text-[0.65rem] whitespace-nowrap"
                 style={{ color: "var(--text-dim)" }}
               >
-                {pct}% · fills as you play
+                {pct}% · pot grows as you play
               </span>
             </div>
           )}

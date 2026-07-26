@@ -629,7 +629,14 @@ try {
     },
   });
   board = (await A.api("/api/leaderboard?game=worm")).data;
-  check("lifetime-only burner still absent (window rule bites)", !board.some((r) => r.player === shortA));
+  // The in-window spend rule is a live house setting the owner may disable
+  // (0) — assert whichever behavior the CURRENT config promises.
+  const liveCfg = (await A.api("/api/config")).data;
+  if (liveCfg.rankedMinWindowBurnedRibbit > 0) {
+    check("lifetime-only burner still absent (window rule bites)", !board.some((r) => r.player === shortA));
+  } else {
+    check("lifetime-only burner ranks (window rule disabled by config)", board.some((r) => r.player === shortA));
+  }
 
   await prisma.burnEvent.create({
     data: {

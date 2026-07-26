@@ -32,7 +32,7 @@ export const GET = handler(async () => {
     // from the prize so a pool that pays has already earned its keep.
     economy: {
       buyBurnShare: cfg.buyBurnShare,
-      bountyHouseMargin: cfg.bountyHouseMargin,
+      bountyPotShare: cfg.bountyPotShare,
       ribbitPerCredit: cfg.ribbitPerCredit,
     },
     totals: {

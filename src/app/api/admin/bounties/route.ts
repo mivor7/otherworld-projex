@@ -11,6 +11,9 @@ const body = z.object({
   game: z.enum(["hopper", "frogris", "worm", "flip", "dice", "blackjack"]).optional(),
   kind: z.enum(["leaderboard", "challenge"]).default("leaderboard"),
   prizeRibbit: z.number().positive().max(1_000_000_000),
+  // House-contributed head start on the pot (credit games): the declared cost
+  // per fill. Play funds prize − seed via the pot's share of the edge.
+  seedRibbit: z.number().min(0).max(1_000_000_000).default(0),
   prizeText: z.string().max(120).optional(),
   durationDays: z.number().int().min(1).max(90),
   autoPay: z.boolean().default(false),
@@ -38,6 +41,7 @@ export const GET = handler(async () => {
       status: b.status,
       autoPay: b.autoPay,
       triggerCreditVolume: b.triggerCreditVolume,
+      seedRibbit: Number(b.seedRibbit / 10n ** 6n),
       endsAt: b.endsAt,
       awards: b._count.awards,
     }))
@@ -65,12 +69,16 @@ export const POST = handler(async (req: Request) => {
   }
 
   const prizeRaw = toRaw(data.prizeRibbit);
-  // Credit-game auto-bounties get their spend threshold derived from the
-  // prize (server-authoritative) so the play that unlocks it always earns
-  // the house more than it pays. Free games are time-based (weekly).
+  if (data.seedRibbit >= data.prizeRibbit && data.seedRibbit > 0) {
+    return err("Seed must be smaller than the prize — a fully-seeded pot has nothing left for play to fund");
+  }
   const isCreditGame = !!data.game && !ARCADE_GAMES.has(data.game);
+  const seedRaw = data.autoPay && isCreditGame ? toRaw(data.seedRibbit) : 0n;
+  // Credit-game pots derive their fill threshold server-side: the seed covers
+  // the head start, play funds prize − seed via the pot's share of the edge —
+  // every fill leaves the house ahead by construction. Free games are weekly.
   const triggerCreditVolume =
-    data.autoPay && isCreditGame ? await requiredCreditSpend(prizeRaw) : null;
+    data.autoPay && isCreditGame ? await requiredCreditSpend(prizeRaw, seedRaw) : null;
 
   const bounty = await prisma.bounty.create({
     data: {
@@ -80,6 +88,7 @@ export const POST = handler(async (req: Request) => {
       game: data.game,
       kind: data.kind,
       prizeRibbit: prizeRaw,
+      seedRibbit: seedRaw,
       prizeText: data.prizeText,
       autoPay: data.autoPay,
       triggerCreditVolume,

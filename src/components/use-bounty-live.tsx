@@ -10,7 +10,15 @@ import { useEffect, useState } from "react";
 import type { JustEnded } from "./bounty-ended-card";
 
 export type BountyLiveProgress =
-  | { mode: "credit"; spent: number; threshold: number; pct: number }
+  | {
+      mode: "credit";
+      spent: number;
+      threshold: number;
+      pct: number;
+      potRibbit?: number;
+      targetRibbit?: number;
+      seedRibbit?: number;
+    }
   | { mode: "time"; endsAt: string }
   | null;
 

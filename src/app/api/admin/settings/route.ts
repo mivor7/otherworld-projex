@@ -96,16 +96,16 @@ export const POST = handler(async (req: Request) => {
   // (The house edge is NOT here — it no longer affects bounties.)
   let rederived = 0;
   if (
-    ["ribbitPerCredit", "buyBurnShare", "bountyHouseMargin"].includes(def.key) &&
+    ["ribbitPerCredit", "buyBurnShare", "houseEdge", "bountyPotShare"].includes(def.key) &&
     String(before) !== String(after)
   ) {
     const open = await prisma.bounty.findMany({
       where: { status: "open", autoPay: true, game: { not: null } },
-      select: { id: true, game: true, prizeRibbit: true, triggerCreditVolume: true },
+      select: { id: true, game: true, prizeRibbit: true, seedRibbit: true, triggerCreditVolume: true },
     });
     for (const b of open) {
       if (!b.game || ARCADE_GAMES.has(b.game)) continue; // weekly, no marker
-      const marker = await requiredCreditSpend(b.prizeRibbit);
+      const marker = await requiredCreditSpend(b.prizeRibbit, b.seedRibbit);
       if (marker !== b.triggerCreditVolume) {
         await prisma.bounty.update({
           where: { id: b.id },
