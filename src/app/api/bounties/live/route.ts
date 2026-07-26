@@ -122,12 +122,15 @@ export const GET = handler(async (req: Request) => {
         windowEligible: boolean;
         lifetimeSpent: number; // $RIBBIT spent on credits, lifetime
         windowSpent: number; // $RIBBIT spent on credits during this bounty
+        volumeEligible: boolean; // tables: wagered enough in-window to rank
+        windowWagered: number; // credits wagered on this table this window
       }
     | null = null;
   if (session) {
     const mine = standings.find((e) => e.userId === session.userId);
     const arcade = ARCADE_GAMES.has(game);
     let value: number;
+    let windowWagered = 0;
     if (arcade) {
       const s = await prisma.arcadeScore.aggregate({
         where: { userId: session.userId, game, createdAt: { gte: bounty.startsAt } },
@@ -139,7 +142,8 @@ export const GET = handler(async (req: Request) => {
         where: { userId: session.userId, game, settled: true, createdAt: { gte: bounty.startsAt } },
         _sum: { wager: true, payout: true },
       });
-      value = (r._sum.payout ?? 0) - (r._sum.wager ?? 0); // signed net credits
+      windowWagered = r._sum.wager ?? 0;
+      value = (r._sum.payout ?? 0) - windowWagered; // signed net credits
     }
     // Break eligibility into its two rules so the player is told EXACTLY what's
     // missing — they may satisfy lifetime spend yet still owe fresh spend this
@@ -165,6 +169,11 @@ export const GET = handler(async (req: Request) => {
       windowEligible,
       lifetimeSpent: fromRaw(lifeTotals.get(session.userId) ?? 0n),
       windowSpent: fromRaw(winTotals.get(session.userId) ?? 0n),
+      // The third gate, matching rankBountyEntries' volume filter — without
+      // this a net-positive player under the floor is silently unranked.
+      volumeEligible:
+        arcade || cfg.rankedMinTableVolume <= 0 || windowWagered >= cfg.rankedMinTableVolume,
+      windowWagered,
     };
   }
 

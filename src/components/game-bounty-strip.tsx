@@ -41,7 +41,7 @@ export function GameBountyStrip({ game }: { game: string }) {
           you&apos;re #{myRank ?? "—"} · ~{fmt(you.projectedRibbit)} $RIBBIT
         </span>
       );
-    } else if (!you.spendEligible) {
+    } else if (!you.spendEligible || you.volumeEligible === false) {
       statusNode = <QualifyStatus you={you} compact />;
     } else if (you.value <= 0) {
       statusNode = (

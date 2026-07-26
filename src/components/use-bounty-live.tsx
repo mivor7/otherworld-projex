@@ -32,6 +32,9 @@ export type BountyLiveYou = {
   windowEligible: boolean;
   lifetimeSpent: number;
   windowSpent: number;
+  // Optional: older cached payloads may lack them — treat absence as eligible.
+  volumeEligible?: boolean;
+  windowWagered?: number;
 };
 
 export type BountyLiveEntry = {

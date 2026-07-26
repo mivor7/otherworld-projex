@@ -82,14 +82,14 @@ export function BountyStandings({ game }: { game: string }) {
       )}
 
       {/* Canonical "what you need to qualify" — identical phrasing everywhere. */}
-      {me.signedIn && live?.you && !live.you.spendEligible && (
+      {me.signedIn && live?.you && (!live.you.spendEligible || live.you.volumeEligible === false) && (
         <div className="mb-4">
           <QualifyStatus you={live.you} />
         </div>
       )}
 
       {/* Your live situation once you qualify — never make the player guess. */}
-      {me.signedIn && live?.you && live.you.spendEligible && (() => {
+      {me.signedIn && live?.you && live.you.spendEligible && live.you.volumeEligible !== false && (() => {
         const you = live.you;
         const isScore = you.unit === "best score";
         const standLine = isScore

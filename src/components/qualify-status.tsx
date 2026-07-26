@@ -2,9 +2,10 @@
 
 // The ONE place the "how much do I need to qualify" answer is phrased, so it
 // reads identically on every surface (game strip, standings aside, arcade
-// header). Leads with CREDITS (what you buy) and shows $RIBBIT + live progress,
-// because eligibility is enforced on $RIBBIT spent. Renders nothing once the
-// player is eligible — it's purely the "what's still missing" helper.
+// header). Covers all three gates: fresh spend for this bounty, lifetime
+// spend (both bought in $RIBBIT), and — on the tables — wagered volume this
+// window. Renders nothing once the player clears every gate — it's purely
+// the "what's still missing" helper.
 import Link from "next/link";
 import { useHouseConfig } from "./use-house-config";
 
@@ -14,6 +15,10 @@ export type QualifyYou = {
   windowEligible: boolean;
   lifetimeSpent: number; // $RIBBIT
   windowSpent: number; // $RIBBIT
+  // Tables only (absent/true on arcade and older payloads): credits wagered
+  // on this table this window vs the house's volume-to-rank floor.
+  volumeEligible?: boolean;
+  windowWagered?: number;
 };
 
 const n = (x: number) => Math.max(0, Math.round(x)).toLocaleString();
@@ -26,35 +31,56 @@ export function QualifyStatus({
   compact?: boolean;
 }) {
   const house = useHouseConfig();
-  if (you.spendEligible) return null;
+  const volumeShort = you.volumeEligible === false;
+  if (you.spendEligible && !volumeShort) return null;
 
   const price = house.ribbitPerCredit || 1;
   const toCredits = (ribbit: number) => Math.max(1, Math.ceil(ribbit / price));
 
-  // The unmet gate(s): fresh spend for THIS bounty, and/or lifetime spend.
-  const reqs: { key: string; where: string; have: number; need: number }[] = [];
+  // The unmet gate(s), most immediate first: fresh spend for THIS bounty,
+  // lifetime spend, then table volume. Spend is phrased in credits-to-BUY
+  // ($RIBBIT under the hood); volume is credits-to-WAGER at this table.
+  const reqs: {
+    key: string;
+    label: string;
+    have: number;
+    need: number;
+    unit: string;
+  }[] = [];
   if (!you.windowEligible)
     reqs.push({
       key: "window",
-      where: "during this bounty",
+      label: `Buy ${n(toCredits(Math.max(0, house.rankedMinWindowBurnedRibbit - you.windowSpent)))} more credits during this bounty`,
       have: you.windowSpent,
       need: house.rankedMinWindowBurnedRibbit,
+      unit: "$RIBBIT",
     });
   if (!you.lifetimeEligible)
     reqs.push({
       key: "lifetime",
-      where: "in total",
+      label: `Buy ${n(toCredits(Math.max(0, house.rankedMinBurnedRibbit - you.lifetimeSpent)))} more credits in total`,
       have: you.lifetimeSpent,
       need: house.rankedMinBurnedRibbit,
+      unit: "$RIBBIT",
+    });
+  if (volumeShort)
+    reqs.push({
+      key: "volume",
+      label: `Wager ${n(Math.max(0, house.rankedMinTableVolume - (you.windowWagered ?? 0)))} more credits at this table during this bounty`,
+      have: you.windowWagered ?? 0,
+      need: house.rankedMinTableVolume,
+      unit: "credits",
     });
   if (reqs.length === 0) return null;
 
   if (compact) {
-    const r = reqs[0]; // lead with the most immediate gap (window first)
-    const credits = toCredits(Math.max(0, r.need - r.have));
+    const r = reqs[0]; // lead with the most immediate gap
+    const gap = Math.max(0, r.need - r.have);
     return (
       <span className="text-fog">
-        buy {n(credits)} more credit{credits === 1 ? "" : "s"} to enter
+        {r.key === "volume"
+          ? `wager ${n(gap)} more credit${gap === 1 ? "" : "s"} to rank`
+          : `buy ${n(toCredits(gap))} more credit${toCredits(gap) === 1 ? "" : "s"} to enter`}
       </span>
     );
   }
@@ -72,8 +98,6 @@ export function QualifyStatus({
       </div>
       <div className="space-y-2.5">
         {reqs.map((r) => {
-          const remaining = Math.max(0, r.need - r.have);
-          const credits = toCredits(remaining);
           const pct = r.need > 0 ? Math.min(100, Math.round((r.have / r.need) * 100)) : 100;
           return (
             <div key={r.key}>
@@ -81,11 +105,9 @@ export function QualifyStatus({
                 className="flex justify-between gap-2 mb-1"
                 style={{ color: "var(--text-dim)" }}
               >
-                <span>
-                  Buy {n(credits)} more credit{credits === 1 ? "" : "s"} {r.where}
-                </span>
+                <span>{r.label}</span>
                 <span className="mono">
-                  {n(r.have)}/{n(r.need)} $RIBBIT
+                  {n(r.have)}/{n(r.need)} {r.unit}
                 </span>
               </div>
               <div
@@ -104,9 +126,15 @@ export function QualifyStatus({
           );
         })}
       </div>
-      <Link href="/games" className="text-neon hover:underline inline-block mt-2.5">
-        Buy credits →
-      </Link>
+      {reqs.some((r) => r.unit === "$RIBBIT") ? (
+        <Link href="/games" className="text-neon hover:underline inline-block mt-2.5">
+          Buy credits →
+        </Link>
+      ) : (
+        <div className="mt-2.5" style={{ color: "var(--text-dim)" }}>
+          Keep playing — every wager counts toward it.
+        </div>
+      )}
     </div>
   );
 }
