@@ -427,6 +427,12 @@ async function waitFor(ms, label) {
 const A = makeClient();
 const B = makeClient();
 const cleanup = { auctionIds: [], userWallets: [A.wallet, B.wallet] };
+// This suite wagers real rounds on the live tables — with the owner's pot
+// bounties open, that play would feed (or on a big pot even TRIGGER) a real
+// auto-payout. Park every open auto-pay bounty for the run and restore in
+// finally; the pots' meters are window aggregates, so real players' rounds
+// during the park still count once restored, and our test rounds are deleted.
+let parkedBounties = [];
 
 // The owner's payout worker may be live against this same DB — the escrow
 // race below creates a REAL pending withdrawal addressed to a throwaway test
@@ -447,6 +453,17 @@ try {
   await prisma.inviteCode.create({
     data: { code: E2E_INVITE, maxUses: 50, note: "games-e2e (auto-cleaned)" },
   });
+  parkedBounties = (
+    await prisma.bounty.findMany({
+      where: { status: "open", autoPay: true },
+      select: { id: true },
+    })
+  ).map((b) => b.id);
+  await prisma.bounty.updateMany({
+    where: { id: { in: parkedBounties } },
+    data: { status: "closed" },
+  });
+  console.log(`parked ${parkedBounties.length} standing bounties for the run\n`);
   await A.signIn();
   await B.signIn();
   const userA = await prisma.user.findUnique({ where: { wallet: A.wallet } });
@@ -538,6 +555,105 @@ try {
     body: JSON.stringify({ action: "deal", wager: 10, clientSeed: "x" }),
   });
   check("deal with 3 credits & wager 10 rejected", poor.status !== 200);
+  await prisma.user.update({ where: { id: userA.id }, data: { credits: 1000 } });
+
+  // ---------------- BLACKJACK SPLIT ----------------
+  console.log("— Blackjack split (pair hunt, second stake, dual settle, deck audit)");
+  const bjTotal = (cards) => {
+    let total = 0, aces = 0;
+    for (const c of cards) {
+      const r = c % 13;
+      const v = r === 12 ? 11 : r >= 8 ? 10 : r + 2;
+      total += v;
+      if (v === 11) aces++;
+    }
+    while (total > 21 && aces > 0) { total -= 10; aces--; }
+    return total;
+  };
+  // The pair hunt can outrun the table's 120/min rate bucket on an unlucky
+  // streak — wait out a 429 instead of flaking (worst case a couple minutes).
+  const bjPost = async (body) => {
+    let res;
+    for (let t = 0; t < 18; t++) {
+      res = await A.api("/api/games/blackjack", { method: "POST", body: JSON.stringify(body) });
+      if (res.status !== 429) return res;
+      await new Promise((r) => setTimeout(r, 10_000));
+    }
+    return res;
+  };
+  // A same-rank pair lands ~5.9% of deals — hunt with a big bankroll so
+  // variance can't strand the hunt, and settle every non-pair hand to keep
+  // the one-open-round rule happy.
+  await prisma.user.update({ where: { id: userA.id }, data: { credits: 5000 } });
+  let pairView = null;
+  let nonPairSplitChecked = false;
+  for (let i = 0; i < 120 && !pairView; i++) {
+    const d = await bjPost({ action: "deal", wager: 10, clientSeed: "e2e-bj-split" });
+    if (d.status !== 200) break;
+    let v = d.data;
+    if (v.phase === "done") continue; // natural — next deal
+    if (v.canSplit) { pairView = v; break; }
+    if (!nonPairSplitChecked) {
+      nonPairSplitChecked = true;
+      const bad = await bjPost({ action: "split", roundId: v.roundId });
+      check("splitting a non-pair rejected", bad.status !== 200);
+    }
+    let guard = 0;
+    while (v.phase !== "done" && guard++ < 4) {
+      v = (await bjPost({ action: "stand", roundId: v.roundId })).data;
+    }
+  }
+  check("pair found within 120 deals", !!pairView);
+  if (pairView) {
+    const before = (await prisma.user.findUnique({ where: { id: userA.id } })).credits;
+    const sp = await bjPost({ action: "split", roundId: pairView.roundId });
+    check("split accepted", sp.status === 200, JSON.stringify(sp.data));
+    let v = sp.data;
+    check("split exposes two hands", !!v.split && v.player.length === 2 && v.split.cards.length >= 1);
+    check("second stake persisted (wager = 2× base)", v.wager === 20, `wager ${v.wager}`);
+    check("double-split rejected", (await bjPost({ action: "split", roundId: v.roundId })).status !== 200);
+    let guard = 0;
+    while (v.phase !== "done" && guard++ < 4) {
+      v = (await bjPost({ action: "stand", roundId: v.roundId })).data;
+    }
+    check("split round settles with both results", v.phase === "done" && !!v.result && !!v.split.result);
+    check("no doubles taken in this flow", !v.doubled && !v.split.doubled);
+    // Recompute both settlements from the returned cards — server must match.
+    const dealerT = bjTotal(v.dealer);
+    const settleHand = (cards) => {
+      const p = bjTotal(cards);
+      if (p > 21) return 0;
+      if (dealerT > 21 || p > dealerT) return 20;
+      if (p === dealerT) return 10;
+      return 0;
+    };
+    const expected = settleHand(v.player) + settleHand(v.split.cards);
+    check("dual-hand payout math exact", v.payout === expected, `payout ${v.payout} expected ${expected}`);
+    const after = (await prisma.user.findUnique({ where: { id: userA.id } })).credits;
+    check(
+      "credits: second stake debited, settle credited",
+      after === before - 10 + expected,
+      `before ${before} after ${after} expected ${before - 10 + expected}`
+    );
+    const row = await prisma.gameRound.findUnique({ where: { id: v.roundId } });
+    check("wager column holds true stake (rankings/bounty volume)", row.wager === 20 && row.houseTake === 20 - expected);
+    // Deck audit: stands-only split consumes cards in a fixed order —
+    // hand1 = deck[0], deck[4]; split hand = deck[2], deck[5]; dealer
+    // opens deck[1], deck[3] and draws from deck[6] on.
+    const rot2 = await A.api("/api/fairness/rotate", { method: "POST" });
+    check("rotation allowed after split round settles", rot2.status === 200 && !!rot2.data.revealedSeed);
+    if (rot2.data?.revealedSeed) {
+      const deck2 = deriveDeck(rot2.data.revealedSeed, "e2e-bj-split", v.nonce);
+      check(
+        "split hands follow the committed deck exactly",
+        v.player[0] === deck2[0] && v.player[1] === deck2[4] &&
+          v.split.cards[0] === deck2[2] && v.split.cards[1] === deck2[5] &&
+          v.dealer[0] === deck2[1] && v.dealer[1] === deck2[3] &&
+          v.dealer.slice(2).every((c, i) => c === deck2[6 + i]),
+        `p ${v.player} s ${v.split.cards} d ${v.dealer} deck ${deck2.slice(0, 10)}`
+      );
+    }
+  }
   await prisma.user.update({ where: { id: userA.id }, data: { credits: 1000 } });
 
   // ---------------- WORM ----------------
@@ -737,6 +853,13 @@ try {
   );
 } finally {
   console.log("\ncleaning test data…");
+  // Reopen the owner's parked bounties first, even on a crash.
+  if (parkedBounties.length) {
+    await prisma.bounty.updateMany({
+      where: { id: { in: parkedBounties } },
+      data: { status: "open" },
+    });
+  }
   await prisma.inviteCode.deleteMany({ where: { code: { startsWith: "OWP-E2E-" } } });
   for (const w of cleanup.userWallets) {
     const u = await prisma.user.findUnique({ where: { wallet: w } });

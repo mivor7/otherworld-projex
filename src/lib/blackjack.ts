@@ -1,5 +1,7 @@
 // Blackjack — single deck per round, dealer stands on all 17s, blackjack
-// pays 3:2, double on any first two cards, no split/insurance (v1).
+// pays 3:2, double on any first two cards, split an identical-rank pair once
+// (one card each on split aces, double after split allowed, a split 21 pays
+// 1:1 — only a natural pays 3:2). No insurance.
 //
 // Provably fair: the entire deck order is derived from the committed server
 // seed before the first card is dealt — shuffle randoms come from
@@ -24,7 +26,7 @@ export const dealParams = z.object({
 });
 
 export const actParams = z.object({
-  action: z.enum(["hit", "stand", "double"]),
+  action: z.enum(["hit", "stand", "double", "split"]),
   roundId: z.string().min(1),
 });
 
@@ -79,10 +81,35 @@ type BJState = {
   deckPos: number;
   player: number[];
   dealer: number[];
-  phase: "player" | "done";
+  // "player" = acting on the first hand, "split" = acting on the second.
+  // Rounds written before split existed only ever hold "player" | "done" and
+  // no `split` field — every path below must treat that absence as "no
+  // split", so an in-flight round keeps playing across the deploy.
+  phase: "player" | "split" | "done";
   doubled: boolean;
   result?: "win" | "lose" | "push" | "blackjack";
+  split?: {
+    cards: number[];
+    doubled: boolean;
+    result?: "win" | "lose" | "push";
+  };
 };
+
+/** True credits staked so far: each hand's base wager, doubled where doubled. */
+function stakedTotal(s: BJState, base: number): number {
+  return base * (s.doubled ? 2 : 1) + (s.split ? base * (s.split.doubled ? 2 : 1) : 0);
+}
+
+/** The round's per-hand base wager. The `wager` COLUMN holds total credits
+ *  staked (it grows on double/split), so the immutable base lives in params. */
+function baseWager(round: { wager: number; params?: string | null }): number {
+  try {
+    const w = JSON.parse(round.params ?? "").wager;
+    return typeof w === "number" && w > 0 ? w : round.wager;
+  } catch {
+    return round.wager;
+  }
+}
 
 /** What the player is allowed to see. Hole card stays hidden until done. */
 export function publicView(round: {
@@ -91,11 +118,14 @@ export function publicView(round: {
   payout: number;
   nonce: number;
   outcome: string;
+  params?: string | null;
   seed?: { seedHash: string };
 }) {
   const s = JSON.parse(round.outcome) as BJState;
   const playerTotal = handTotal(s.player);
   const done = s.phase === "done";
+  const base = baseWager(round);
+  const splitTotal = s.split ? handTotal(s.split.cards) : null;
   return {
     roundId: round.id,
     phase: s.phase,
@@ -106,35 +136,67 @@ export function publicView(round: {
     dealerTotal: done ? handTotal(s.dealer).total : null,
     doubled: s.doubled,
     result: s.result ?? null,
-    // The wager column always holds the TRUE credits staked: doubling
-    // persists 2× at settle (a doubled hand can never stay open), so no
-    // multiplier here — rankings and bounty volume read the same column.
+    split: s.split
+      ? {
+          cards: s.split.cards,
+          total: splitTotal!.total,
+          soft: splitTotal!.soft,
+          doubled: s.split.doubled,
+          result: s.split.result ?? null,
+        }
+      : null,
+    // 0 = first hand acting, 1 = split hand acting, null = round over.
+    activeHand: s.phase === "player" ? 0 : s.phase === "split" ? 1 : null,
+    // The wager column always holds the TRUE credits staked so far — doubles
+    // and splits persist their extra stake the moment they happen — so no
+    // multiplier here: rankings and bounty volume read the same column.
     wager: round.wager,
+    // Doubling or splitting costs one more base wager; the client greys the
+    // buttons against this, the server re-checks funds regardless.
+    baseWager: base,
     payout: done ? round.payout : null,
     nonce: round.nonce,
     seedHash: round.seed?.seedHash,
-    canDouble: s.phase === "player" && s.player.length === 2 && !s.doubled,
+    canDouble:
+      s.phase === "player"
+        ? s.player.length === 2 && !s.doubled
+        : s.phase === "split"
+          ? s.split!.cards.length === 2 && !s.split!.doubled
+          : false,
+    canSplit:
+      s.phase === "player" &&
+      !s.split &&
+      !s.doubled &&
+      s.player.length === 2 &&
+      cardRank(s.player[0]) === cardRank(s.player[1]),
   };
 }
 
-function settleState(s: BJState, wager: number): { payout: number } {
-  const p = handTotal(s.player).total;
-  const d = handTotal(s.dealer).total;
-  const total = wager * (s.doubled ? 2 : 1);
-  if (p > 21) {
-    s.result = "lose";
-    return { payout: 0 };
+function settleHand(
+  cards: number[],
+  dealer: number[],
+  stake: number
+): { payout: number; result: "win" | "lose" | "push" } {
+  const p = handTotal(cards).total;
+  if (p > 21) return { payout: 0, result: "lose" };
+  const d = handTotal(dealer).total;
+  if (d > 21 || p > d) return { payout: stake * 2, result: "win" };
+  if (p === d) return { payout: stake, result: "push" };
+  return { payout: 0, result: "lose" };
+}
+
+/** Settle every hand against the dealer. Split 21s pay 1:1 by design —
+ *  the 3:2 "blackjack" result only ever comes from a natural at deal. */
+function settleState(s: BJState, base: number): { payout: number } {
+  const first = settleHand(s.player, s.dealer, base * (s.doubled ? 2 : 1));
+  s.result = first.result;
+  let payout = first.payout;
+  if (s.split) {
+    const second = settleHand(s.split.cards, s.dealer, base * (s.split.doubled ? 2 : 1));
+    s.split.result = second.result;
+    payout += second.payout;
   }
-  if (d > 21 || p > d) {
-    s.result = "win";
-    return { payout: total * 2 };
-  }
-  if (p === d) {
-    s.result = "push";
-    return { payout: total };
-  }
-  s.result = "lose";
-  return { payout: 0 };
+  return { payout };
 }
 
 /**
@@ -151,6 +213,29 @@ function dealerPlay(s: BJState, deck: number[]) {
   while (handTotal(s.dealer).total < 17) {
     s.dealer.push(draw(s, deck));
   }
+}
+
+/** Close the round: the dealer only draws when at least one hand is live —
+ *  same behavior the table always had for a single busted hand. */
+function finishRound(s: BJState, deck: number[]) {
+  const anyLive =
+    handTotal(s.player).total <= 21 ||
+    (s.split !== undefined && handTotal(s.split.cards).total <= 21);
+  if (anyLive) dealerPlay(s, deck);
+  s.phase = "done";
+}
+
+/** The current hand is complete (stand, bust, 21, or double) — move on.
+ *  With a waiting split hand: give it its second card and hand over control
+ *  (auto-standing a two-card 21); otherwise the dealer plays and we settle. */
+function advanceHand(s: BJState, deck: number[]) {
+  if (s.phase === "player" && s.split) {
+    s.phase = "split";
+    s.split.cards.push(draw(s, deck));
+    if (handTotal(s.split.cards).total === 21) finishRound(s, deck);
+    return;
+  }
+  finishRound(s, deck);
 }
 
 async function loadRound(userId: string, roundId: string) {
@@ -249,44 +334,66 @@ export async function deal(userId: string, wager: number, clientSeed: string) {
 export async function act(
   userId: string,
   roundId: string,
-  action: "hit" | "stand" | "double"
+  action: "hit" | "stand" | "double" | "split"
 ) {
   const round = await loadRound(userId, roundId);
   if (round.settled) throw new ApiError("Round already settled", 409);
   const s = JSON.parse(round.outcome) as BJState;
-  if (s.phase !== "player") throw new ApiError("No action available", 409);
+  if (s.phase !== "player" && s.phase !== "split") {
+    throw new ApiError("No action available", 409);
+  }
   const deck = deriveDeck(round.seed.seed, round.clientSeed, round.nonce);
   const prevOutcome = round.outcome;
+  const base = baseWager(round);
+  // The hand the action applies to: first hand in "player", second in "split".
+  const active = s.phase === "player" ? s.player : s.split!.cards;
 
   return prisma.$transaction(async (tx) => {
-    if (action === "double") {
-      if (s.player.length !== 2 || s.doubled) throw new ApiError("Cannot double now");
-      await adjustCredits(tx, userId, -round.wager, "wager", round.id);
-      s.doubled = true;
-      s.player.push(draw(s, deck));
-      if (handTotal(s.player).total <= 21) dealerPlay(s, deck);
-      s.phase = "done";
-    } else if (action === "hit") {
-      s.player.push(draw(s, deck));
-      const t = handTotal(s.player).total;
-      if (t > 21) {
-        s.phase = "done";
-      } else if (t === 21) {
-        dealerPlay(s, deck);
-        s.phase = "done";
+    if (action === "split") {
+      if (
+        s.phase !== "player" ||
+        s.split ||
+        s.doubled ||
+        s.player.length !== 2 ||
+        cardRank(s.player[0]) !== cardRank(s.player[1])
+      ) {
+        throw new ApiError("Cannot split now");
       }
+      await adjustCredits(tx, userId, -base, "wager", round.id);
+      const aces = cardRank(s.player[0]) === 12;
+      s.split = { cards: [s.player[1]], doubled: false };
+      s.player = [s.player[0], draw(s, deck)];
+      if (aces) {
+        // Split aces take exactly one card each — both hands auto-stand.
+        s.split.cards.push(draw(s, deck));
+        finishRound(s, deck);
+      } else if (handTotal(s.player).total === 21) {
+        advanceHand(s, deck);
+      }
+    } else if (action === "double") {
+      const handDoubled = s.phase === "player" ? s.doubled : s.split!.doubled;
+      if (active.length !== 2 || handDoubled) throw new ApiError("Cannot double now");
+      await adjustCredits(tx, userId, -base, "wager", round.id);
+      if (s.phase === "player") s.doubled = true;
+      else s.split!.doubled = true;
+      active.push(draw(s, deck));
+      advanceHand(s, deck);
+    } else if (action === "hit") {
+      active.push(draw(s, deck));
+      const t = handTotal(active).total;
+      if (t >= 21) advanceHand(s, deck);
     } else {
-      dealerPlay(s, deck);
-      s.phase = "done";
+      advanceHand(s, deck);
     }
 
     let payout = 0;
     const done = s.phase === "done";
-    if (done) ({ payout } = settleState(s, round.wager));
-    // Doubling stakes a second wager — persist the TRUE total in the wager
-    // column, or every ranking/volume/bounty-meter read of this round would
-    // undercount the double and overstate the player's net win.
-    const totalWager = round.wager * (s.doubled ? 2 : 1);
+    if (done) ({ payout } = settleState(s, base));
+    // Doubles and splits stake extra wagers — persist the TRUE total in the
+    // wager column the moment it changes, or every ranking/volume/bounty-
+    // meter read of this round would undercount the stake and overstate the
+    // player's net win.
+    const totalWager = stakedTotal(s, base);
 
     // Optimistic lock on the previous state blob — a concurrent action on
     // the same round loses the race and errors instead of double-drawing.
@@ -314,9 +421,13 @@ export async function act(
 }
 
 /**
- * Auto-stand an abandoned hand so it can settle fairly (used before seed
- * rotation; a revealed seed must never expose a live deck).
+ * Auto-stand an abandoned round so it can settle fairly (used before seed
+ * rotation; a revealed seed must never expose a live deck). A split round
+ * has two hands to stand — the first stand may hand control to the split
+ * hand instead of closing the round.
  */
 export async function forceSettle(userId: string, roundId: string) {
-  return act(userId, roundId, "stand");
+  let view = await act(userId, roundId, "stand");
+  if (view.phase !== "done") view = await act(userId, roundId, "stand");
+  return view;
 }

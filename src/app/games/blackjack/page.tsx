@@ -13,9 +13,17 @@ import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 
+type SplitView = {
+  cards: number[];
+  total: number;
+  soft: boolean;
+  doubled: boolean;
+  result: "win" | "lose" | "push" | null;
+};
+
 type View = {
   roundId: string;
-  phase: "player" | "done";
+  phase: "player" | "split" | "done";
   player: number[];
   playerTotal: number;
   playerSoft: boolean;
@@ -23,11 +31,15 @@ type View = {
   dealerTotal: number | null;
   doubled: boolean;
   result: "win" | "lose" | "push" | "blackjack" | null;
+  split: SplitView | null;
+  activeHand: 0 | 1 | null;
   wager: number;
+  baseWager?: number;
   payout: number | null;
   nonce: number;
   seedHash?: string;
   canDouble: boolean;
+  canSplit?: boolean;
 };
 
 const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -62,9 +74,10 @@ type PracticeRound = {
   pos: number;
   player: number[];
   dealer: number[];
-  phase: "player" | "done";
+  phase: "player" | "split" | "done";
   doubled: boolean;
   result: View["result"];
+  split: { cards: number[]; doubled: boolean; result: SplitView["result"] } | null;
   wager: number;
   payout: number;
 };
@@ -81,6 +94,7 @@ function shuffledDeck(): number[] {
 function practiceView(r: PracticeRound): View {
   const pt = handTotal(r.player);
   const done = r.phase === "done";
+  const st = r.split ? handTotal(r.split.cards) : null;
   return {
     roundId: "practice",
     phase: r.phase,
@@ -91,10 +105,28 @@ function practiceView(r: PracticeRound): View {
     dealerTotal: done ? handTotal(r.dealer).total : null,
     doubled: r.doubled,
     result: r.result,
-    wager: r.wager * (r.doubled ? 2 : 1),
+    split: r.split
+      ? { cards: r.split.cards, total: st!.total, soft: st!.soft, doubled: r.split.doubled, result: r.split.result }
+      : null,
+    activeHand: r.phase === "player" ? 0 : r.phase === "split" ? 1 : null,
+    wager:
+      r.wager * (r.doubled ? 2 : 1) +
+      (r.split ? r.wager * (r.split.doubled ? 2 : 1) : 0),
+    baseWager: r.wager,
     payout: done ? r.payout : null,
     nonce: 0,
-    canDouble: r.phase === "player" && r.player.length === 2 && !r.doubled,
+    canDouble:
+      r.phase === "player"
+        ? r.player.length === 2 && !r.doubled
+        : r.phase === "split"
+          ? r.split!.cards.length === 2 && !r.split!.doubled
+          : false,
+    canSplit:
+      r.phase === "player" &&
+      !r.split &&
+      !r.doubled &&
+      r.player.length === 2 &&
+      r.player[0] % 13 === r.player[1] % 13,
   };
 }
 
@@ -104,6 +136,31 @@ const RESULT_COPY: Record<string, string> = {
   push: "Push — wager returned.",
   lose: "The house takes it.",
 };
+
+// Dealer only draws when at least one hand is live — same as the server.
+function practiceDealerPlay(r: PracticeRound) {
+  const anyLive =
+    handTotal(r.player).total <= 21 ||
+    (r.split !== null && handTotal(r.split.cards).total <= 21);
+  if (!anyLive) return;
+  while (handTotal(r.dealer).total < 17) r.dealer.push(r.deck[r.pos++]);
+}
+
+const HAND_COPY: Record<string, string> = {
+  win: "wins",
+  push: "pushes",
+  lose: "folds",
+};
+
+/** Headline for a settled split round — one line covering both hands. */
+function splitResultCopy(a: string, b: string): string {
+  if (a === b) {
+    if (a === "win") return "Both hands win.";
+    if (a === "push") return "Both hands push — wagers returned.";
+    return "The house takes both hands.";
+  }
+  return `First hand ${HAND_COPY[a]}, split hand ${HAND_COPY[b]}.`;
+}
 
 export default function BlackjackPage() {
   const { me, refresh, loading } = useSession();
@@ -153,11 +210,11 @@ export default function BlackjackPage() {
       if (res.ok) {
         setRound(data);
         if (data.phase === "done") {
-          if (data.result === "win" || data.result === "blackjack") celebrate();
+          if (data.result === "win" || data.result === "blackjack" || data.split?.result === "win") celebrate();
           await refresh();
           window.dispatchEvent(new Event("owp:round")); // live-update the bounty meter
         }
-        if (body.action === "deal" || body.action === "double") await refresh();
+        if (body.action === "deal" || body.action === "double" || body.action === "split") await refresh();
       } else {
         setError(data.error ?? "Something went wrong");
       }
@@ -172,33 +229,50 @@ export default function BlackjackPage() {
   // ——— practice table actions (no wallet, no server, no $RIBBIT) ———
   const settlePractice = useCallback(
     (r: PracticeRound) => {
-      const total = r.wager * (r.doubled ? 2 : 1);
-      const p = handTotal(r.player).total;
-      const d = handTotal(r.dealer).total;
-      if (p > 21) {
-        r.result = "lose";
-        r.payout = 0;
-      } else if (d > 21 || p > d) {
-        r.result = "win";
-        r.payout = total * 2;
-      } else if (p === d) {
-        r.result = "push";
-        r.payout = total;
-      } else {
-        r.result = "lose";
-        r.payout = 0;
+      const settleHand = (cards: number[], stake: number) => {
+        const p = handTotal(cards).total;
+        if (p > 21) return { payout: 0, result: "lose" as const };
+        const d = handTotal(r.dealer).total;
+        if (d > 21 || p > d) return { payout: stake * 2, result: "win" as const };
+        if (p === d) return { payout: stake, result: "push" as const };
+        return { payout: 0, result: "lose" as const };
+      };
+      const first = settleHand(r.player, r.wager * (r.doubled ? 2 : 1));
+      r.result = first.result;
+      r.payout = first.payout;
+      if (r.split) {
+        const second = settleHand(r.split.cards, r.wager * (r.split.doubled ? 2 : 1));
+        r.split.result = second.result;
+        r.payout += second.payout;
       }
       r.phase = "done";
       if (r.payout > 0) practice.adjust(r.payout);
-      if (r.result === "win") celebrate();
+      if (r.result === "win" || r.split?.result === "win") celebrate();
       setPracticeRound(practiceView(r));
     },
     [practice]
   );
 
-  const dealerPlay = (r: PracticeRound) => {
-    while (handTotal(r.dealer).total < 17) r.dealer.push(r.deck[r.pos++]);
-  };
+  // Current hand complete — hand control to a waiting split hand (dealing its
+  // second card, auto-standing a two-card 21) or play the dealer and settle.
+  const advancePractice = useCallback(
+    (r: PracticeRound) => {
+      if (r.phase === "player" && r.split) {
+        r.phase = "split";
+        r.split.cards.push(r.deck[r.pos++]);
+        if (handTotal(r.split.cards).total === 21) {
+          practiceDealerPlay(r);
+          settlePractice(r);
+        } else {
+          setPracticeRound(practiceView(r));
+        }
+        return;
+      }
+      practiceDealerPlay(r);
+      settlePractice(r);
+    },
+    [settlePractice]
+  );
 
   const dealPractice = useCallback(() => {
     setError(null);
@@ -214,6 +288,7 @@ export default function BlackjackPage() {
       phase: "player",
       doubled: false,
       result: null,
+      split: null,
       wager,
       payout: 0,
     };
@@ -241,51 +316,67 @@ export default function BlackjackPage() {
   }, [practice, wager]);
 
   const actPractice = useCallback(
-    (action: "hit" | "stand" | "double") => {
+    (action: "hit" | "stand" | "double" | "split") => {
       const r = practiceRef.current;
-      if (!r || r.phase !== "player") return;
-      if (action === "double") {
-        if (r.player.length !== 2 || r.doubled) return;
+      if (!r || (r.phase !== "player" && r.phase !== "split")) return;
+      const active = r.phase === "player" ? r.player : r.split!.cards;
+      if (action === "split") {
+        if (
+          r.phase !== "player" || r.split || r.doubled ||
+          r.player.length !== 2 || r.player[0] % 13 !== r.player[1] % 13
+        ) return;
         practice.ensure(r.wager);
         practice.adjust(-r.wager);
-        r.doubled = true;
-        r.player.push(r.deck[r.pos++]);
-        if (handTotal(r.player).total <= 21) dealerPlay(r);
-        settlePractice(r);
-      } else if (action === "hit") {
-        r.player.push(r.deck[r.pos++]);
-        const t = handTotal(r.player).total;
-        if (t > 21) {
+        const aces = r.player[0] % 13 === 12;
+        r.split = { cards: [r.player[1]], doubled: false, result: null };
+        r.player = [r.player[0], r.deck[r.pos++]];
+        if (aces) {
+          // Split aces take exactly one card each — both hands auto-stand.
+          r.split.cards.push(r.deck[r.pos++]);
+          practiceDealerPlay(r);
           settlePractice(r);
-        } else if (t === 21) {
-          dealerPlay(r);
-          settlePractice(r);
+        } else if (handTotal(r.player).total === 21) {
+          advancePractice(r);
         } else {
           setPracticeRound(practiceView(r));
         }
+      } else if (action === "double") {
+        const handDoubled = r.phase === "player" ? r.doubled : r.split!.doubled;
+        if (active.length !== 2 || handDoubled) return;
+        practice.ensure(r.wager);
+        practice.adjust(-r.wager);
+        if (r.phase === "player") r.doubled = true;
+        else r.split!.doubled = true;
+        active.push(r.deck[r.pos++]);
+        advancePractice(r);
+      } else if (action === "hit") {
+        active.push(r.deck[r.pos++]);
+        if (handTotal(active).total >= 21) advancePractice(r);
+        else setPracticeRound(practiceView(r));
       } else {
-        dealerPlay(r);
-        settlePractice(r);
+        advancePractice(r);
       }
     },
-    [practice, settlePractice]
+    [practice, settlePractice, advancePractice]
   );
 
   const dealNew = () =>
     sandbox
       ? dealPractice()
       : post({ action: "deal", wager, clientSeed: clientSeed || randomClientSeed() });
-  const act = (action: "hit" | "stand" | "double") =>
+  const act = (action: "hit" | "stand" | "double" | "split") =>
     sandbox
       ? actPractice(action)
       : post({ action, roundId: view!.roundId });
 
   const view = sandbox ? practiceRound : round;
-  const inHand = view?.phase === "player";
+  const inHand = view?.phase === "player" || view?.phase === "split";
   const done = view?.phase === "done";
   const balance = sandbox ? practice.credits : (me.credits ?? 0);
   const canPlay = sandbox || me.signedIn;
-  const doubleFundsOk = sandbox || (me.credits ?? 0) >= (view?.wager ?? 0);
+  // Doubling or splitting stakes one more base wager.
+  const extraBet = view?.baseWager ?? view?.wager ?? 0;
+  const extraFundsOk = sandbox || (me.credits ?? 0) >= extraBet;
 
   return (
     <div className="pt-6 max-w-3xl lg:max-w-6xl mx-auto">
@@ -296,7 +387,7 @@ export default function BlackjackPage() {
         compact
         kicker="Wing I — table 03"
         title="Blackjack"
-        desc="Single deck, dealer stands on 17, blackjack pays 3:2. The whole deck order is committed before your first card — verifiably fair."
+        desc="Single deck, dealer stands on 17, blackjack pays 3:2, split any pair once. The whole deck order is committed before your first card — verifiably fair."
       />
 
       <FirstVisitHint id="how-games-work">
@@ -394,11 +485,25 @@ export default function BlackjackPage() {
               hiddenHole={inHand}
             />
             <Hand
-              label={`Your hand${view?.doubled ? " · doubled" : ""}`}
+              label={
+                view?.split
+                  ? `First hand${view.doubled ? " · doubled" : ""}${done && view.result ? ` · ${HAND_COPY[view.result]}` : ""}`
+                  : `Your hand${view?.doubled ? " · doubled" : ""}`
+              }
               cards={view?.player ?? []}
               total={view ? view.playerTotal : null}
               soft={view?.playerSoft}
+              active={view?.split ? view.activeHand === 0 : undefined}
             />
+            {view?.split && (
+              <Hand
+                label={`Split hand${view.split.doubled ? " · doubled" : ""}${done && view.split.result ? ` · ${HAND_COPY[view.split.result]}` : ""}`}
+                cards={view.split.cards}
+                total={view.split.total}
+                soft={view.split.soft}
+                active={view.activeHand === 1}
+              />
+            )}
             {!view && (
               <p className="text-fog text-sm py-4 text-center">
                 {sandbox
@@ -412,10 +517,12 @@ export default function BlackjackPage() {
         {done && view?.result && (
           <div
             className={`stat-number text-center text-xl mb-5 result-pop ${
-              view.result === "lose" ? "text-danger" : "text-neon"
+              (view.payout ?? 0) > 0 ? "text-neon" : "text-danger"
             }`}
           >
-            {RESULT_COPY[view.result]}
+            {view.split && view.split.result
+              ? splitResultCopy(view.result, view.split.result)
+              : RESULT_COPY[view.result]}
             {view.payout !== null && view.payout > 0 &&
               ` +${view.payout} ${sandbox ? "practice credits" : "credits"}`}
           </div>
@@ -434,10 +541,20 @@ export default function BlackjackPage() {
               <button
                 className="btn btn-portal btn-lg px-8"
                 onClick={() => act("double")}
-                disabled={busy || !doubleFundsOk}
+                disabled={busy || !extraFundsOk}
                 title="Double the wager, take exactly one card"
               >
                 Double
+              </button>
+            )}
+            {view!.canSplit && (
+              <button
+                className="btn btn-portal btn-lg px-8"
+                onClick={() => act("split")}
+                disabled={busy || !extraFundsOk}
+                title="Split the pair into two hands — stakes a second wager. Split aces take one card each."
+              >
+                Split
               </button>
             )}
           </div>
@@ -580,20 +697,35 @@ function Hand({
   total,
   soft,
   hiddenHole,
+  active,
 }: {
   label: string;
   cards: number[];
   total: number | null;
   soft?: boolean;
   hiddenHole?: boolean;
+  /** Split rounds only: true = this hand is acting, false = waiting/finished,
+   *  undefined = single-hand round (no marker at all). */
+  active?: boolean;
 }) {
   return (
-    <div>
+    <div className={active === false ? "opacity-60 transition-opacity" : "transition-opacity"}>
       <div className="flex items-baseline gap-2.5 mb-2">
         <span className="kicker">{label}</span>
         {total !== null && (
           <span className="stat-number text-neon text-sm">
             {soft ? `${total} soft` : total}
+          </span>
+        )}
+        {active && (
+          <span
+            className="kicker !text-[0.6rem] px-1.5 py-0.5 rounded"
+            style={{
+              color: "oklch(0.78 0.11 150)",
+              border: "1px solid oklch(0.78 0.11 150 / 0.35)",
+            }}
+          >
+            to act
           </span>
         )}
       </div>
