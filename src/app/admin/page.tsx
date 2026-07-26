@@ -200,7 +200,6 @@ const BOUNTY_PRESETS: {
   { label: "Frog Flip (pot)", game: "flip", title: "Double or Nothing — Frog Flip", description: "Call the flip and ride your streak. The pot grows as the table is played and pays out the best net.", target: "Best net credits", prizeRibbit: 750, seedRibbit: 250, durationDays: 14, autoPay: true },
   { label: "Pond Dice (pot)", game: "dice", title: "High Roller — Pond Dice", description: "Set your line and roll under it. The pot grows as dice is played and splits by net winnings.", target: "Best net credits", prizeRibbit: 750, seedRibbit: 250, durationDays: 14, autoPay: true },
   { label: "Blackjack (pot)", game: "blackjack", title: "The House Edge — Blackjack", description: "Beat the dealer. The pot grows as blackjack is played and pays out the best net.", target: "Best net credits", prizeRibbit: 1500, seedRibbit: 500, durationDays: 14, autoPay: true },
-  { label: "Blackjack FLAGSHIP", game: "blackjack", title: "The Vault Run — Blackjack", description: "The big one: a house-seeded vault pot that grows with every hand dealt. Best net splits it.", target: "Best net credits", prizeRibbit: 5000, seedRibbit: 2500, durationDays: 30, autoPay: true },
 ];
 
 function previewShares(prize: number, splits: number[], winners: number): number[] {
