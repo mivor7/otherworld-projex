@@ -428,6 +428,20 @@ const A = makeClient();
 const B = makeClient();
 const cleanup = { auctionIds: [], userWallets: [A.wallet, B.wallet] };
 
+// The owner's payout worker may be live against this same DB — the escrow
+// race below creates a REAL pending withdrawal addressed to a throwaway test
+// wallet. Pause payouts for the run (the worker checks this switch every
+// pass) and lift it LAST in cleanup, after the rows are deleted. This exact
+// race once paid 1,000 real $RIBBIT to a discarded test wallet (2026-07-26).
+const prePayoutsPaused = await prisma.houseSetting.findUnique({
+  where: { key: "payoutsPaused" },
+});
+await prisma.houseSetting.upsert({
+  where: { key: "payoutsPaused" },
+  update: { value: "true" },
+  create: { key: "payoutsPaused", value: "true" },
+});
+
 try {
   console.log(`player A ${A.wallet.slice(0,8)}… · player B ${B.wallet.slice(0,8)}… → ${BASE}\n`);
   await prisma.inviteCode.create({
@@ -740,6 +754,17 @@ try {
   await prisma.auction.deleteMany({ where: { id: { in: cleanup.auctionIds } } });
   for (const w of cleanup.userWallets) {
     await prisma.user.deleteMany({ where: { wallet: w } });
+  }
+  // Lift the payouts pause only now — every suite withdrawal row is gone.
+  // On a mid-cleanup crash payouts stay paused: the safe failure direction.
+  if (prePayoutsPaused) {
+    await prisma.houseSetting.upsert({
+      where: { key: "payoutsPaused" },
+      update: { value: prePayoutsPaused.value },
+      create: { key: "payoutsPaused", value: prePayoutsPaused.value },
+    });
+  } else {
+    await prisma.houseSetting.deleteMany({ where: { key: "payoutsPaused" } });
   }
   await prisma.$disconnect();
 }

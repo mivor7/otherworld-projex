@@ -136,6 +136,22 @@ const preSettings = await prisma.houseSetting.findMany({
   where: { key: { in: TOUCHED_SETTINGS } },
 });
 
+// The owner's payout worker may be live against this same DB — and suite
+// bounty awards create REAL pending withdrawals addressed to throwaway test
+// wallets. Pause payouts for the run (the worker checks this switch every
+// pass) and lift it LAST in cleanup, after every suite withdrawal row is
+// deleted. This exact race once paid 1,000 real $RIBBIT to a discarded
+// test wallet. Kept out of TOUCHED_SETTINGS on purpose: that restore runs
+// BEFORE the withdrawal deletions.
+const prePayoutsPaused = await prisma.houseSetting.findUnique({
+  where: { key: "payoutsPaused" },
+});
+await prisma.houseSetting.upsert({
+  where: { key: "payoutsPaused" },
+  update: { value: "true" },
+  create: { key: "payoutsPaused", value: "true" },
+});
+
 // The suite creates bounties on these games; the app enforces one open bounty
 // per game, so the owner's live bounties on them would make our creates 409.
 // Park them (→ closed) for the run and restore in finally — the board is left
@@ -634,6 +650,17 @@ try {
     await prisma.serverSeed.deleteMany({ where: { userId: u.id } });
     await prisma.ledgerEntry.deleteMany({ where: { userId: u.id } });
     await prisma.user.deleteMany({ where: { id: u.id } });
+  }
+  // Lift the payouts pause only now — every suite withdrawal row is gone.
+  // On a mid-cleanup crash payouts stay paused: the safe failure direction.
+  if (prePayoutsPaused) {
+    await prisma.houseSetting.upsert({
+      where: { key: "payoutsPaused" },
+      update: { value: prePayoutsPaused.value },
+      create: { key: "payoutsPaused", value: prePayoutsPaused.value },
+    });
+  } else {
+    await prisma.houseSetting.deleteMany({ where: { key: "payoutsPaused" } });
   }
   await prisma.$disconnect();
 }

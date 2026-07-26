@@ -323,6 +323,12 @@ and clear payouts by hand in `/admin`. Never run it against the treasury key.
     track the credit price/split/margin — no hardcoded thresholds.
   - ⚠️ They hit the **production Neon DB** (the app's only DB) — don't run them
     while someone is playing/testing. They self-clean, but pick a quiet window.
+  - Every suite **pauses payouts** (`payoutsPaused` house setting) for its run
+    and restores the owner's exact setting afterward, so a live payout worker
+    can never pay a suite-created withdrawal on-chain. Real user withdrawals
+    queued during a run are simply paid on the next worker pass after it ends.
+    If a run is killed hard mid-cleanup, payouts may be left paused — flip the
+    switch back in /admin House controls.
   - `admin-e2e.mjs` needs `TEST_ADMIN_KEYPAIR` (JSON `{wallet, secret}` of an
     admin wallet) — the owner holds it.
   - Last verified green against prod: economy 20/20, games 34/34.

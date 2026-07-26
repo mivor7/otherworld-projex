@@ -92,6 +92,20 @@ async function requiredCredits(prizeRaw, seedRaw = 0n) {
   return Math.max(1, Math.ceil(funded / rate));
 }
 
+// Uniform with games/admin suites: the owner's payout worker may be live
+// against this same DB, so pause payouts while suite withdrawal rows exist
+// and lift the pause LAST in cleanup, after they're deleted. (This suite's
+// destinations aren't real pubkeys, so the worker couldn't pay them anyway —
+// the pause keeps the guarantee structural rather than incidental.)
+const prePayoutsPaused = await prisma.houseSetting.findUnique({
+  where: { key: "payoutsPaused" },
+});
+await prisma.houseSetting.upsert({
+  where: { key: "payoutsPaused" },
+  update: { value: "true" },
+  create: { key: "payoutsPaused", value: "true" },
+});
+
 try {
   console.log(`economy checks → ${BASE}\n`);
 
@@ -351,6 +365,17 @@ try {
     await prisma.withdrawal.deleteMany({ where: { userId: id } });
     await prisma.ledgerEntry.deleteMany({ where: { userId: id } });
     await prisma.user.deleteMany({ where: { id } });
+  }
+  // Lift the payouts pause only now — every suite withdrawal row is gone.
+  // On a mid-cleanup crash payouts stay paused: the safe failure direction.
+  if (prePayoutsPaused) {
+    await prisma.houseSetting.upsert({
+      where: { key: "payoutsPaused" },
+      update: { value: prePayoutsPaused.value },
+      create: { key: "payoutsPaused", value: prePayoutsPaused.value },
+    });
+  } else {
+    await prisma.houseSetting.deleteMany({ where: { key: "payoutsPaused" } });
   }
   await prisma.$disconnect();
 }
