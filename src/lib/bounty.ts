@@ -435,6 +435,14 @@ async function renewWeeklyBounty(
     where: { game: b.game, status: "open", autoPay: true, id: { not: b.id } },
   });
   if (otherOpen > 0) return;
+  // A credit-table successor is a fresh POT and must carry a credit trigger —
+  // without it the renewal degrades into a time-based "weekly" that ignores
+  // play and pays at its deadline. Re-derived (not copied) so a renewal after
+  // an economy-settings change opens at the current honest rate.
+  const isCreditGame = !!b.game && !ARCADE_GAMES.has(b.game);
+  const trigger = isCreditGame
+    ? await requiredCreditSpend(b.prizeRibbit, b.seedRibbit ?? 0n)
+    : null;
   await prisma.bounty.create({
     data: {
       title: b.title,
@@ -446,6 +454,7 @@ async function renewWeeklyBounty(
       seedRibbit: b.seedRibbit ?? 0n,
       prizeText: b.prizeText,
       autoPay: true,
+      triggerCreditVolume: trigger,
       endsAt: new Date(Date.now() + durationMs),
     },
   });

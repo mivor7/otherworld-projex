@@ -145,6 +145,10 @@ try {
   let b1r = await prisma.bounty.findUnique({ where: { id: b1.id } });
   check("below-threshold bounty stays open (no payout)", b1r.status === "open",
     `spent ${belowVol} / req ${req1} → status ${b1r.status}`);
+  // Clear the game before the fill test: renewal deliberately skips when
+  // another open auto-pay bounty covers the game, so b2's pot re-open check
+  // needs the table to itself.
+  await prisma.bounty.update({ where: { id: b1.id }, data: { status: "closed" } });
 
   // ---------------- auto-bounty: crosses threshold → pro-rata payout ----------------
   console.log("— Auto-bounty fires at the threshold, pays all winners pro-rata");
@@ -192,6 +196,22 @@ try {
   const awards2 = await prisma.bountyAward.count({ where: { bountyId: b2.id } });
   const wds2 = await prisma.withdrawal.count({ where: { ref: b2.id } });
   check("no double-pay on re-trigger", awards2 === 2 && wds2 === 2, `awards ${awards2} wds ${wds2}`);
+
+  // The paid pot must RE-OPEN as a fresh POT: same prize/seed and a derived
+  // credit trigger. A successor without one silently degrades into a
+  // time-based weekly that ignores play and pays at its deadline (real bug:
+  // renewWeeklyBounty once dropped triggerCreditVolume on renewal).
+  const potSuccessor = await prisma.bounty.findFirst({
+    where: { title: "ECON trigger", status: "open", id: { not: b2.id } },
+  });
+  if (potSuccessor) bountyIds.push(potSuccessor.id);
+  check(
+    "paid pot re-opens as a fresh pot (credit trigger derived, seed carried)",
+    !!potSuccessor &&
+      Number(potSuccessor.triggerCreditVolume) > 0 &&
+      potSuccessor.seedRibbit === b2.seedRibbit,
+    potSuccessor ? `trigger ${potSuccessor.triggerCreditVolume}` : "no successor"
+  );
 
   // ---------------- progress surfaced publicly ----------------
   console.log("— Progress is visible to players");
@@ -343,8 +363,10 @@ try {
   // Belt and braces: renewal successors carry the test titles — fold them
   // into the id list so the ordered cleanup below (awards before bounties)
   // catches them too.
+  // Every suite bounty is "ECON …"-titled — sweep by prefix so renewal
+  // successors AND rows orphaned by a crashed earlier run all get caught.
   const strays = await prisma.bounty.findMany({
-    where: { title: { in: ["ECON weekly renew", "ECON free weekly", "ECON deadline"] } },
+    where: { title: { startsWith: "ECON" } },
     select: { id: true },
   });
   bountyIds.push(...strays.map((s) => s.id));
