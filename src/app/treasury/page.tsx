@@ -22,8 +22,6 @@ type TreasuryData = {
     creditsSoldRaw: string;
     purchaseCount: number;
     bountyPaidRaw: string;
-    houseRevenueRaw: string;
-    houseNetRaw: string;
     houseTakeCredits: number;
     wageredCredits: number;
     rounds: number;
@@ -116,10 +114,10 @@ export default function TreasuryPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <StatCard
-              label="House net"
-              value={`${BigInt(data.totals.houseNetRaw) >= 0n ? "+" : ""}${fmtRibbit(data.totals.houseNetRaw)}`}
-              sub={`$RIBBIT · ${fmtRibbit(data.totals.houseRevenueRaw)} player credit sales − ${fmtRibbit(data.totals.bountyPaidRaw)} prizes · house wallets excluded`}
-              tone={BigInt(data.totals.houseNetRaw) >= 0n ? "neon" : "plain"}
+              label="Prizes paid"
+              value={fmtRibbit(data.totals.bountyPaidRaw)}
+              sub="$RIBBIT in bounty prizes sent to players"
+              tone="neon"
             />
             <StatCard
               label="Wagered volume"

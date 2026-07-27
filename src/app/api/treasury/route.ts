@@ -53,19 +53,12 @@ export const GET = handler(async () => {
       burnCount: burnAgg._count,
       creditsSoldRaw: playerBuyAgg._sum.ribbitRaw ?? 0n,
       purchaseCount: playerBuyAgg._count,
+      // NOTE deliberately NO "house net/profit" figure here: with a small
+      // seeded test group the honest number swings wildly with who's counted
+      // as a house wallet, and any big green number on a public transparency
+      // page reads as either scam or lie. The page shows verifiable FLOWS
+      // (prizes paid, sales, burns) and leaves profit math to the owners.
       bountyPaidRaw: paidAgg._sum.amountRaw ?? 0n,
-      // REAL house money, in $RIBBIT, PLAYERS ONLY: the treasury leg of
-      // player credit purchases (the burn leg is destroyed; burn-to-play
-      // earns nothing) minus bounty prizes awarded to players. Can go
-      // NEGATIVE — a seeded test phase pays out more than players put in.
-      // Credits are chips that recycle through the tables, so a credits-
-      // denominated "net" must never be presented as house profit.
-      houseRevenueRaw:
-        (playerBuyAgg._sum.ribbitRaw ?? 0n) - (playerBuyAgg._sum.burnedRaw ?? 0n),
-      houseNetRaw:
-        (playerBuyAgg._sum.ribbitRaw ?? 0n) -
-        (playerBuyAgg._sum.burnedRaw ?? 0n) -
-        (paidAgg._sum.amountRaw ?? 0n),
       houseTakeCredits: takeAgg._sum.houseTake ?? 0,
       wageredCredits: takeAgg._sum.wager ?? 0,
       rounds: roundCount,
