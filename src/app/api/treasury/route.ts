@@ -44,6 +44,17 @@ export const GET = handler(async () => {
       creditsSoldRaw: buyAgg._sum.ribbitRaw ?? 0n,
       purchaseCount: buyAgg._count,
       bountyPaidRaw: paidAgg._sum.amountRaw ?? 0n,
+      // REAL house money, in $RIBBIT: the treasury leg of every credit
+      // purchase (the burn leg is destroyed, burn-to-play earns nothing)
+      // minus the bounty prizes actually awarded. Credits are chips — they
+      // recycle through the tables, so a credits-denominated "net" wildly
+      // overstates revenue and must never be presented as house profit.
+      houseRevenueRaw:
+        (buyAgg._sum.ribbitRaw ?? 0n) - (buyAgg._sum.burnedRaw ?? 0n),
+      houseNetRaw:
+        (buyAgg._sum.ribbitRaw ?? 0n) -
+        (buyAgg._sum.burnedRaw ?? 0n) -
+        (paidAgg._sum.amountRaw ?? 0n),
       houseTakeCredits: takeAgg._sum.houseTake ?? 0,
       wageredCredits: takeAgg._sum.wager ?? 0,
       rounds: roundCount,
