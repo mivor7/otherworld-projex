@@ -54,8 +54,10 @@ export function Navbar() {
 
         {/* Inline nav only from lg — at md widths (768–1024) links + brand +
             wallet never actually fit (the old truncation was masking it);
-            tablets use the scrollable nav row below instead. */}
-        <nav className="hidden lg:flex items-center gap-0.5 ml-6 flex-1">
+            tablets use the scrollable nav row below instead. justify-center:
+            the link cluster floats mid-gap so the slack splits evenly instead
+            of piling up in front of the wallet on wide screens. */}
+        <nav className="hidden lg:flex items-center justify-center gap-0.5 flex-1">
           {LINKS.map((l) => (
             <Link
               key={l.href}
