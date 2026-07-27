@@ -13,6 +13,7 @@ import { fromRaw, toRaw } from "@/lib/config";
 import { ARCADE_GAMES, autoSettleBounties, bountyProgress, cachedBountyStandings } from "@/lib/bounty";
 import { burnTotals } from "@/lib/ranked";
 import { houseConfig } from "@/lib/settings";
+import { stakerWallets } from "@/lib/staking";
 
 // Live data — never cache; always read current DB state.
 export const dynamic = "force-dynamic";
@@ -99,12 +100,14 @@ export const GET = handler(async (req: Request) => {
 
   const standings = await cachedBountyStandings(bounty);
 
+  const stakers = await stakerWallets();
   const entries = standings.map((e) => ({
     rank: e.rank,
     wallet: short(e.wallet),
     value: e.value,
     projectedRibbit: fromRaw(e.projectedRaw),
     isYou: session?.userId === e.userId,
+    staker: stakers.has(e.wallet),
   }));
 
   // The caller's OWN live situation for this bounty — so they know exactly

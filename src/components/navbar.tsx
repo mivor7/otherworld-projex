@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/auctions", label: "Auction House" },
   { href: "/bounties", label: "Bounties" },
   { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/staking", label: "Staking" },
   { href: "/treasury", label: "Treasury" },
   { href: "/fairness", label: "Fairness" },
   { href: "/about", label: "About" },

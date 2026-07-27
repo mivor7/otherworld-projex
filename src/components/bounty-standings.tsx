@@ -150,7 +150,9 @@ export function BountyStandings({ game }: { game: string }) {
                   {String(e.rank).padStart(2, "0")}
                 </td>
                 <td className="py-1.5 pr-2 mono text-xs">
-                  {e.wallet}{e.isYou && " · you"}
+                  {e.wallet}
+                  {e.staker && <span className="staker-mark ml-1.5">staker</span>}
+                  {e.isYou && " · you"}
                 </td>
                 <td className="py-1.5 pr-2 stat-number text-xs text-right">
                   {e.value.toLocaleString()}

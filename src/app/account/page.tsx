@@ -92,6 +92,7 @@ export default function AccountPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [stake, setStake] = useState<{ stakedRibbit: number; unlockAt: string | null } | null>(null);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -110,6 +111,11 @@ export default function AccountPage() {
     grab<Application>("/api/listings/apply", setApplications);
     grab<Round>("/api/games/history", setRounds);
     grab<Badge>("/api/me/badges", setBadges);
+    // On-chain stake in the official Streamflow pool (read-only, cosmetic).
+    fetch("/api/staking")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.you && setStake(d.you))
+      .catch(() => {});
   }, [me.signedIn]);
 
   // Watch live bounty positions in real time — a player who has stopped
@@ -190,6 +196,17 @@ export default function AccountPage() {
         title="My account"
         desc="Your balances, bids, consignments and rounds — the house keeps the books, you keep the receipts."
       />
+
+      {stake && stake.stakedRibbit > 0 && (
+        <div className="-mt-3 mb-5 text-xs text-fog">
+          <span className="staker-mark mr-1.5">staker</span>
+          {Math.round(stake.stakedRibbit).toLocaleString()} $RIBBIT staked
+          {stake.unlockAt && (
+            <> · unlocks {new Date(stake.unlockAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</>
+          )}{" "}
+          · <Link href="/staking" className="text-neon hover:underline">Staking →</Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard label="Play credits" value={String(me.credits ?? 0)} tone="neon" />

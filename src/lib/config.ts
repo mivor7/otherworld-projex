@@ -34,6 +34,13 @@ export const CONFIG = {
   // can display the float that actually pays withdrawals/prizes.
   payoutWallet: process.env.PAYOUT_WALLET ?? "",
 
+  // The official $RIBBIT staking pool on Streamflow (public account address,
+  // READ-ONLY — staking itself happens on Streamflow with the user's own
+  // wallet; the app only watches the chain and never holds staked funds).
+  stakePool:
+    process.env.STAKE_POOL_ADDRESS ??
+    "8vxnUP7QEbtE1RJqih5o1b7BYJRMPbt8cvgruWp82Y78",
+
   // Burn-to-play: how many whole $RIBBIT one play credit costs.
   ribbitPerCredit: num(process.env.RIBBIT_PER_CREDIT, 100),
 

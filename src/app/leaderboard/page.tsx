@@ -8,7 +8,7 @@ import { PageHero } from "@/components/hero";
 import { EmptyState } from "@/components/empty-state";
 import { useHouseConfig } from "@/components/use-house-config";
 
-type Row = { rank: number; player: string; score: number; volume?: number };
+type Row = { rank: number; player: string; score: number; volume?: number; staker?: boolean };
 
 const GAMES: { id: string; label: string; unit: string; kind: "arcade" | "table" }[] = [
   { id: "hopper", label: "Hopper", unit: "best score", kind: "arcade" },
@@ -127,7 +127,10 @@ export default function LeaderboardPage() {
                   <td className="py-2.5 pl-5 pr-3 w-14 mono text-xs" style={{ color: "var(--text-dim)" }}>
                     {row.rank <= 3 ? ["🥇", "🥈", "🥉"][row.rank - 1] : String(row.rank).padStart(2, "0")}
                   </td>
-                  <td className="py-2.5 pr-3 mono text-xs">{row.player}</td>
+                  <td className="py-2.5 pr-3 mono text-xs">
+                    {row.player}
+                    {row.staker && <span className="staker-mark ml-1.5">staker</span>}
+                  </td>
                   {meta.kind === "table" && (
                     <td className="py-2.5 pr-3 text-xs text-right" style={{ color: "var(--text-dim)" }}>
                       {row.volume?.toLocaleString()} wagered

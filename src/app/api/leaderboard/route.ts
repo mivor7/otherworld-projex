@@ -2,6 +2,7 @@ import { handler, ok } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { eligibleBurners } from "@/lib/ranked";
 import { houseConfig } from "@/lib/settings";
+import { stakerWallets } from "@/lib/staking";
 
 // Live data — never cache; always read current DB state.
 export const dynamic = "force-dynamic";
@@ -44,11 +45,13 @@ export const GET = handler(async (req: Request) => {
       select: { id: true, wallet: true },
     });
     const walletById = new Map(users.map((u) => [u.id, u.wallet]));
+    const stakers = await stakerWallets();
     return ok(
       ranked.map((s, i) => ({
         rank: i + 1,
         player: short(walletById.get(s.userId) ?? "????????"),
         score: s._max.score,
+        staker: stakers.has(walletById.get(s.userId) ?? ""),
       }))
     );
   }
@@ -81,12 +84,14 @@ export const GET = handler(async (req: Request) => {
     select: { id: true, wallet: true },
   });
   const walletById = new Map(users.map((u) => [u.id, u.wallet]));
+  const stakers = await stakerWallets();
   return ok(
     ranked.map((r, i) => ({
       rank: i + 1,
       player: short(walletById.get(r.userId) ?? "????????"),
       score: r.net,
       volume: r.volume,
+      staker: stakers.has(walletById.get(r.userId) ?? ""),
     }))
   );
 });

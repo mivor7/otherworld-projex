@@ -1457,3 +1457,21 @@ button:focus-visible,
 .result-pop {
   animation: result-pop 0.4s var(--hs-ease) both;
 }
+
+/* Staker mark — cosmetic gold tag for wallets holding an active stake in the
+   official Streamflow pool (see /staking). Purely decorative: it never
+   affects eligibility, payouts, or ranking math. */
+.staker-mark {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.3rem;
+  border: 1px solid oklch(0.8 0.12 85 / 0.4);
+  color: oklch(0.85 0.13 85);
+  background: oklch(0.8 0.12 85 / 0.08);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  line-height: 1.4;
+}

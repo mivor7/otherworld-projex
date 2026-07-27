@@ -40,6 +40,7 @@ export type BountyLiveYou = {
 export type BountyLiveEntry = {
   rank: number;
   wallet: string;
+  staker?: boolean;
   value: number;
   projectedRibbit: number;
   isYou: boolean;

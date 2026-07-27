@@ -73,6 +73,12 @@ check("/api/treasury totals", treasury.status === 200 && treasury.json?.totals !
 const activity = await get("/api/activity");
 check("/api/activity feed", activity.status === 200 && Array.isArray(activity.json),
   `status ${activity.status}`);
+const staking = await get("/api/staking");
+check(
+  "/api/staking reads the Streamflow pool",
+  staking.status === 200 && (staking.json?.pool === null || staking.json?.pool?.totalStakedRibbit >= 0),
+  `status ${staking.status}`
+);
 const lb = await get("/api/leaderboard?game=worm");
 check("/api/leaderboard", lb.status === 200 && Array.isArray(lb.json), `status ${lb.status}`);
 const auctions = await get("/api/auctions");
@@ -86,6 +92,7 @@ for (const [p, marker] of [
   ["/bounties", ""],
   ["/treasury", ""],
   ["/fairness", ""],
+  ["/staking", "streamflow"],
   ["/admin", ""],
 ]) {
   const r = await get(p);
