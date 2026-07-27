@@ -116,13 +116,13 @@ export default function TreasuryPage() {
             <StatCard
               label="Prizes paid"
               value={fmtRibbit(data.totals.bountyPaidRaw)}
-              sub="$RIBBIT in bounty prizes sent to players"
+              sub="$RIBBIT in bounty prizes sent to hunters"
               tone="neon"
             />
             <StatCard
               label="Wagered volume"
               value={data.totals.wageredCredits.toLocaleString()}
-              sub={`player credits across the tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} credits (chips, not $RIBBIT)`}
+              sub={`credits across all tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} credits (chips, not $RIBBIT)`}
             />
             <StatCard
               label="Rounds settled"

@@ -8,27 +8,21 @@ import { houseConfig } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 export const GET = handler(async () => {
-  // The money/activity stats count PLAYERS only: house-owned wallets
-  // (CONFIG.houseWallets — owners buying credits from their own holdings,
-  // or winning their own bounties) are excluded, because self-dealing isn't
-  // revenue and counting it wildly overstated "house net". Burn totals stay
-  // GLOBAL — a burn is on-chain destruction regardless of who signed it.
-  const players = { user: { wallet: { notIn: CONFIG.houseWallets } } };
-  const [chain, burnAgg, buyAgg, playerBuyAgg, takeAgg, roundCount, paidAgg, recent] =
+  // Every aggregate is GLOBAL (all wallets) — deliberately identical to the
+  // sources the bounty board uses, so the same stat can never show two
+  // different values on two pages (owner's rule: numbers must be consistent).
+  const [chain, burnAgg, buyAgg, takeAgg, roundCount, paidAgg, recent] =
     await Promise.all([
       getTreasuryStats(),
       prisma.burnEvent.aggregate({ _sum: { amountRaw: true }, _count: true }),
       prisma.creditPurchase.aggregate({
-        _sum: { burnedRaw: true },
-      }),
-      prisma.creditPurchase.aggregate({
-        where: players,
         _sum: { ribbitRaw: true, burnedRaw: true },
         _count: true,
       }),
-      prisma.gameRound.aggregate({ where: players, _sum: { houseTake: true, wager: true } }),
-      prisma.gameRound.count({ where: players }),
-      prisma.bountyAward.aggregate({ where: players, _sum: { amountRaw: true } }),
+      prisma.gameRound.aggregate({ _sum: { houseTake: true, wager: true } }),
+      prisma.gameRound.count(),
+      // Same aggregate the bounty board's "paid out" headline uses.
+      prisma.bountyAward.aggregate({ _sum: { amountRaw: true } }),
       prisma.treasuryEvent.findMany({ orderBy: { createdAt: "desc" }, take: 15 }),
     ]);
 
@@ -47,12 +41,12 @@ export const GET = handler(async () => {
     },
     totals: {
       // "Burned forever" = pure burns PLUS the burn leg of every credit
-      // purchase (ALL wallets — burning is global, on-chain destruction).
+      // purchase — the split-buy path is where most burns actually happen.
       ribbitBurnedRaw:
         (burnAgg._sum.amountRaw ?? 0n) + (buyAgg._sum.burnedRaw ?? 0n),
       burnCount: burnAgg._count,
-      creditsSoldRaw: playerBuyAgg._sum.ribbitRaw ?? 0n,
-      purchaseCount: playerBuyAgg._count,
+      creditsSoldRaw: buyAgg._sum.ribbitRaw ?? 0n,
+      purchaseCount: buyAgg._count,
       // NOTE deliberately NO "house net/profit" figure here: with a small
       // seeded test group the honest number swings wildly with who's counted
       // as a house wallet, and any big green number on a public transparency

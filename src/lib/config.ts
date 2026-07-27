@@ -41,16 +41,6 @@ export const CONFIG = {
     process.env.STAKE_POOL_ADDRESS ??
     "8vxnUP7QEbtE1RJqih5o1b7BYJRMPbt8cvgruWp82Y78",
 
-  // Wallets owned by the house (owners/partners buying credits from their
-  // own treasury-funded holdings). The public treasury stats EXCLUDE their
-  // purchases, prizes, and play — self-dealing isn't revenue, and counting
-  // it made "house net" wildly overstate what players actually brought in.
-  // Defaults to ADMIN_WALLETS; extend with HOUSE_WALLETS (comma-separated).
-  houseWallets: (process.env.HOUSE_WALLETS ?? process.env.ADMIN_WALLETS ?? "")
-    .split(",")
-    .map((w) => w.trim())
-    .filter(Boolean),
-
   // Burn-to-play: how many whole $RIBBIT one play credit costs.
   ribbitPerCredit: num(process.env.RIBBIT_PER_CREDIT, 100),
 
