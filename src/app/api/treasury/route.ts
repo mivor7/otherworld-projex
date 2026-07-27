@@ -8,17 +8,27 @@ import { houseConfig } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 export const GET = handler(async () => {
-  const [chain, burnAgg, buyAgg, takeAgg, roundCount, paidAgg, recent] =
+  // The money/activity stats count PLAYERS only: house-owned wallets
+  // (CONFIG.houseWallets — owners buying credits from their own holdings,
+  // or winning their own bounties) are excluded, because self-dealing isn't
+  // revenue and counting it wildly overstated "house net". Burn totals stay
+  // GLOBAL — a burn is on-chain destruction regardless of who signed it.
+  const players = { user: { wallet: { notIn: CONFIG.houseWallets } } };
+  const [chain, burnAgg, buyAgg, playerBuyAgg, takeAgg, roundCount, paidAgg, recent] =
     await Promise.all([
       getTreasuryStats(),
       prisma.burnEvent.aggregate({ _sum: { amountRaw: true }, _count: true }),
       prisma.creditPurchase.aggregate({
+        _sum: { burnedRaw: true },
+      }),
+      prisma.creditPurchase.aggregate({
+        where: players,
         _sum: { ribbitRaw: true, burnedRaw: true },
         _count: true,
       }),
-      prisma.gameRound.aggregate({ _sum: { houseTake: true, wager: true } }),
-      prisma.gameRound.count(),
-      prisma.bountyAward.aggregate({ _sum: { amountRaw: true } }),
+      prisma.gameRound.aggregate({ where: players, _sum: { houseTake: true, wager: true } }),
+      prisma.gameRound.count({ where: players }),
+      prisma.bountyAward.aggregate({ where: players, _sum: { amountRaw: true } }),
       prisma.treasuryEvent.findMany({ orderBy: { createdAt: "desc" }, take: 15 }),
     ]);
 
@@ -37,23 +47,24 @@ export const GET = handler(async () => {
     },
     totals: {
       // "Burned forever" = pure burns PLUS the burn leg of every credit
-      // purchase — the split-buy path is where most burns actually happen.
+      // purchase (ALL wallets — burning is global, on-chain destruction).
       ribbitBurnedRaw:
         (burnAgg._sum.amountRaw ?? 0n) + (buyAgg._sum.burnedRaw ?? 0n),
       burnCount: burnAgg._count,
-      creditsSoldRaw: buyAgg._sum.ribbitRaw ?? 0n,
-      purchaseCount: buyAgg._count,
+      creditsSoldRaw: playerBuyAgg._sum.ribbitRaw ?? 0n,
+      purchaseCount: playerBuyAgg._count,
       bountyPaidRaw: paidAgg._sum.amountRaw ?? 0n,
-      // REAL house money, in $RIBBIT: the treasury leg of every credit
-      // purchase (the burn leg is destroyed, burn-to-play earns nothing)
-      // minus the bounty prizes actually awarded. Credits are chips — they
-      // recycle through the tables, so a credits-denominated "net" wildly
-      // overstates revenue and must never be presented as house profit.
+      // REAL house money, in $RIBBIT, PLAYERS ONLY: the treasury leg of
+      // player credit purchases (the burn leg is destroyed; burn-to-play
+      // earns nothing) minus bounty prizes awarded to players. Can go
+      // NEGATIVE — a seeded test phase pays out more than players put in.
+      // Credits are chips that recycle through the tables, so a credits-
+      // denominated "net" must never be presented as house profit.
       houseRevenueRaw:
-        (buyAgg._sum.ribbitRaw ?? 0n) - (buyAgg._sum.burnedRaw ?? 0n),
+        (playerBuyAgg._sum.ribbitRaw ?? 0n) - (playerBuyAgg._sum.burnedRaw ?? 0n),
       houseNetRaw:
-        (buyAgg._sum.ribbitRaw ?? 0n) -
-        (buyAgg._sum.burnedRaw ?? 0n) -
+        (playerBuyAgg._sum.ribbitRaw ?? 0n) -
+        (playerBuyAgg._sum.burnedRaw ?? 0n) -
         (paidAgg._sum.amountRaw ?? 0n),
       houseTakeCredits: takeAgg._sum.houseTake ?? 0,
       wageredCredits: takeAgg._sum.wager ?? 0,

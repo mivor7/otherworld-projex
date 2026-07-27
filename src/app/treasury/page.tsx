@@ -118,13 +118,13 @@ export default function TreasuryPage() {
             <StatCard
               label="House net"
               value={`${BigInt(data.totals.houseNetRaw) >= 0n ? "+" : ""}${fmtRibbit(data.totals.houseNetRaw)}`}
-              sub={`$RIBBIT · ${fmtRibbit(data.totals.houseRevenueRaw)} from credit sales − ${fmtRibbit(data.totals.bountyPaidRaw)} prizes paid`}
+              sub={`$RIBBIT · ${fmtRibbit(data.totals.houseRevenueRaw)} player credit sales − ${fmtRibbit(data.totals.bountyPaidRaw)} prizes · house wallets excluded`}
               tone={BigInt(data.totals.houseNetRaw) >= 0n ? "neon" : "plain"}
             />
             <StatCard
               label="Wagered volume"
               value={data.totals.wageredCredits.toLocaleString()}
-              sub={`credits across all tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} credits (chips, not $RIBBIT)`}
+              sub={`player credits across the tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} credits (chips, not $RIBBIT)`}
             />
             <StatCard
               label="Rounds settled"
