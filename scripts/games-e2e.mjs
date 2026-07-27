@@ -853,13 +853,9 @@ try {
   );
 } finally {
   console.log("\ncleaning test data…");
-  // Reopen the owner's parked bounties first, even on a crash.
-  if (parkedBounties.length) {
-    await prisma.bounty.updateMany({
-      where: { id: { in: parkedBounties } },
-      data: { status: "open" },
-    });
-  }
+  // NOTE: parked bounties are reopened at the BOTTOM of this block, only
+  // after every suite round is deleted — reopening first left a seconds-wide
+  // gap where a public poll could settle a REAL pot against suite volume.
   await prisma.inviteCode.deleteMany({ where: { code: { startsWith: "OWP-E2E-" } } });
   for (const w of cleanup.userWallets) {
     const u = await prisma.user.findUnique({ where: { wallet: w } });
@@ -877,6 +873,14 @@ try {
   await prisma.auction.deleteMany({ where: { id: { in: cleanup.auctionIds } } });
   for (const w of cleanup.userWallets) {
     await prisma.user.deleteMany({ where: { wallet: w } });
+  }
+  // Reopen the owner's parked bounties only now — every suite round that
+  // could pollute their meters is gone.
+  if (parkedBounties.length) {
+    await prisma.bounty.updateMany({
+      where: { id: { in: parkedBounties } },
+      data: { status: "open" },
+    });
   }
   // Lift the payouts pause only now — every suite withdrawal row is gone.
   // On a mid-cleanup crash payouts stay paused: the safe failure direction.

@@ -353,13 +353,10 @@ try {
     `status ${b8r2.status} awards ${b8awards}`);
 } finally {
   console.log("\ncleaning test data…");
-  // Reopen every standing bounty parked at the top, even on a crash.
-  if (parkedIds.length) {
-    await prisma.bounty.updateMany({
-      where: { id: { in: parkedIds } },
-      data: { status: "open" },
-    });
-  }
+  // NOTE: the owner's parked bounties are reopened at the BOTTOM of this
+  // block, only after every suite round is deleted — reopening first left a
+  // seconds-wide gap where a public poll could settle a REAL pot against
+  // suite volume (it fired the live dice pot ~45 credits early once).
   // Belt and braces: renewal successors carry the test titles — fold them
   // into the id list so the ordered cleanup below (awards before bounties)
   // catches them too.
@@ -387,6 +384,14 @@ try {
     await prisma.withdrawal.deleteMany({ where: { userId: id } });
     await prisma.ledgerEntry.deleteMany({ where: { userId: id } });
     await prisma.user.deleteMany({ where: { id } });
+  }
+  // Reopen the owner's parked bounties only now — every suite round that
+  // could pollute their meters is gone.
+  if (parkedIds.length) {
+    await prisma.bounty.updateMany({
+      where: { id: { in: parkedIds } },
+      data: { status: "open" },
+    });
   }
   // Lift the payouts pause only now — every suite withdrawal row is gone.
   // On a mid-cleanup crash payouts stay paused: the safe failure direction.

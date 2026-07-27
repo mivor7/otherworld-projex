@@ -609,13 +609,10 @@ try {
 } finally {
   console.log("\ncleaning test data…");
   await prisma.inviteCode.deleteMany({ where: { code: { startsWith: "OWP-E2E-" } } });
-  // Un-park the owner's live bounties we closed for the run.
-  if (parkedBountyIds.length) {
-    await prisma.bounty.updateMany({
-      where: { id: { in: parkedBountyIds } },
-      data: { status: "open" },
-    });
-  }
+  // NOTE: the owner's parked bounties are reopened at the BOTTOM of this
+  // block, only after every suite round is deleted — reopening first left a
+  // seconds-wide gap where a public poll could settle a REAL pot against
+  // suite volume.
   // Restore the settings this suite touched to EXACTLY their pre-run state —
   // the owner may have live overrides (e.g. buyBurnShare) that a blanket
   // delete would silently revert to env defaults on the production DB.
@@ -650,6 +647,14 @@ try {
     await prisma.serverSeed.deleteMany({ where: { userId: u.id } });
     await prisma.ledgerEntry.deleteMany({ where: { userId: u.id } });
     await prisma.user.deleteMany({ where: { id: u.id } });
+  }
+  // Reopen the owner's parked bounties only now — every suite round that
+  // could pollute their meters is gone.
+  if (parkedBountyIds.length) {
+    await prisma.bounty.updateMany({
+      where: { id: { in: parkedBountyIds } },
+      data: { status: "open" },
+    });
   }
   // Lift the payouts pause only now — every suite withdrawal row is gone.
   // On a mid-cleanup crash payouts stay paused: the safe failure direction.
