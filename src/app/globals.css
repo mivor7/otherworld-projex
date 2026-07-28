@@ -984,15 +984,6 @@ html[data-intro="1"] .vault-word {
   text-shadow: 0 1px 0 oklch(0 0 0 / 0.6);
   padding-left: 0.32em; /* optically center the tracked text */
 }
-.vault-word-sub {
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  text-transform: uppercase;
-  letter-spacing: 0.42em;
-  color: oklch(0.78 0.11 150 / 0.75);
-  padding-left: 0.42em;
-}
-
 /* Depth vignette over the whole scene — fades with the reveal so the exposed
    page is never dimmed behind the parting doors. */
 .vault-vignette {

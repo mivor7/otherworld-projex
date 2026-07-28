@@ -10,11 +10,11 @@ import { VaultIntro } from "@/components/vault-intro";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://otherworldprojex.xyz"),
-  title: "Other World Projex — $RIBBIT Bounty Arcade",
+  title: "Other World Projex",
   description:
     "Decentralized gaming on Solana. Turn $RIBBIT into credits — part burned forever — play provably-fair games, bid in the auction house, and hunt bounties that pay automatically. One transparent treasury.",
   openGraph: {
-    title: "Other World Projex — $RIBBIT Bounty Arcade",
+    title: "Other World Projex",
     description:
       "Token holders become bounty hunters. Provably-fair games, an auction house and bounty boards — one transparent treasury on Solana.",
     siteName: "Other World Projex",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Other World Projex — $RIBBIT Bounty Arcade",
+    title: "Other World Projex",
     description:
       "Token holders become bounty hunters. Provably fair, paid in $RIBBIT.",
     images: ["/og.png"],

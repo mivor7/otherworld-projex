@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Other World Projex — $RIBBIT Bounty Arcade",
+    name: "Other World Projex",
     short_name: "OWP",
     description:
       "Provably-fair games, bounty boards and an auction house on Solana — turn $RIBBIT into credits and hunt pools that pay automatically.",

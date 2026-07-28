@@ -67,7 +67,6 @@ export function VaultIntro() {
         </div>
         <div className="vault-word">
           <span className="vault-word-main">Other World Projex</span>
-          <span className="vault-word-sub">The $RIBBIT House</span>
         </div>
       </div>
       <div className="vault-vignette" />
