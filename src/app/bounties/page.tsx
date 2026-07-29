@@ -368,7 +368,7 @@ export default function BountiesPage() {
                 </p>
                 <p>
                   <span className="text-frost font-medium">One edge, split in half.</span>{" "}
-                  {`The tables keep a flat ${edgePct}% edge — that is the house's entire take from play, published and provably fair. It gets split down the middle: ${potPct}% of it feeds the table's bounty pot, the rest is what the house keeps. Same ${edgePct}%, two halves — there is no second margin anywhere.`}
+                  {`The tables keep a flat ${edgePct}% edge — that is the house's entire take from play, published and provably fair. It gets split down the middle: ${potPct}% of it feeds the pot that is OPEN on that table at that moment (never a future round — no bounty open means nothing accrues), the rest is what the house keeps. Same ${edgePct}%, two halves — there is no second margin anywhere.`}
                 </p>
                 <div className="md:col-span-2 panel p-4">
                   <div className="kicker !text-[0.6rem] mb-2">The math, end to end</div>
