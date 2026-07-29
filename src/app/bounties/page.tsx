@@ -343,64 +343,64 @@ export default function BountiesPage() {
         </aside>
       </div>
 
-      {/* The fine print — how chips, the edge and the pots actually work,
-          with the live numbers and the real math. One coherent story: the 4%
-          edge is the house's whole take, and the pot gets half of it.
-          NOTE: keep every sentence inside ONE JSX expression (or use explicit
-          {" "}) — JSX strips newline-adjacent whitespace and eats spaces. */}
+      {/* The fine print — the whole economy in three rules. Pedagogy: a
+          player should only ever meet TWO numbers (96% / 4%) plus the word
+          "half" — every derived figure (burn split, 1.9/chip, thresholds)
+          lives in the auditors' footnote, because each extra number on the
+          main path reads like an extra fee. Keep sentences in single JSX
+          expressions — JSX eats newline-adjacent spaces. */}
       <section id="how-pots-work" className="panel p-6 sm:p-8 mt-10 scroll-mt-24">
         <div className="kicker mb-1.5">The fine print</div>
-        <h2 className="!text-xl mb-5">How chips, the edge and the pots work</h2>
+        <h2 className="!text-xl mb-2">How the money works</h2>
+        <p className="text-sm text-fog mb-6">
+          {`Three rules run the whole house. Everything else is bookkeeping.`}
+        </p>
         {(() => {
           const price = house.ribbitPerCredit;
           const burnPct = Math.round(house.buyBurnShare * 100);
-          const houseLeg = Math.round(price * (1 - house.buyBurnShare) * 100) / 100;
           const edgePct = Math.round(house.houseEdge * 100);
+          const payback = 100 - edgePct;
           const potPct = Math.round(house.bountyPotShare * 100);
           const rate =
             Math.round(house.bountyPotShare * house.houseEdge * (1 - house.buyBurnShare) * price * 100) / 100;
           return (
             <>
-              <div className="grid md:grid-cols-2 gap-x-10 gap-y-5 text-sm text-fog leading-relaxed">
-                <p>
-                  <span className="text-frost font-medium">⛁ Chips are the table currency — tables only.</span>{" "}
-                  {`${price.toLocaleString()} $RIBBIT buys one chip (${burnPct}% of the payment is burned forever, the rest lands in the transparent treasury). Chips play blackjack, dice and flip — nothing else. They never convert back to $RIBBIT: the only way to win real $RIBBIT at the tables is through the bounty pots below. The free arcade games never touch chips.`}
-                </p>
-                <p>
-                  <span className="text-frost font-medium">One edge, split in half.</span>{" "}
-                  {`The tables keep a flat ${edgePct}% edge — that is the house's entire take from play, published and provably fair. It gets split down the middle: ${potPct}% of it feeds the pot that is OPEN on that table at that moment (never a future round — no bounty open means nothing accrues), the rest is what the house keeps. Same ${edgePct}%, two halves — there is no second margin anywhere.`}
-                </p>
-                <div className="md:col-span-2 panel p-4">
-                  <div className="kicker !text-[0.6rem] mb-2">The math, end to end</div>
-                  <div className="mono text-[0.78rem] leading-loose overflow-x-auto whitespace-pre">
-{`1 chip costs        ${price.toLocaleString()} $RIBBIT   →   ${(price - houseLeg).toLocaleString()} burned · ${houseLeg.toLocaleString()} to the house
-table edge          ${edgePct}% of every wager
-the pot's share     ${potPct}% of that edge
-pot growth          ${price} × ${(house.houseEdge).toString()} × ${(1 - house.buyBurnShare).toString()} × ${(house.bountyPotShare).toString()}  =  ${rate} $RIBBIT per chip wagered`}
-                  </div>
-                  <p className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
-                    {`Example: a 4,000 $RIBBIT pot that opens with a 2,000 house seed needs 2,000 more — at ${rate} $RIBBIT per chip that's about ${Math.ceil(2000 / rate).toLocaleString()} chips of play across all players, then it pays.`}
+              <ol className="space-y-5 max-w-3xl">
+                <li className="flex gap-4">
+                  <span className="mono text-neon text-sm shrink-0 pt-0.5">01</span>
+                  <p className="text-sm text-fog leading-relaxed">
+                    <span className="text-frost font-medium">⛁ Chips only travel one way.</span>{" "}
+                    {`${price.toLocaleString()} $RIBBIT buys one chip. Chips play the tables — blackjack, dice, flip — and never convert back to $RIBBIT. Winning $RIBBIT here happens through the bounty pots, and playing with chips is what enters you. (The free arcade never touches chips.)`}
                   </p>
-                </div>
-                <p>
-                  <span className="text-frost font-medium">Pots fill from play and pay instantly.</span>{" "}
-                  {`Every chip wagered at a table nudges that table's pot up by ${rate} $RIBBIT — the meter shows exactly where it stands. The moment the pot reaches its prize, every eligible hunter who is net-positive on that table gets paid automatically, split by how much they're up. No claims, no waiting. Rounds are numbered; if the house has re-open on, a fresh pot starts immediately as the next round — a round marked FINAL won't return until the house posts a new bounty.`}
+                </li>
+                <li className="flex gap-4">
+                  <span className="mono text-neon text-sm shrink-0 pt-0.5">02</span>
+                  <p className="text-sm text-fog leading-relaxed">
+                    <span className="text-frost font-medium">{`The tables keep ${edgePct}% — and that is the only cost in the whole house.`}</span>{" "}
+                    {`For every 100 chips placed on a table, 96 come back to players as winnings — on long-run average, per bet. Three honest notes. One: it's an average — any single bet wins or loses in full, and short sessions are pure luck. Two: it's per bet, not per bankroll — chips you win back and wager again meet the same ${edgePct}% again, every time they cross the table. Three: there is no other cost anywhere — no fee on buying chips, no fee on winning, no fee on payouts. This per-bet ${edgePct}% is the house's entire income from play, and every deal and roll is verifiable.`}
+                  </p>
+                </li>
+                <li className="flex gap-4">
+                  <span className="mono text-neon text-sm shrink-0 pt-0.5">03</span>
+                  <p className="text-sm text-fog leading-relaxed">
+                    <span className="text-frost font-medium">Half of that goes straight back as prizes.</span>{" "}
+                    {`The house splits its ${edgePct}% take down the middle: half it keeps, half feeds the bounty pot that is open on that table — live, bet by bet, while you play. When the pot reaches its prize, every eligible player who's up on the table splits it automatically and the next numbered round can open on a fresh pot (a round marked FINAL doesn't come back). No pot open on a table = nothing accrues anywhere — the table says so right on the page.`}
+                  </p>
+                </li>
+              </ol>
+
+              <p className="text-xs text-fog mt-6 max-w-3xl">
+                {`The arcade is a different world: free, no chips, ever. When an episode is live the week's best verified scores split a $RIBBIT pool at the deadline — no live episode means scores are just for bragging until the next one opens.`}
+              </p>
+
+              <div className="panel p-4 mt-6 max-w-3xl">
+                <div className="kicker !text-[0.6rem] mb-2">For the auditors — the exact live numbers</div>
+                <p className="mono text-[0.72rem] leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                  {`chip price ${price.toLocaleString()} $RIBBIT · of every chip purchase ${burnPct}% is burned forever and ${100 - burnPct}% funds the treasury · table edge ${edgePct}% · the pot's share ${potPct}% of the take → the open pot climbs ${rate} $RIBBIT per chip wagered. Example: a 4,000 $RIBBIT pot opening on a 2,000 house seed needs ${Math.ceil(2000 / rate).toLocaleString()} chips of play across all players, then it pays. All values are read live from the house settings.`}
                 </p>
-                <p>
-                  <span className="text-frost font-medium">No live bounty on a table?</span>{" "}
-                  {`The table still plays exactly the same — you win and lose chips — but nothing feeds a prize while no bounty is open. The game page says so whenever that's the case, and the pot returns the moment the house posts the next round.`}
-                </p>
-                <p>
-                  <span className="text-frost font-medium">The arcade is a separate, free world.</span>{" "}
-                  {`Hopper, Frogris and Worm Frog cost nothing and never use chips. When an episode (bounty) is live, the week's best verified scores split a $RIBBIT pool at the deadline. No live episode = scores are just for bragging — they don't count toward anything until the next episode opens.`}
-                </p>
-                <p>
-                  <span className="text-frost font-medium">Why it&apos;s built this way.</span>{" "}
-                  {`A pot can only pay out what play has already funded (plus the house seed it opened with) — the house can never owe more than it has earned, which is what makes every posted prize real instead of a marketing number. Eligibility needs a minimum chip spend so prizes go to real players, not sybil wallets.`}{" "}
-                  <Link href="/fairness" className="text-neon hover:underline">
-                    Verify the fairness →
-                  </Link>
-                </p>
+                <Link href="/fairness" className="text-neon hover:underline text-xs inline-block mt-2">
+                  Verify the fairness →
+                </Link>
               </div>
             </>
           );
