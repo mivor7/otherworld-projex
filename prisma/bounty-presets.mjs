@@ -68,7 +68,7 @@ export const BOUNTY_PRESETS = [
     seed: 250,
     days: 14,
     description:
-      "A house-seeded pot over the dice table. It grows with every credit wagered on Pond Dice — the pot's share of the edge — and the moment it reaches 750 $RIBBIT, every eligible hunter is paid automatically, pro-rata by net credits won. Then a fresh pot opens.",
+      "Set your line and roll under it. The pot opens seeded and grows as dice is played; when it hits the prize it pays all eligible net winners by their net — and re-opens for the next round.",
   }),
   creditBounty({
     title: "EP 06 — Blackjack",
@@ -78,7 +78,7 @@ export const BOUNTY_PRESETS = [
     seed: 500,
     days: 14,
     description:
-      "Beat the dealer, bank the credits. The pot grows as blackjack is played; at 1,500 $RIBBIT every eligible winner takes a share sized to their net win — paid automatically, no claims — and the pot re-opens.",
+      "Beat the dealer, bank the credits. The pot grows with every hand dealt at the table; at the prize it pays every eligible net winner automatically, then a fresh round is dealt in.",
   }),
   creditBounty({
     title: "Double or Nothing — Frog Flip",
@@ -88,7 +88,7 @@ export const BOUNTY_PRESETS = [
     seed: 250,
     days: 14,
     description:
-      "Call the coin. The pot grows as flips stack up on the table; at 750 $RIBBIT all eligible net winners split it pro-rata — automatically, the moment it fills — and a fresh pot opens.",
+      "Call the coin. The pot opens on a house seed and grows with every flip at the table; the moment it fills, every net-positive hunter splits it — then the next round opens on a fresh pot.",
   }),
 
   // ---- Free arcade: weekly, deliberately smaller than the tables ----

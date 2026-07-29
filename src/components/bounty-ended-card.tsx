@@ -11,9 +11,15 @@ import { celebrate } from "./confetti";
 export type JustEnded = {
   id: string;
   title: string;
+  round?: number;
+  // "paid" = the pot filled / winners were paid; "expired" = the deadline
+  // passed without a payout (pot never filled or nobody qualified).
+  outcome?: "paid" | "expired";
   prizeRibbit: number;
   winners: number;
   you: { won: boolean; rank: number | null; amountRibbit: number } | null;
+  // The fresh round already open on this game, if any.
+  next: { round: number; autoRenew: boolean } | null;
 };
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -81,7 +87,11 @@ export function BountyEndedCard({ data }: { data: JustEnded }) {
       </button>
       <div className="flex items-center gap-2 mb-1 pr-7">
         <span className="text-base leading-none">🏁</span>
-        <span className="text-sm font-semibold">The {data.title} bounty just ended</span>
+        <span className="text-sm font-semibold">
+          {data.title}
+          {data.round ? ` · Round ${data.round}` : ""}{" "}
+          {data.outcome === "expired" ? "ended without a payout" : "just paid out"}
+        </span>
       </div>
       {won ? (
         <p className="text-sm text-neon">
@@ -91,7 +101,9 @@ export function BountyEndedCard({ data }: { data: JustEnded }) {
         </p>
       ) : (
         <p className="text-xs text-fog">
-          {data.winners > 0 ? (
+          {data.outcome === "expired" ? (
+            <>The round hit its deadline before the pot filled — nothing was paid. </>
+          ) : data.winners > 0 ? (
             <>
               {data.winners} hunter{data.winners === 1 ? "" : "s"} shared{" "}
               {fmt(data.prizeRibbit)} $RIBBIT.{" "}
@@ -99,9 +111,32 @@ export function BountyEndedCard({ data }: { data: JustEnded }) {
           ) : (
             <>No one qualified this round. </>
           )}
-          A fresh pool builds as the game is played — keep hunting.
+          <WhatsNext next={data.next} />
+        </p>
+      )}
+      {won && (
+        <p className="text-xs text-fog mt-1">
+          <WhatsNext next={data.next} />
         </p>
       )}
     </div>
+  );
+}
+
+// The one line every player needs after a round ends: is there a fresh round
+// right now, or not? No guessing, no silent strip swap.
+function WhatsNext({ next }: { next: JustEnded["next"] }) {
+  if (next) {
+    return (
+      <span className="text-frost">
+        Round {next.round} is already open below — same prize, fresh pot, keep playing.
+      </span>
+    );
+  }
+  return (
+    <span>
+      No new round is open on this table right now — the house posts the next
+      bounty when it&apos;s ready.
+    </span>
   );
 }

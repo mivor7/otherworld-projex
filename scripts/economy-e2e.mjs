@@ -212,6 +212,37 @@ try {
       potSuccessor.seedRibbit === b2.seedRibbit,
     potSuccessor ? `trigger ${potSuccessor.triggerCreditVolume}` : "no successor"
   );
+  check(
+    "successor auto-numbers itself as the next round",
+    !!potSuccessor && potSuccessor.round === 2 && potSuccessor.autoRenew === true,
+    potSuccessor ? `round ${potSuccessor.round}` : "no successor"
+  );
+
+  // ---------------- the owner's re-open switch ----------------
+  console.log("— autoRenew OFF: a paid pot does NOT re-open");
+  const reqNR = await requiredCredits(1000n * RAW);
+  const bNR = await prisma.bounty.create({
+    data: {
+      title: "ECON no-renew", description: "e2e", game: "dice", kind: "leaderboard",
+      prizeRibbit: 1000n * RAW, autoPay: true, autoRenew: false,
+      triggerCreditVolume: reqNR,
+      endsAt: new Date(Date.now() + 7 * 864e5),
+    },
+  });
+  bountyIds.push(bNR.id);
+  const wNR = await makeWinner("bnr", 50, Math.max(100, reqNR + 10), bNR.startsAt);
+  void wNR;
+  await settleSweep();
+  const bNRr = await prisma.bounty.findUnique({ where: { id: bNR.id } });
+  const nrSuccessor = await prisma.bounty.findFirst({
+    where: { title: "ECON no-renew", status: "open", id: { not: bNR.id } },
+  });
+  if (nrSuccessor) bountyIds.push(nrSuccessor.id);
+  check(
+    "autoRenew=false pot pays but leaves the table without a successor",
+    bNRr.status === "paid" && !nrSuccessor,
+    `status ${bNRr.status} successor ${!!nrSuccessor}`
+  );
 
   // ---------------- progress surfaced publicly ----------------
   console.log("— Progress is visible to players");

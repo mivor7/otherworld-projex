@@ -21,6 +21,9 @@ const body = z.object({
   seedRibbit: z.number().min(0).max(1_000_000_000).optional(),
   prizeText: z.string().max(120).nullable().optional(),
   autoPay: z.boolean().optional(),
+  // Owner's re-open switch — editable while the bounty is live, so the
+  // current round can be made the last one before it settles.
+  autoRenew: z.boolean().optional(),
   // Extend (or shorten, negative) the deadline by this many days.
   extendDays: z.number().int().min(-90).max(90).optional(),
 });
@@ -69,6 +72,7 @@ export const POST = handler(
           ...(data.prizeRibbit !== undefined ? { prizeRibbit: prizeRaw } : {}),
           ...(data.seedRibbit !== undefined ? { seedRibbit: seedRaw } : {}),
           ...(data.prizeText !== undefined ? { prizeText: data.prizeText } : {}),
+          ...(data.autoRenew !== undefined ? { autoRenew: data.autoRenew } : {}),
           ...(data.autoPay !== undefined ||
           data.prizeRibbit !== undefined ||
           data.seedRibbit !== undefined

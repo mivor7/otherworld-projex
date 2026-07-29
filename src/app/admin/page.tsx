@@ -85,6 +85,8 @@ type Pulse = {
   wagered24: number;
   ribbitIn24: number;
   topPlayers: { wallet: string; rounds: number; volume: number; net: number }[];
+  creditHolders: { wallet: string; credits: number; since: string }[];
+  creditsOutstanding: number;
 };
 
 type ReviewEntry = {
@@ -157,6 +159,8 @@ type ManagedBounty = {
   seedRibbit: number;
   status: string;
   autoPay: boolean;
+  autoRenew: boolean;
+  round: number;
   triggerCreditVolume: number | null;
   endsAt: string;
   awards: number;
@@ -194,12 +198,12 @@ const BOUNTY_PRESETS: {
   durationDays: number;
   autoPay: boolean;
 }[] = [
-  { label: "Hopper (weekly)", game: "hopper", title: "EP 05 — Hopper", description: "Cross the pond for the highest replay-verified score this week — every eligible hunter shares the pool.", target: "Top score", prizeRibbit: 1250, seedRibbit: 0, durationDays: 7, autoPay: true },
-  { label: "Frogris (weekly)", game: "frogris", title: "EP 02 — Frogris", description: "Clear lines and chase levels for the top verified score this week. Eligible top scores split the pool.", target: "Top score", prizeRibbit: 1000, seedRibbit: 0, durationDays: 7, autoPay: true },
-  { label: "Worm (weekly)", game: "worm", title: "EP 04 — Worm Frog", description: "Grow the longest and post the best verified score this week. Paid pro-rata to eligible hunters.", target: "Top score", prizeRibbit: 900, seedRibbit: 0, durationDays: 7, autoPay: true },
-  { label: "Frog Flip (pot)", game: "flip", title: "Double or Nothing — Frog Flip", description: "Call the flip and ride your streak. The pot grows as the table is played and pays out the best net.", target: "Best net credits", prizeRibbit: 750, seedRibbit: 250, durationDays: 14, autoPay: true },
-  { label: "Pond Dice (pot)", game: "dice", title: "High Roller — Pond Dice", description: "Set your line and roll under it. The pot grows as dice is played and splits by net winnings.", target: "Best net credits", prizeRibbit: 750, seedRibbit: 250, durationDays: 14, autoPay: true },
-  { label: "Blackjack (pot)", game: "blackjack", title: "The House Edge — Blackjack", description: "Beat the dealer. The pot grows as blackjack is played and pays out the best net.", target: "Best net credits", prizeRibbit: 1500, seedRibbit: 500, durationDays: 14, autoPay: true },
+  { label: "Hopper weekly", game: "hopper", title: "The Pond Crossing — Hopper", description: "Cross the pond for the highest replay-verified score of the week. Free to enter — the pool pays every eligible hunter pro-rata at the deadline, then a fresh round opens.", target: "The Highway Bandit", prizeRibbit: 1250, seedRibbit: 0, durationDays: 7, autoPay: true },
+  { label: "Frogris weekly", game: "frogris", title: "The Stacking Order — Frogris", description: "Clear lines, chase levels, and post the top verified score of the week. Free to enter — eligible top scores split the pool at the deadline, and a fresh round follows.", target: "The Stack-Smuggler", prizeRibbit: 1000, seedRibbit: 0, durationDays: 7, autoPay: true },
+  { label: "Worm weekly", game: "worm", title: "The Long Game — Worm Frog", description: "Grow the longest without biting your tail. Free to enter — the week's best verified scores share the pool at the deadline, then a new round begins.", target: "The Tail-Bite Serpent", prizeRibbit: 900, seedRibbit: 0, durationDays: 7, autoPay: true },
+  { label: "Frog Flip pot", game: "flip", title: "Double or Nothing — Frog Flip", description: "Call the coin. The pot opens on a house seed and grows with every flip at the table; the moment it fills, every net-positive hunter splits it — then the next round opens on a fresh pot.", target: "The Two-Face", prizeRibbit: 750, seedRibbit: 250, durationDays: 14, autoPay: true },
+  { label: "Pond Dice pot", game: "dice", title: "High Roller — Pond Dice", description: "Set your line and roll under it. The pot opens seeded and grows as dice is played; when it hits the prize it pays all eligible net winners by their net — and re-opens for the next round.", target: "The Deep End", prizeRibbit: 750, seedRibbit: 250, durationDays: 14, autoPay: true },
+  { label: "Blackjack pot", game: "blackjack", title: "The House Edge — Blackjack", description: "Beat the dealer, bank the credits. The pot grows with every hand dealt at the table; at the prize it pays every eligible net winner automatically, then a fresh round is dealt in.", target: "The House Toad", prizeRibbit: 1500, seedRibbit: 500, durationDays: 14, autoPay: true },
 ];
 
 function previewShares(prize: number, splits: number[], winners: number): number[] {
@@ -241,12 +245,13 @@ export default function AdminPage() {
     seedRibbit: 0,
     durationDays: 7,
     autoPay: true, // auto-settlement is the whole point of the system — default on
+    autoRenew: true, // fresh round opens when this one settles — the owner's switch
   });
   const bountyIsFree = ["hopper", "frogris", "worm"].includes(bountyForm.game);
 
   const [manage, setManage] = useState<ManagedBounty[]>([]);
   const [editBounty, setEditBounty] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", target: "", prizeRibbit: 0, seedRibbit: 0, extendDays: 0, autoPay: false });
+  const [editForm, setEditForm] = useState({ title: "", target: "", prizeRibbit: 0, seedRibbit: 0, extendDays: 0, autoPay: false, autoRenew: true });
   const [editAuction, setEditAuction] = useState<string | null>(null);
   const [auctionEditForm, setAuctionEditForm] = useState({ title: "", description: "", startBidRibbit: 0, minIncrementRibbit: 0, extendHours: 0 });
   const [playerWallet, setPlayerWallet] = useState("");
@@ -675,6 +680,55 @@ export default function AdminPage() {
           ) : (
             <p className="text-sm text-fog">No table play in the last 7 days yet.</p>
           )}
+
+          {/* Everyone holding chips right now — outstanding credits are future
+              play (and future pot fuel). */}
+          {pulse && (
+            <div className="mt-6 pt-5 border-t" style={{ borderColor: "var(--hairline)" }}>
+              <div className="flex items-baseline justify-between mb-2">
+                <div className="kicker !text-[0.65rem]">Credit balances</div>
+                <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+                  {pulse.creditHolders.length} wallet{pulse.creditHolders.length === 1 ? "" : "s"} ·{" "}
+                  {pulse.creditsOutstanding.toLocaleString()} credits outstanding
+                </span>
+              </div>
+              {pulse.creditHolders.length === 0 ? (
+                <p className="text-sm text-fog">Nobody is holding credits right now.</p>
+              ) : (
+                <div className="overflow-x-auto max-h-72 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {pulse.creditHolders.map((h) => (
+                        <tr key={h.wallet} className="table-row">
+                          <td className="py-1.5 pr-3 mono text-xs">{shortWallet(h.wallet)}</td>
+                          <td className="py-1.5 text-right stat-number text-neon">
+                            {h.credits.toLocaleString()}
+                          </td>
+                          <td className="py-1.5 pl-3 text-right text-xs" style={{ color: "var(--text-dim)" }}>
+                            joined {new Date(h.since).toLocaleDateString()}
+                          </td>
+                          <td className="py-1.5 text-right">
+                            <button
+                              className="btn btn-ghost !text-xs !min-h-[1.8rem]"
+                              onClick={() => {
+                                setPlayerWallet(h.wallet);
+                                lookupPlayer(h.wallet);
+                                document
+                                  .getElementById("player-lookup")
+                                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                              }}
+                            >
+                              look up
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1051,6 +1105,7 @@ export default function AdminPage() {
                         seedRibbit: p.seedRibbit,
                         durationDays: p.durationDays,
                         autoPay: p.autoPay,
+                        autoRenew: true,
                       })
                     }
                   >
@@ -1113,6 +1168,19 @@ export default function AdminPage() {
               />
               <span className="text-frost">Settle this bounty automatically</span>
             </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bountyForm.autoRenew}
+                onChange={(e) => setBountyForm({ ...bountyForm, autoRenew: e.target.checked })}
+              />
+              <span className="text-frost">
+                Re-open automatically when it settles
+                <span className="text-xs text-fog ml-2">
+                  (each new round numbers itself — Round 2, 3, …; off = this round is the last)
+                </span>
+              </span>
+            </label>
             {/* Always explain what will happen — manual vs auto, and the
                 required credit-spend this bounty needs before it pays. */}
             {(() => {
@@ -1146,7 +1214,10 @@ export default function AdminPage() {
                   grows <span className="stat-number text-neon">{potRate.toFixed(2)} $RIBBIT per credit wagered</span>{" "}
                   — its share of the house edge. It fills at{" "}
                   <span className="stat-number text-neon">≈ {requiredCredits.toLocaleString()} credits</span> wagered on{" "}
-                  {bountyForm.game}, then pays all eligible winners pro-rata and re-opens automatically.
+                  {bountyForm.game}, then pays all eligible winners pro-rata
+                  {bountyForm.autoRenew
+                    ? " and re-opens automatically as the next numbered round."
+                    : ". Re-open is OFF — this round is the last; the table waits until you post a new bounty."}
                   <div className="mt-1.5">
                     Your cost per fill is <span className="text-frost">the seed and only the seed</span> — the funded{" "}
                     {fundedRibbit.toLocaleString()} $RIBBIT is covered by edge the house genuinely collected, so every
@@ -1426,6 +1497,16 @@ export default function AdminPage() {
                       auto{b.triggerCreditVolume ? ` · ${b.triggerCreditVolume.toLocaleString()} cr` : " · weekly"}
                     </span>
                   )}
+                  <span
+                    className="badge"
+                    title={
+                      b.autoRenew
+                        ? "A fresh round opens automatically when this one settles"
+                        : "Final round — will NOT re-open when it settles"
+                    }
+                  >
+                    R{b.round}{b.autoRenew ? " ↻" : " · final"}
+                  </span>
                   <span className="text-xs ml-auto" style={{ color: "var(--text-dim)" }}>
                     ends {new Date(b.endsAt).toLocaleDateString()}
                     {b.awards > 0 && ` · ${b.awards} paid`}
@@ -1448,6 +1529,7 @@ export default function AdminPage() {
                             seedRibbit: b.seedRibbit ?? 0,
                             extendDays: 0,
                             autoPay: b.autoPay,
+                            autoRenew: b.autoRenew,
                           });
                         }
                       }}
@@ -1538,6 +1620,12 @@ export default function AdminPage() {
                           onChange={(e) => setEditForm({ ...editForm, autoPay: e.target.checked })} />
                         Auto-pay
                       </label>
+                      <label className="flex items-center gap-2 text-xs text-fog cursor-pointer pb-2"
+                        title="Off = this round is the last; the bounty won't re-open when it settles.">
+                        <input type="checkbox" checked={editForm.autoRenew}
+                          onChange={(e) => setEditForm({ ...editForm, autoRenew: e.target.checked })} />
+                        Re-open on settle
+                      </label>
                     </div>
                     <p className="text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
                       Changing the prize on an auto-pay credit bounty re-derives its
@@ -1553,6 +1641,7 @@ export default function AdminPage() {
                           target: editForm.target || null,
                           prizeRibbit: editForm.prizeRibbit,
                           seedRibbit: editForm.seedRibbit,
+                          autoRenew: editForm.autoRenew,
                           autoPay: editForm.autoPay,
                           ...(editForm.extendDays ? { extendDays: editForm.extendDays } : {}),
                         });

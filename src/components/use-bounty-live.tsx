@@ -50,6 +50,8 @@ export type BountyLive = {
   bounty: {
     id: string;
     title: string;
+    round?: number;
+    autoRenew?: boolean;
     prizeRibbit: number;
     prizeText: string | null;
     autoPay: boolean;

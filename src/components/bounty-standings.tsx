@@ -49,7 +49,23 @@ export function BountyStandings({ game }: { game: string }) {
         </span>
         <span className="stat-number text-gold text-sm ml-auto">{prize}</span>
       </div>
-      <div className="font-medium tracking-tight mb-3">{b.title}</div>
+      <div className="font-medium tracking-tight mb-3">
+        {b.title}
+        {b.round !== undefined && (
+          <span
+            className="mono text-[0.6rem] uppercase tracking-widest ml-2 align-middle"
+            style={{ color: "var(--text-dim)" }}
+            title={
+              b.autoRenew === false
+                ? "Final round — this bounty won't re-open when it ends"
+                : "A fresh round opens automatically when this one pays"
+            }
+          >
+            round {b.round}
+            {b.autoRenew === false && " · final"}
+          </span>
+        )}
+      </div>
 
       {b.progress?.mode === "credit" && (
         <div className="mb-4">
@@ -165,9 +181,12 @@ export function BountyStandings({ game }: { game: string }) {
           </tbody>
         </table>
       )}
-      <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--hairline)" }}>
+      <div className="mt-3 pt-3 border-t flex gap-4" style={{ borderColor: "var(--hairline)" }}>
         <Link href="/bounties" className="text-xs text-neon hover:underline">
           All bounties →
+        </Link>
+        <Link href="/bounties#how-pots-work" className="text-xs text-fog hover:text-frost">
+          How pots work →
         </Link>
       </div>
     </aside>

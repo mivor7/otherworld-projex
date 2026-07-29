@@ -17,6 +17,8 @@ const body = z.object({
   prizeText: z.string().max(120).optional(),
   durationDays: z.number().int().min(1).max(90),
   autoPay: z.boolean().default(false),
+  // Owner's re-open switch: open a fresh round automatically after settle.
+  autoRenew: z.boolean().default(true),
 });
 
 // Full bounty list for the admin manage panel — every status, with award
@@ -40,6 +42,8 @@ export const GET = handler(async () => {
       prizeText: b.prizeText,
       status: b.status,
       autoPay: b.autoPay,
+      autoRenew: b.autoRenew,
+      round: b.round,
       triggerCreditVolume: b.triggerCreditVolume,
       seedRibbit: Number(b.seedRibbit / 10n ** 6n),
       endsAt: b.endsAt,
@@ -91,6 +95,7 @@ export const POST = handler(async (req: Request) => {
       seedRibbit: seedRaw,
       prizeText: data.prizeText,
       autoPay: data.autoPay,
+      autoRenew: data.autoRenew,
       triggerCreditVolume,
       endsAt: new Date(Date.now() + data.durationDays * 24 * 3600 * 1000),
     },

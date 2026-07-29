@@ -16,6 +16,7 @@ export const GET = handler(async () => {
     ribbitPerCredit: cfg.ribbitPerCredit,
     buyBurnShare: cfg.buyBurnShare,
     houseEdge: cfg.houseEdge,
+    bountyPotShare: cfg.bountyPotShare,
     minWager: cfg.minWager,
     maxWager: cfg.maxWager,
     rankedMinBurnedRibbit: cfg.rankedMinBurnedRibbit,

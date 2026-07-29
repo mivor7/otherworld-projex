@@ -112,8 +112,14 @@ This is the most-iterated, most-subtle subsystem. The final design:
   cost per fill). The pot earns
   `bountyPotShare × houseEdge × (1 − buyBurnShare) × ribbitPerCredit`
   $RIBBIT per credit wagered — its share of the edge the house actually
-  collects — and pays the moment it reaches the prize, then **re-opens
-  automatically** with the same prize/seed.
+  collects — and pays the moment it reaches the prize. If the bounty's
+  **`autoRenew`** switch is on (the default; editable live in the admin
+  create/edit forms) a fresh round opens automatically with the same
+  prize/seed and **`round` + 1** (rounds are auto-numbered and shown to
+  players everywhere); switched off, the round is final and the table waits
+  for a new bounty. Arcade weeklies renew the same way.
+  The public mechanics live on `/bounties#how-pots-work` with the live
+  numbers — keep that section truthful if the formula ever changes.
 - The fill threshold (`requiredCreditSpend(prize, seed)`) is derived
   server-side and re-derived whenever prize/seed/economy settings change.
   Solvency is structural: when the meter fills, the house has collected the

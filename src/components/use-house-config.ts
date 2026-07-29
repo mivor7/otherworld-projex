@@ -11,6 +11,7 @@ export type LiveHouseConfig = {
   ribbitPerCredit: number;
   buyBurnShare: number;
   houseEdge: number;
+  bountyPotShare: number;
   minWager: number;
   maxWager: number;
   rankedMinBurnedRibbit: number;
@@ -25,6 +26,7 @@ const FALLBACK: LiveHouseConfig = {
   ribbitPerCredit: CLIENT_CONFIG.ribbitPerCredit,
   buyBurnShare: CLIENT_CONFIG.buyBurnShare,
   houseEdge: CLIENT_CONFIG.houseEdge,
+  bountyPotShare: CLIENT_CONFIG.bountyPotShare,
   minWager: 1,
   maxWager: 1_000,
   rankedMinBurnedRibbit: CLIENT_CONFIG.rankedMinBurnedRibbit,

@@ -19,6 +19,8 @@ type Bounty = {
   prizeRibbit: string;
   prizeText: string | null;
   status: string;
+  round?: number;
+  autoRenew?: boolean;
   endsAt: string;
   progress?:
     | { mode: "credit"; spent: number; threshold: number; pct: number; potRibbit?: number; targetRibbit?: number; seedRibbit?: number }
@@ -175,7 +177,23 @@ export default function BountiesPage() {
                       </Link>
                     )}
                   </div>
-                  <h3 className="!text-[1.05rem]">{b.title}</h3>
+                  <h3 className="!text-[1.05rem]">
+                    {b.title}
+                    {b.round !== undefined && (
+                      <span
+                        className="mono text-[0.6rem] uppercase tracking-widest ml-2 align-middle"
+                        style={{ color: "var(--text-dim)" }}
+                        title={
+                          b.autoRenew === false
+                            ? "Final round — won't re-open when it ends"
+                            : "A fresh round opens automatically when this one pays"
+                        }
+                      >
+                        round {b.round}
+                        {b.autoRenew === false && " · final"}
+                      </span>
+                    )}
+                  </h3>
                   {b.target && (
                     <div className="mono text-xs text-gold mt-1 uppercase tracking-wider">
                       Target · {b.target}
@@ -256,6 +274,11 @@ export default function BountiesPage() {
                     )}
                     <div className="min-w-0">
                       <span className="font-medium tracking-tight">{b.title}</span>
+                      {b.round !== undefined && b.round > 0 && (
+                        <span className="mono text-[0.6rem] uppercase tracking-widest ml-2" style={{ color: "var(--text-dim)" }}>
+                          r{b.round}
+                        </span>
+                      )}
                       <span className="text-fog text-sm ml-3">
                         {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`}
                       </span>
@@ -319,6 +342,67 @@ export default function BountiesPage() {
           </p>
         </aside>
       </div>
+
+      {/* The fine print — how the pot engine actually works, with the live
+          numbers. Linked from every game panel ("How pots work →");
+          deliberately down-page: there when curious, never in the way. */}
+      <section id="how-pots-work" className="panel p-6 sm:p-8 mt-10 scroll-mt-24">
+        <div className="kicker mb-1.5">The fine print</div>
+        <h2 className="!text-xl mb-5">How the pots actually work</h2>
+        {(() => {
+          const rate =
+            Math.round(
+              house.bountyPotShare * house.houseEdge * (1 - house.buyBurnShare) * house.ribbitPerCredit * 100
+            ) / 100;
+          return (
+            <div className="grid md:grid-cols-2 gap-x-10 gap-y-5 text-sm text-fog leading-relaxed">
+              <p>
+                <span className="text-frost font-medium">Credits are one-way chips.</span>{" "}
+                {house.ribbitPerCredit.toLocaleString()} $RIBBIT buys one credit;{" "}
+                {Math.round(house.buyBurnShare * 100)}% of every purchase is burned forever and
+                the rest lands in the transparent treasury. Credits never convert back — winning
+                real $RIBBIT happens through the bounty pots.
+              </p>
+              <p>
+                <span className="text-frost font-medium">The edge is published, and it fuels the pots.</span>{" "}
+                Tables keep a flat {Math.round(house.houseEdge * 100)}% edge — that&apos;s the whole
+                house take, and it&apos;s where prize money comes from. No hidden margins: every game
+                is provably fair and every payout is on the public ledger.
+              </p>
+              <p>
+                <span className="text-frost font-medium">Pots grow with play, not promises.</span>{" "}
+                Every credit wagered on a table adds <span className="text-neon">{rate} $RIBBIT</span> to
+                that table&apos;s pot — {Math.round(house.bountyPotShare * 100)}% of the edge the house
+                actually collects. Some pots also open with a house-contributed seed as a head start;
+                the meter shows exactly where the pot stands at any moment.
+              </p>
+              <p>
+                <span className="text-frost font-medium">Filling pays everyone eligible — instantly.</span>{" "}
+                The moment a pot reaches its target it pays every eligible net-positive hunter
+                automatically, split pro-rata by net credits won. No claims, no waiting. Arcade
+                episodes are free to play and pay on their weekly deadline instead.
+              </p>
+              <p>
+                <span className="text-frost font-medium">Rounds are numbered.</span> When a pot pays
+                and the house has it set to re-open, a fresh round starts immediately — same prize,
+                empty meter, round number up by one. A bounty marked{" "}
+                <span className="mono text-[0.7rem] uppercase">final</span> won&apos;t re-open: when
+                it ends, that table waits until the house posts a new bounty.
+              </p>
+              <p>
+                <span className="text-frost font-medium">Why it&apos;s built this way.</span> A pot can
+                only pay what play has already funded (plus the declared seed) — the house can never
+                owe more than it has earned, which is what makes every posted prize real. Eligibility
+                gates (a minimum spend, and net-positive play) exist so prizes go to real hunters,
+                not sybil wallets.{" "}
+                <Link href="/fairness" className="text-neon hover:underline">
+                  Verify the fairness →
+                </Link>
+              </p>
+            </div>
+          );
+        })()}
+      </section>
     </div>
   );
 }

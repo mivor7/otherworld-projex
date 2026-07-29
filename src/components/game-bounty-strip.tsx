@@ -68,6 +68,7 @@ export function GameBountyStrip({ game }: { game: string }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="badge badge-live">
               <span className="live-dot" /> live bounty
+              {b.round !== undefined && ` · r${b.round}`}
             </span>
             <span className="stat-number text-gold text-sm">{prize} pool</span>
             {statusNode && <span className="text-xs ml-auto">{statusNode}</span>}

@@ -31,6 +31,7 @@ export const GET = handler(async () => {
     burn1,
     buy1,
     top,
+    holders,
   ] = await Promise.all([
     prisma.gameRound.groupBy({ by: ["userId"], where: { createdAt: { gte: d1 } } }),
     prisma.gameRound.groupBy({ by: ["userId"], where: { createdAt: { gte: d7 } } }),
@@ -53,6 +54,14 @@ export const GET = handler(async () => {
       _count: true,
       orderBy: { _sum: { wager: "desc" } },
       take: 15,
+    }),
+    // Everyone holding chips right now — outstanding credits are future play
+    // (and future pot fuel), and the owner asked to see exactly who holds what.
+    prisma.user.findMany({
+      where: { credits: { gt: 0 } },
+      select: { wallet: true, credits: true, createdAt: true },
+      orderBy: { credits: "desc" },
+      take: 200,
     }),
   ]);
 
@@ -84,5 +93,11 @@ export const GET = handler(async () => {
     wagered24: roundStats1._sum.wager ?? 0,
     ribbitIn24: Math.round(fromRaw((burn1._sum.amountRaw ?? 0n) + (buy1._sum.ribbitRaw ?? 0n))),
     topPlayers,
+    creditHolders: holders.map((h) => ({
+      wallet: h.wallet,
+      credits: h.credits,
+      since: h.createdAt,
+    })),
+    creditsOutstanding: holders.reduce((s, h) => s + h.credits, 0),
   });
 });

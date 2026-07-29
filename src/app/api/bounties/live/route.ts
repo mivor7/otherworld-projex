@@ -44,6 +44,7 @@ export const GET = handler(async (req: Request) => {
       byGame[b.game!] = {
         id: b.id,
         title: b.title,
+        round: b.round,
         prizeRibbit: fromRaw(b.prizeRibbit),
         prizeText: b.prizeText,
         autoPay: b.autoPay,
@@ -56,24 +57,42 @@ export const GET = handler(async (req: Request) => {
   const session = await getSession();
 
   // A bounty for this game that settled in the last few minutes — surfaced so a
-  // player who was racing sees the OUTCOME (won #N / it paid out) instead of the
-  // strip silently vanishing. Included whether or not a fresh bounty is now open
-  // (arcade weeklies renew the instant the old one pays).
+  // player who was racing sees the OUTCOME (paid / expired unpaid, won #N, and
+  // whether a fresh round opened) instead of the strip silently changing.
   const RECENT_MS = 15 * 60 * 1000;
   const recentPaid = await prisma.bounty.findFirst({
     where: { game, status: "paid", paidAt: { gte: new Date(Date.now() - RECENT_MS) } },
     orderBy: { paidAt: "desc" },
   });
+  // No recent payout? A deadline may still have passed with the pot unfilled
+  // (or no eligible winner) — that end deserves an explanation too.
+  const recentExpired = recentPaid
+    ? null
+    : await prisma.bounty.findFirst({
+        where: {
+          game,
+          status: "closed",
+          paidAt: null,
+          endsAt: { gte: new Date(Date.now() - RECENT_MS), lte: new Date() },
+        },
+        orderBy: { endsAt: "desc" },
+      });
+  const recent = recentPaid ?? recentExpired;
   let justEnded: {
     id: string;
     title: string;
+    round: number;
+    outcome: "paid" | "expired";
     prizeRibbit: number;
     winners: number;
     you: { won: boolean; rank: number | null; amountRibbit: number } | null;
+    // The fresh round already open on this game, if any — so the card can say
+    // exactly what happens next instead of leaving players guessing.
+    next: { round: number; autoRenew: boolean } | null;
   } | null = null;
-  if (recentPaid) {
+  if (recent) {
     const awards = await prisma.bountyAward.findMany({
-      where: { bountyId: recentPaid.id },
+      where: { bountyId: recent.id },
       orderBy: { rank: "asc" },
     });
     let mine: { won: boolean; rank: number | null; amountRibbit: number } | null = null;
@@ -84,11 +103,14 @@ export const GET = handler(async (req: Request) => {
         : { won: false, rank: null, amountRibbit: 0 };
     }
     justEnded = {
-      id: recentPaid.id,
-      title: recentPaid.title,
-      prizeRibbit: fromRaw(recentPaid.prizeRibbit),
+      id: recent.id,
+      title: recent.title,
+      round: recent.round,
+      outcome: recentPaid ? "paid" : "expired",
+      prizeRibbit: fromRaw(recent.prizeRibbit),
       winners: awards.length,
       you: mine,
+      next: null, // filled below once the open bounty is known
     };
   }
 
@@ -96,6 +118,9 @@ export const GET = handler(async (req: Request) => {
     where: { status: "open", game },
     orderBy: { prizeRibbit: "desc" },
   });
+  if (justEnded && bounty && bounty.id !== justEnded.id) {
+    justEnded.next = { round: bounty.round, autoRenew: bounty.autoRenew };
+  }
   if (!bounty) return ok({ bounty: null, entries: [], you: null, justEnded });
 
   const standings = await cachedBountyStandings(bounty);
@@ -184,6 +209,8 @@ export const GET = handler(async (req: Request) => {
     bounty: {
       id: bounty.id,
       title: bounty.title,
+      round: bounty.round,
+      autoRenew: bounty.autoRenew,
       prizeRibbit: fromRaw(bounty.prizeRibbit),
       prizeText: bounty.prizeText,
       autoPay: bounty.autoPay,

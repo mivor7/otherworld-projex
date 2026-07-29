@@ -237,6 +237,14 @@ model Bounty {
   // triggerCreditVolume; free-game bounties trigger at endsAt (weekly).
   autoPay            Boolean @default(false)
   triggerCreditVolume Int?   // credit-spend threshold (credit games only)
+  // Owner's re-open switch: when true, a fresh round of this bounty opens
+  // automatically after it settles (pot pays → new pot; weekly ends → new
+  // week). Editable while the bounty is live — flip it off any time and the
+  // current round becomes the last one.
+  autoRenew   Boolean  @default(true)
+  // Auto-numbered edition: 1 on creation, successor = parent + 1. Shown to
+  // players so "which round am I in" is never a mystery.
+  round       Int      @default(1)
   startsAt    DateTime @default(now())
   endsAt      DateTime
   createdAt   DateTime @default(now())
