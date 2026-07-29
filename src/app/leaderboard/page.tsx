@@ -14,9 +14,9 @@ const GAMES: { id: string; label: string; unit: string; kind: "arcade" | "table"
   { id: "hopper", label: "Hopper", unit: "best score", kind: "arcade" },
   { id: "frogris", label: "Frogris", unit: "best score", kind: "arcade" },
   { id: "worm", label: "Worm Frog", unit: "best score", kind: "arcade" },
-  { id: "flip", label: "Frog Flip", unit: "net credits", kind: "table" },
-  { id: "dice", label: "Pond Dice", unit: "net credits", kind: "table" },
-  { id: "blackjack", label: "Blackjack", unit: "net credits", kind: "table" },
+  { id: "flip", label: "Frog Flip", unit: "net chips", kind: "table" },
+  { id: "dice", label: "Pond Dice", unit: "net chips", kind: "table" },
+  { id: "blackjack", label: "Blackjack", unit: "net chips", kind: "table" },
 ];
 
 export default function LeaderboardPage() {

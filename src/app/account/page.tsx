@@ -53,7 +53,7 @@ type LivePosition = {
   value: number;
   rank: number;
   players: number;
-  unit: "net credits" | "best score";
+  unit: "net chips" | "best score";
   inRunning: boolean;
   projectedRibbit: number;
   spendEligible: boolean;
@@ -209,7 +209,7 @@ export default function AccountPage() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Play credits" value={String(me.credits ?? 0)} tone="neon" />
+        <StatCard label="Table chips ⛁" value={String(me.credits ?? 0)} tone="neon" />
         <StatCard
           label="$RIBBIT available"
           value={fmtRibbit(me.ribbitAvailable ?? 0)}
@@ -225,7 +225,7 @@ export default function AccountPage() {
           <div className="kicker">Move funds</div>
           <div className="grid gap-1.5">
             <Link href="/games" className="btn btn-ghost !text-xs w-full">
-              Buy credits
+              Buy chips
             </Link>
             <button
               className="btn btn-ghost !text-xs w-full"
@@ -351,8 +351,8 @@ export default function AccountPage() {
                       <span className="text-fog">
                         not eligible —{" "}
                         {!p.lifetimeEligible
-                          ? "spend more $RIBBIT on credits"
-                          : "buy credits during this bounty"}
+                          ? "spend more $RIBBIT on chips"
+                          : "buy chips during this bounty"}
                       </span>
                     ) : p.value > 0 ? (
                       <span className="text-fog">in the running as the pool fills</span>

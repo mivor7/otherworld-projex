@@ -143,7 +143,7 @@ export const GET = handler(async (req: Request) => {
     | {
         inRunning: boolean;
         value: number; // net credits (tables) or best score (arcade)
-        unit: "net credits" | "best score";
+        unit: "net chips" | "best score";
         projectedRibbit: number;
         spendEligible: boolean;
         lifetimeEligible: boolean;
@@ -190,7 +190,7 @@ export const GET = handler(async (req: Request) => {
     you = {
       inRunning: !!mine,
       value,
-      unit: arcade ? "best score" : "net credits",
+      unit: arcade ? "best score" : "net chips",
       projectedRibbit: mine ? fromRaw(mine.projectedRaw) : 0,
       spendEligible: lifetimeEligible && windowEligible,
       lifetimeEligible,
@@ -214,7 +214,7 @@ export const GET = handler(async (req: Request) => {
       prizeRibbit: fromRaw(bounty.prizeRibbit),
       prizeText: bounty.prizeText,
       autoPay: bounty.autoPay,
-      unit: ["hopper", "frogris", "worm"].includes(game) ? "best score" : "net credits",
+      unit: ["hopper", "frogris", "worm"].includes(game) ? "best score" : "net chips",
       progress: await bountyProgress(bounty),
     },
     entries,

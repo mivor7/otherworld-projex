@@ -424,6 +424,8 @@ async function renewWeeklyBounty(
     prizeRibbit: bigint;
     seedRibbit?: bigint;
     prizeText: string | null;
+    autoRenew?: boolean;
+    round?: number;
     startsAt?: Date;
     endsAt?: Date;
   },
@@ -431,6 +433,13 @@ async function renewWeeklyBounty(
   // default to 7 days.
   durationMs = 7 * 24 * 3600 * 1000
 ): Promise<void> {
+  // The owner's re-open switch — read LIVE from the row, not the caller's
+  // snapshot, so flipping it off mid-settle still counts.
+  const fresh = await prisma.bounty.findUnique({
+    where: { id: b.id },
+    select: { autoRenew: true, round: true },
+  });
+  if (!(fresh?.autoRenew ?? b.autoRenew ?? true)) return;
   const otherOpen = await prisma.bounty.count({
     where: { game: b.game, status: "open", autoPay: true, id: { not: b.id } },
   });
@@ -454,6 +463,8 @@ async function renewWeeklyBounty(
       seedRibbit: b.seedRibbit ?? 0n,
       prizeText: b.prizeText,
       autoPay: true,
+      autoRenew: true,
+      round: (fresh?.round ?? b.round ?? 1) + 1,
       triggerCreditVolume: trigger,
       endsAt: new Date(Date.now() + durationMs),
     },

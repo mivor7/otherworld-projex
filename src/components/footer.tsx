@@ -17,7 +17,7 @@ export function Footer() {
             </span>
           </div>
           <p className="text-fog leading-relaxed max-w-sm">
-            A decentralized bounty arcade on Solana. Turn $RIBBIT into credits,
+            A decentralized bounty arcade on Solana. Turn $RIBBIT into table chips,
             play provably-fair games, bid in the auction house, hunt bounties
             that pay automatically — all against one transparent treasury.
           </p>

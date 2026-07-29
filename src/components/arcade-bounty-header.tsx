@@ -2,9 +2,9 @@
 
 // Compact bounty header for an arcade game's single leaderboard card: when a
 // bounty is live it shows the prize, that top scores share it weekly, and the
-// signed-in player's own standing. Renders nothing when there's no open bounty,
-// so the card is just a plain leaderboard then. This replaces the old two-card
-// arrangement (a separate bounty panel above the leaderboard) with one card.
+// signed-in player's own standing. With NO open bounty it says so plainly —
+// scores aren't counting toward anything, and players deserve to know that.
+import Link from "next/link";
 import { useSession } from "./session";
 import { QualifyStatus } from "./qualify-status";
 import { BountyEndedCard } from "./bounty-ended-card";
@@ -43,6 +43,18 @@ export function ArcadeBountyHeader({ game }: { game: string }) {
   return (
     <>
       {justEnded && <BountyEndedCard data={justEnded} />}
+      {live && !b && !justEnded && (
+        <div className="mb-4 pb-4 border-b" style={{ borderColor: "var(--hairline)" }}>
+          <p className="text-xs text-fog leading-relaxed">
+            <span className="text-frost font-medium">No live episode right now.</span>{" "}
+            Scores aren&apos;t counting toward a prize — play for fun, and check{" "}
+            <Link href="/bounties" className="text-neon hover:underline">
+              the board
+            </Link>{" "}
+            for the next episode.
+          </p>
+        </div>
+      )}
       {b && (
         <div className="mb-4 pb-4 border-b" style={{ borderColor: "var(--hairline)" }}>
           <div className="flex items-center gap-2 mb-1.5">

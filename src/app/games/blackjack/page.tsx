@@ -426,7 +426,7 @@ export default function BlackjackPage() {
             </button>
           </div>
           <div className="text-right">
-            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice credits" : "Credits"}</div>
+            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice chips" : "Chips ⛁"}</div>
             <div className="stat-number text-neon">{canPlay ? balance : "—"}</div>
           </div>
         </div>
@@ -524,7 +524,7 @@ export default function BlackjackPage() {
               ? splitResultCopy(view.result, view.split.result)
               : RESULT_COPY[view.result]}
             {view.payout !== null && view.payout > 0 &&
-              ` +${view.payout} ${sandbox ? "practice credits" : "credits"}`}
+              ` +${view.payout} ${sandbox ? "practice chips" : "chips"}`}
           </div>
         )}
 
@@ -566,7 +566,7 @@ export default function BlackjackPage() {
               className="input max-w-28 text-center"
               min={house.minWager}
               max={house.maxWager}
-              aria-label="Wager in credits"
+              aria-label="Wager in chips"
               value={wager || ""}
               onChange={(e) => {
                 const n = Math.floor(Number(e.target.value));
@@ -587,13 +587,13 @@ export default function BlackjackPage() {
           <p className="text-fog text-sm mt-5 text-center">
             Sign in with your wallet to take a seat — or try the sandbox above.{" "}
             <Link href="/games" className="text-neon hover:underline">
-              Get credits →
+              Get chips →
             </Link>
           </p>
         )}
         {!sandbox && me.signedIn && !inHand && (me.credits ?? 0) < wager && (
           <p className="text-fog text-sm mt-5 text-center">
-            Not enough credits.{" "}
+            Not enough chips.{" "}
             <Link href="/games" className="text-neon hover:underline">
               Get more credits →
             </Link>

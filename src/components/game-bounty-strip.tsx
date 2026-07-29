@@ -24,7 +24,22 @@ export function GameBountyStrip({ game }: { game: string }) {
 
   const b = live?.bounty;
   const justEnded = live?.justEnded ?? null;
-  if (!b && !justEnded) return null;
+  // Data arrived and there's genuinely nothing running: say so — a table with
+  // no bounty must never look like a table with a hidden one. (The ended card
+  // already explains the no-new-round case, so don't double up.)
+  if (!b && !justEnded) {
+    if (!live) return null; // still loading — don't flash the notice
+    return (
+      <div
+        className="rounded-xl px-4 py-2.5 mb-3 text-xs text-fog"
+        style={{ border: "1px solid var(--hairline)", background: "oklch(1 0 0 / 0.02)" }}
+      >
+        No live bounty on this table right now — you win and lose chips as
+        normal, but nothing feeds a $RIBBIT prize until the house posts the
+        next round.
+      </div>
+    );
+  }
 
   const prize = b ? b.prizeText ?? `${fmt(b.prizeRibbit)} $RIBBIT` : "";
   const pct = b && b.progress?.mode === "credit" ? b.progress.pct : null;

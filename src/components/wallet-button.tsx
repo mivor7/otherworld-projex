@@ -120,7 +120,7 @@ export function WalletButton() {
             : ribbit.toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
           $RIBBIT
         </span>
-        <span className="mono text-neon" title="Play credits">{me.credits ?? 0} cr</span>
+        <span className="mono text-neon" title="Table chips">⛁ {me.credits ?? 0}</span>
         <span className="mono hidden sm:inline">{shortWallet(me.wallet ?? "")}</span>
         <span
           className="text-fog transition-transform"
@@ -150,7 +150,7 @@ export function WalletButton() {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-fog">Play credits</span>
+              <span className="text-fog">Table chips ⛁</span>
               <span className="stat-number text-neon">{me.credits ?? 0}</span>
             </div>
             <div className="flex justify-between">
@@ -170,7 +170,7 @@ export function WalletButton() {
 
           <div className="grid gap-1.5 mb-4">
             <Link href="/games" className="btn btn-primary w-full !justify-start" onClick={() => setOpen(false)}>
-              Buy credits
+              Buy chips
             </Link>
             <Link href="/account" className="btn btn-ghost w-full !justify-start" onClick={() => setOpen(false)}>
               My account

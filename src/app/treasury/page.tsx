@@ -83,7 +83,7 @@ export default function TreasuryPage() {
         badge="Live on-chain"
         title="The"
         titleAccent="Treasury"
-        subtitle="One vault backs the whole house — funded by the owners, replenished by the house share of every credit purchase and by token trade fees. Balances read live from Solana; every payout is published below."
+        subtitle="One vault backs the whole house — funded by the owners, replenished by the house share of every chip purchase and by token trade fees. Balances read live from Solana; every payout is published below."
         stats={stats}
       />
 
@@ -122,7 +122,7 @@ export default function TreasuryPage() {
             <StatCard
               label="Wagered volume"
               value={data.totals.wageredCredits.toLocaleString()}
-              sub={`credits across all tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} credits (chips, not $RIBBIT)`}
+              sub={`chips across all tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} chips (table currency, not $RIBBIT)`}
             />
             <StatCard
               label="Rounds settled"
@@ -131,7 +131,7 @@ export default function TreasuryPage() {
               tone="portal"
             />
             <StatCard
-              label="Credit sales"
+              label="Chip sales"
               value={String(data.totals.burnCount + data.totals.purchaseCount)}
               sub={`${fmtRibbit(data.totals.ribbitBurnedRaw)} $RIBBIT burned forever`}
               tone="gold"
@@ -144,8 +144,8 @@ export default function TreasuryPage() {
               {(
                 [
                   [
-                    "Bounty prizes ← credit purchases",
-                    `funded by the treasury's ${Math.round((1 - data.economy.buyBurnShare) * 100)}% share of every credit bought (the other ${Math.round(data.economy.buyBurnShare * 100)}% is burned)`,
+                    "Bounty prizes ← chip purchases",
+                    `funded by the treasury's ${Math.round((1 - data.economy.buyBurnShare) * 100)}% share of every chip bought (the other ${Math.round(data.economy.buyBurnShare * 100)}% is burned)`,
                     "var(--color-neon)",
                     1 - data.economy.buyBurnShare,
                   ],
@@ -202,7 +202,7 @@ export default function TreasuryPage() {
                 </li>
                 <li>
                   <span className="text-frost font-medium">Burns.</span> The burn
-                  leg of every credit purchase is destroyed at the mint — it never
+                  leg of every chip purchase is destroyed at the mint — it never
                   touches the treasury. Only the house leg lands here.
                 </li>
               </ul>

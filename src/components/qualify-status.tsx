@@ -50,7 +50,7 @@ export function QualifyStatus({
   if (!you.windowEligible)
     reqs.push({
       key: "window",
-      label: `Buy ${n(toCredits(Math.max(0, house.rankedMinWindowBurnedRibbit - you.windowSpent)))} more credits during this bounty`,
+      label: `Buy ${n(toCredits(Math.max(0, house.rankedMinWindowBurnedRibbit - you.windowSpent)))} more chips during this bounty`,
       have: you.windowSpent,
       need: house.rankedMinWindowBurnedRibbit,
       unit: "$RIBBIT",
@@ -58,7 +58,7 @@ export function QualifyStatus({
   if (!you.lifetimeEligible)
     reqs.push({
       key: "lifetime",
-      label: `Buy ${n(toCredits(Math.max(0, house.rankedMinBurnedRibbit - you.lifetimeSpent)))} more credits in total`,
+      label: `Buy ${n(toCredits(Math.max(0, house.rankedMinBurnedRibbit - you.lifetimeSpent)))} more chips in total`,
       have: you.lifetimeSpent,
       need: house.rankedMinBurnedRibbit,
       unit: "$RIBBIT",
@@ -66,10 +66,10 @@ export function QualifyStatus({
   if (volumeShort)
     reqs.push({
       key: "volume",
-      label: `Wager ${n(Math.max(0, house.rankedMinTableVolume - (you.windowWagered ?? 0)))} more credits at this table during this bounty`,
+      label: `Wager ${n(Math.max(0, house.rankedMinTableVolume - (you.windowWagered ?? 0)))} more chips at this table during this bounty`,
       have: you.windowWagered ?? 0,
       need: house.rankedMinTableVolume,
-      unit: "credits",
+      unit: "chips",
     });
   if (reqs.length === 0) return null;
 
@@ -79,8 +79,8 @@ export function QualifyStatus({
     return (
       <span className="text-fog">
         {r.key === "volume"
-          ? `wager ${n(gap)} more credit${gap === 1 ? "" : "s"} to rank`
-          : `buy ${n(toCredits(gap))} more credit${toCredits(gap) === 1 ? "" : "s"} to enter`}
+          ? `wager ${n(gap)} more chip${gap === 1 ? "" : "s"} to rank`
+          : `buy ${n(toCredits(gap))} more chip${toCredits(gap) === 1 ? "" : "s"} to enter`}
       </span>
     );
   }
@@ -128,7 +128,7 @@ export function QualifyStatus({
       </div>
       {reqs.some((r) => r.unit === "$RIBBIT") ? (
         <Link href="/games" className="text-neon hover:underline inline-block mt-2.5">
-          Buy credits →
+          Buy chips →
         </Link>
       ) : (
         <div className="mt-2.5" style={{ color: "var(--text-dim)" }}>

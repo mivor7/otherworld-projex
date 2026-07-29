@@ -91,7 +91,7 @@ export const GET = handler(async () => {
       value,
       rank: idx + 1,
       players: ranking.length,
-      unit: arcade ? "best score" : "net credits",
+      unit: arcade ? "best score" : "net chips",
       inRunning: !!mine,
       projectedRibbit: mine ? fromRaw(mine.projectedRaw) : 0,
       spendEligible: lifetimeEligible && windowEligible,

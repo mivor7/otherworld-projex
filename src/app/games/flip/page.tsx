@@ -169,7 +169,7 @@ export default function FlipPage() {
               </button>
             </div>
             <div className="text-right">
-              <div className="kicker !text-[0.6rem]">{sandbox ? "Practice credits" : "Credits"}</div>
+              <div className="kicker !text-[0.6rem]">{sandbox ? "Practice chips" : "Chips ⛁"}</div>
               <div className="stat-number text-neon">{canPlay ? balance : "—"}</div>
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function FlipPage() {
                 {result.win
                   ? streak > 1
                     ? `🔥 ${streak} in a row — +${result.payout}!`
-                    : `+${result.payout} credits!`
+                    : `+${result.payout} chips!`
                   : "The pond takes it."}
               </span>
             )}
@@ -258,7 +258,7 @@ export default function FlipPage() {
             /* Won — bank the pot or risk it all on the next call */
             <div className="flex flex-col items-center gap-3 mb-2">
               <div className="text-sm text-fog">
-                Pot riding: <span className="stat-number text-gold">{pot}</span> credits
+                Pot riding: <span className="stat-number text-gold">{pot}</span> chips
               </div>
               <div className="flex flex-wrap justify-center gap-3">
                 <button className="btn btn-ghost text-lg px-8 py-3" onClick={cashOut}>
@@ -288,7 +288,7 @@ export default function FlipPage() {
                   className="input max-w-28 text-center"
                   min={house.minWager}
                   max={house.maxWager}
-                  aria-label="Wager in credits"
+                  aria-label="Wager in chips"
                   value={wager || ""}
                   onChange={(e) => {
                     const n = Math.floor(Number(e.target.value));
@@ -296,7 +296,7 @@ export default function FlipPage() {
                   }}
                 />
                 <span className="text-sm text-fog">
-                  credits → win <span className="text-neon">{Math.floor(wager * flipMult)}</span>
+                  chips → win <span className="text-neon">{Math.floor(wager * flipMult)}</span>
                 </span>
               </div>
 
@@ -314,15 +314,15 @@ export default function FlipPage() {
             <p className="text-fog text-sm mt-4">
               Sign in with your wallet to play — or try the sandbox above.{" "}
               <Link href="/games" className="text-neon hover:underline">
-                Get credits →
+                Get chips →
               </Link>
             </p>
           )}
           {!sandbox && me.signedIn && !pendingWin && (me.credits ?? 0) < wager && (
             <p className="text-fog text-sm mt-4">
-              Not enough credits.{" "}
+              Not enough chips.{" "}
               <Link href="/games" className="text-neon hover:underline">
-                Get more credits →
+                Get more chips →
               </Link>
             </p>
           )}

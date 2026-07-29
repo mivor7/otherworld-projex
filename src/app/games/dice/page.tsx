@@ -140,7 +140,7 @@ export default function DicePage() {
             </button>
           </div>
           <div className="text-right">
-            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice credits" : "Credits"}</div>
+            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice chips" : "Chips ⛁"}</div>
             <div className="stat-number text-neon">{canPlay ? balance : "—"}</div>
           </div>
         </div>
@@ -242,14 +242,14 @@ export default function DicePage() {
             className="input max-w-28 text-center"
             min={house.minWager}
             max={house.maxWager}
-            aria-label="Wager in credits"
+            aria-label="Wager in chips"
             value={wager || ""}
             onChange={(e) => {
               const n = Math.floor(Number(e.target.value));
               setWager(Number.isFinite(n) && n > 0 ? Math.min(house.maxWager, n) : 0);
             }}
           />
-          <span className="text-sm text-fog">credits</span>
+          <span className="text-sm text-fog">chips</span>
         </div>
 
         {result && !rolling && (
@@ -257,7 +257,7 @@ export default function DicePage() {
             className={`stat-number text-center text-2xl mb-4 result-pop ${result.win ? "neon-text" : "text-danger"}`}
           >
             rolled {result.outcome.rolled.toFixed(2)} —{" "}
-            {result.win ? `+${result.payout} credits!` : "under the water it goes."}
+            {result.win ? `+${result.payout} chips!` : "under the water it goes."}
           </div>
         )}
 
@@ -275,15 +275,15 @@ export default function DicePage() {
           <p className="text-fog text-sm mt-4 text-center">
             Sign in with your wallet to play — or try the sandbox above.{" "}
             <Link href="/games" className="text-neon hover:underline">
-              Get credits →
+              Get chips →
             </Link>
           </p>
         )}
         {!sandbox && me.signedIn && balance < wager && (
           <p className="text-fog text-sm mt-4 text-center">
-            Not enough credits.{" "}
+            Not enough chips.{" "}
             <Link href="/games" className="text-neon hover:underline">
-              Get more credits →
+              Get more chips →
             </Link>
           </p>
         )}

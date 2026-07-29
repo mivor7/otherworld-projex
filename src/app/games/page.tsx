@@ -102,7 +102,7 @@ export default function GamesPage() {
       .then(async (results) => {
         const won = results.filter((r) => r.ok);
         if (won.length > 0) {
-          setMsg({ kind: "ok", text: "Recovered a pending payment — credits added." });
+          setMsg({ kind: "ok", text: "Recovered a pending payment — chips added." });
           await refresh();
         }
       })
@@ -117,7 +117,7 @@ export default function GamesPage() {
     const res = await redeemSignature(canBuy ? "/api/credits/buy" : "/api/burn/verify", rescueSig);
     setMsg(
       res.ok
-        ? { kind: "ok", text: "Payment verified on-chain — credits added." }
+        ? { kind: "ok", text: "Payment verified on-chain — chips added." }
         : { kind: "err", text: res.error }
     );
     if (res.ok) {
@@ -153,7 +153,7 @@ export default function GamesPage() {
         kind: "ok",
         text:
           typeof granted === "number"
-            ? `${canBuy ? "Purchase" : "Burn"} verified — ${granted} credits added.`
+            ? `${canBuy ? "Purchase" : "Burn"} verified — ${granted} chips added.`
             : "Payment verified — your credits are in your balance.",
       });
       await refresh();
@@ -169,7 +169,7 @@ export default function GamesPage() {
     const res = await fetch("/api/dev/faucet", { method: "POST" });
     setMsg(
       res.ok
-        ? { kind: "ok", text: "100 demo credits added (dev faucet)." }
+        ? { kind: "ok", text: "100 demo chips added (dev faucet)." }
         : { kind: "err", text: "Faucet unavailable" }
     );
     await refresh();
@@ -234,7 +234,7 @@ export default function GamesPage() {
           <div className="sm:col-span-2">
             <div className="kicker">Casino tables</div>
             <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
-              Played with credits · provably fair, published edge
+              Played with chips ⛁ · provably fair, published edge
             </p>
           </div>
           {CREDIT_GAMES.map(renderCard)}
@@ -293,18 +293,18 @@ export default function GamesPage() {
 
           {!me.signedIn ? (
             <Notice kind="info">
-              Connect your wallet and sign in (top right) to get credits and
+              Connect your wallet and sign in (top right) to get chips and
               take a seat.
             </Notice>
           ) : (
             <>
               <label className="kicker !text-[0.6rem]">
-                {canBuy ? "Buy credits with $RIBBIT" : "Burn $RIBBIT → credits"}
+                {canBuy ? "Buy table chips with $RIBBIT" : "Burn $RIBBIT → chips"}
               </label>
               {house.creditSalesPaused && (
                 <div className="mt-1.5">
                   <Notice kind="info">
-                    Credit sales are paused by the house — back shortly.
+                    Chip sales are paused by the house — back shortly.
                   </Notice>
                 </div>
               )}
@@ -415,7 +415,7 @@ export default function GamesPage() {
               }}
             >
               <span className="text-gold">🏆 Two steps to win prizes.</span>{" "}
-              <b>1) Buy credits to become eligible</b> — you need{" "}
+              <b>1) Buy chips to become eligible</b> — you need{" "}
               {Math.ceil(
                 house.rankedMinBurnedRibbit / (house.ribbitPerCredit || 1)
               ).toLocaleString()}{" "}

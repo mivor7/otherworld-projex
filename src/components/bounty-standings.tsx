@@ -22,16 +22,34 @@ export function BountyStandings({ game }: { game: string }) {
 
   const b = live?.bounty;
   const justEnded = live?.justEnded ?? null;
-  if (!b && !justEnded) return null;
 
   // Desktop players see the settled-bounty outcome here (the mobile-only strip
   // above the game covers phones — hence lg-only, so it never shows twice).
+  // With no bounty at all, say so plainly — a quiet table must never look
+  // like a table with a hidden prize.
   if (!b) {
-    return justEnded ? (
+    if (!live) return null; // still loading — don't flash the notice
+    return (
       <aside className="hidden lg:block h-fit lg:sticky lg:top-24">
-        <BountyEndedCard data={justEnded} />
+        {justEnded ? (
+          <BountyEndedCard data={justEnded} />
+        ) : (
+          <div className="panel p-5">
+            <div className="kicker !text-[0.6rem] mb-2">No live bounty</div>
+            <p className="text-xs text-fog leading-relaxed">
+              This table has no bounty running right now. You win and lose
+              chips as normal, but nothing feeds a $RIBBIT prize until the
+              house posts the next round.
+            </p>
+            <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--hairline)" }}>
+              <Link href="/bounties" className="text-xs text-neon hover:underline">
+                See all bounties →
+              </Link>
+            </div>
+          </div>
+        )}
       </aside>
-    ) : null;
+    );
   }
 
   const prize = b.prizeText ?? `${fmt(b.prizeRibbit)} $RIBBIT`;
@@ -74,7 +92,7 @@ export function BountyStandings({ game }: { game: string }) {
             <span className="mono text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
               {b.progress.potRibbit != null
                 ? `${b.progress.potRibbit.toLocaleString()} / ${b.progress.targetRibbit?.toLocaleString()} $RIBBIT · ${b.progress.pct}%`
-                : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} credits · ${b.progress.pct}%`}
+                : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} chips · ${b.progress.pct}%`}
             </span>
           </div>
           <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.01 165)" }}>
@@ -110,7 +128,7 @@ export function BountyStandings({ game }: { game: string }) {
         const isScore = you.unit === "best score";
         const standLine = isScore
           ? `Your best this bounty: ${you.value.toLocaleString()}`
-          : `Your net this bounty: ${you.value > 0 ? "+" : ""}${you.value.toLocaleString()} credits`;
+          : `Your net this bounty: ${you.value > 0 ? "+" : ""}${you.value.toLocaleString()} chips`;
         return (
           <div
             className="rounded-lg p-3 mb-4"
