@@ -362,6 +362,13 @@ try {
 
   // ---------------- credit bounty deadline + closed-means-stopped ----------------
   console.log("— Credit bounty deadline closes unpaid; closed never auto-pays");
+  // Clear the table first: earlier suite bounties (b2's renewal successor,
+  // the progress-display bounty) are still open on dice, and an occupied
+  // game correctly blocks the deadline renewal we assert below.
+  await prisma.bounty.updateMany({
+    where: { title: { startsWith: "ECON" }, status: "open" },
+    data: { status: "closed" },
+  });
   const b8 = await prisma.bounty.create({
     data: {
       title: "ECON deadline", description: "e2e", game: "dice", kind: "leaderboard",
@@ -374,6 +381,18 @@ try {
   const b8r = await prisma.bounty.findUnique({ where: { id: b8.id } });
   check("credit bounty past deadline with unfilled meter closes unpaid",
     b8r.status === "closed" && !b8r.paidAt, `status ${b8r.status}`);
+  // The owner's re-open switch applies to EVERY way a round ends — an
+  // expired pot re-opens as the next numbered round (fresh window; the seed
+  // is only ever a cost on a fill, so an expired round cost nothing).
+  const dlSuccessor = await prisma.bounty.findFirst({
+    where: { title: "ECON deadline", status: "open", id: { not: b8.id } },
+  });
+  if (dlSuccessor) bountyIds.push(dlSuccessor.id);
+  check(
+    "expired pot re-opens as the next round (autoRenew on)",
+    !!dlSuccessor && dlSuccessor.round === b8.round + 1 && Number(dlSuccessor.triggerCreditVolume) > 0,
+    dlSuccessor ? `round ${dlSuccessor.round}` : "no successor"
+  );
   // Even a trivially-reachable trigger must not revive it: closed is final
   // for the automat (only an explicit admin award can pay it now).
   await prisma.bounty.update({ where: { id: b8.id }, data: { triggerCreditVolume: 1 } });

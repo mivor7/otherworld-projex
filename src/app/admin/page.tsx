@@ -251,6 +251,11 @@ export default function AdminPage() {
   const bountyIsFree = ["hopper", "frogris", "worm"].includes(bountyForm.game);
 
   const [manage, setManage] = useState<ManagedBounty[]>([]);
+  const [waitlist, setWaitlist] = useState<{
+    count: number;
+    goal: number;
+    entries: { position: number; displayName: string; email: string; wallet: string | null; joinedAt: string; referrals: number; referredBy: string | null }[];
+  } | null>(null);
   const [editBounty, setEditBounty] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ title: "", target: "", prizeRibbit: 0, seedRibbit: 0, extendDays: 0, autoPay: false, autoRenew: true });
   const [editAuction, setEditAuction] = useState<string | null>(null);
@@ -292,6 +297,10 @@ export default function AdminPage() {
     fetch("/api/auctions")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setLiveAuctions(Array.isArray(d.live) ? d.live : []))
+      .catch(() => {});
+    fetch("/api/admin/waitlist")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setWaitlist(d))
       .catch(() => {});
     fetch("/api/admin/bounties")
       .then((r) => (r.ok ? r.json() : null))
@@ -731,6 +740,70 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Airdrop waitlist — imported snapshot; positions are earned places. */}
+      <div className="mb-8">
+        <div className="kicker mb-3">Airdrop waitlist</div>
+        <div className="panel p-5">
+          {!waitlist ? (
+            <p className="text-fog text-sm">Loading waitlist…</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 mb-3">
+                <span className="stat-number text-neon text-xl">
+                  {waitlist.count.toLocaleString()} / {waitlist.goal.toLocaleString()}
+                </span>
+                <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+                  members · airdrop guaranteed at {waitlist.goal.toLocaleString()} (amount TBA) ·
+                  signup required holding 250k $RIBBIT · positions &amp; referrals are earned —
+                  never recompute them
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden mb-4" style={{ background: "oklch(0.22 0.01 165)" }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${Math.min(100, Math.round((waitlist.count / waitlist.goal) * 100))}%`,
+                    background: "linear-gradient(90deg, oklch(0.66 0.1 150), oklch(0.82 0.11 150))",
+                  }}
+                />
+              </div>
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs" style={{ color: "var(--text-dim)" }}>
+                      <th className="pb-2 text-left font-medium">#</th>
+                      <th className="pb-2 text-left font-medium">Name</th>
+                      <th className="pb-2 text-left font-medium">Email</th>
+                      <th className="pb-2 text-left font-medium">Wallet</th>
+                      <th className="pb-2 text-right font-medium">Referrals</th>
+                      <th className="pb-2 text-right font-medium">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {waitlist.entries.map((w) => (
+                      <tr key={w.position} className="table-row">
+                        <td className="py-1.5 pr-3 mono text-xs" style={{ color: "var(--text-dim)" }}>
+                          {String(w.position).padStart(3, "0")}
+                        </td>
+                        <td className="py-1.5 pr-3 text-xs">{w.displayName}</td>
+                        <td className="py-1.5 pr-3 mono text-xs">{w.email}</td>
+                        <td className="py-1.5 pr-3 mono text-xs">
+                          {w.wallet ? `${w.wallet.slice(0, 4)}…${w.wallet.slice(-4)}` : <span style={{ color: "var(--text-dim)" }}>—</span>}
+                        </td>
+                        <td className="py-1.5 pr-3 text-right text-xs">{w.referrals || ""}</td>
+                        <td className="py-1.5 text-right text-xs" style={{ color: "var(--text-dim)" }}>
+                          {new Date(w.joinedAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

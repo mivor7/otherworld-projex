@@ -532,10 +532,20 @@ export async function autoSettleBounties(): Promise<void> {
             await renewWeeklyBounty(b, durationMs);
           }
         } else if (now >= b.endsAt) {
-          await prisma.bounty.updateMany({
+          const closed = await prisma.bounty.updateMany({
             where: { id: b.id, status: "open" },
             data: { status: "closed" },
           });
+          // An expired pot re-opens too when the owner's switch is on — a
+          // fresh window and meter. The seed is only ever a cost on a FILL,
+          // so an expired round costs nothing. Guarded close = one renewer.
+          if (closed.count > 0) {
+            const durationMs = Math.max(
+              24 * 3600 * 1000,
+              b.endsAt.getTime() - b.startsAt.getTime()
+            );
+            await renewWeeklyBounty(b, durationMs);
+          }
         }
       }
     } catch (e) {
@@ -633,6 +643,21 @@ export async function awardBounty(
       totalRaw: shares.reduce((a, b) => a + b, 0n).toString(),
     } satisfies AwardResult;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  // A manually-awarded bounty settles like any other settle: the owner's
+  // re-open switch decides whether a fresh round opens (renewWeeklyBounty
+  // re-reads the switch and skips when another open bounty covers the game).
+  // Outside the award transaction on purpose — a failed renewal must never
+  // unwind a payout that already happened.
+  try {
+    const durationMs = Math.max(
+      24 * 3600 * 1000,
+      bounty.endsAt.getTime() - bounty.startsAt.getTime()
+    );
+    await renewWeeklyBounty(bounty, durationMs);
+  } catch (e) {
+    console.error(`renewal after manual award failed for ${bountyId}:`, e);
+  }
 
   return result;
 }

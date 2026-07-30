@@ -156,7 +156,13 @@ await prisma.houseSetting.upsert({
 // per game, so the owner's live bounties on them would make our creates 409.
 // Park them (→ closed) for the run and restore in finally — the board is left
 // EXACTLY as we found it.
-const SUITE_GAMES = ["dice", "worm", "blackjack"];
+// Park every game, not just the ones this suite creates bounties on: the
+// suite writes houseEdge/buyBurnShare through the live settings API, which
+// re-derives the trigger of EVERY open credit bounty at the test values —
+// an unparked pot keeps that skewed trigger after the run (it once left the
+// owner's flip pot at trigger 2000 instead of 1053). Parked = closed =
+// invisible to the re-derive.
+const SUITE_GAMES = ["dice", "worm", "blackjack", "flip", "frogris", "hopper"];
 let parkedBountyIds = [];
 
 try {
@@ -186,7 +192,7 @@ try {
     method: "POST",
     body: JSON.stringify({
       title: "ADM TEST solo", description: "e2e admin test bounty",
-      game: "worm", prizeRibbit: 9000, durationDays: 7,
+      game: "worm", prizeRibbit: 9000, durationDays: 7, autoRenew: false,
     }),
   });
   check("bounty created", create.status === 200 && !!create.data.id);
@@ -246,7 +252,7 @@ try {
     method: "POST",
     body: JSON.stringify({
       title: "ADM TEST top3", description: "e2e admin split test",
-      game: "worm", prizeRibbit: 10000, durationDays: 7,
+      game: "worm", prizeRibbit: 10000, durationDays: 7, autoRenew: false,
     }),
   });
   const b3 = create3.data.id;
@@ -343,7 +349,7 @@ try {
     method: "POST",
     body: JSON.stringify({
       title: "ADM auto-trigger", description: "e2e derive test",
-      game: "dice", prizeRibbit: 5000, durationDays: 7, autoPay: true,
+      game: "dice", prizeRibbit: 5000, durationDays: 7, autoPay: true, autoRenew: false,
     }),
   });
   if (autoB.data?.id) bountyIds.push(autoB.data.id);
@@ -361,7 +367,7 @@ try {
     method: "POST",
     body: JSON.stringify({
       title: "ADM auto free", description: "e2e free-game auto-bounty",
-      game: "worm", prizeRibbit: 3000, durationDays: 7, autoPay: true,
+      game: "worm", prizeRibbit: 3000, durationDays: 7, autoPay: true, autoRenew: false,
     }),
   });
   if (autoFree.data?.id) bountyIds.push(autoFree.data.id);
@@ -376,7 +382,7 @@ try {
     body: JSON.stringify({
       // Blackjack (also a credit game → same trigger math) so it doesn't hit
       // the one-open-per-game guard against the dice auto-bounty above.
-      title: "ADM editable", description: "e2e edit/delete test",
+      title: "ADM editable", description: "e2e edit/delete test", autoRenew: false,
       game: "blackjack", prizeRibbit: 5000, durationDays: 7, autoPay: true,
     }),
   });
@@ -627,7 +633,12 @@ try {
   });
   // A transient failure can leave an undefined id in these arrays — filter it
   // so cleanup itself never crashes and always runs to completion.
-  const bIds = bountyIds.filter(Boolean);
+  const admStrays = await prisma.bounty.findMany({
+    where: { title: { startsWith: "ADM" } },
+    select: { id: true },
+  });
+  bountyIds.push(...admStrays.map((x) => x.id));
+  const bIds = [...new Set(bountyIds.filter(Boolean))];
   const aIds = auctionIds.filter(Boolean);
   await prisma.withdrawal.deleteMany({ where: { ref: { in: bIds } } });
   await prisma.treasuryEvent.deleteMany({ where: { ref: { in: [...bIds, ...aIds] } } });
