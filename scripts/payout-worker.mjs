@@ -150,7 +150,24 @@ async function processQueue() {
           fromAta, MINT, toAta, signer.publicKey, wd.amountRaw, DECIMALS, [], TP
         )
       );
-      const signature = await sendAndConfirmTransaction(connection, tx, [signer]);
+      // Hard ceiling: the public RPC can hang indefinitely (it wedged the
+      // whole worker once, mid-claim). After 90s we assume the transaction
+      // MAY have been broadcast and stop touching this row automatically.
+      const signature = await Promise.race([
+        sendAndConfirmTransaction(connection, tx, [signer]),
+        new Promise((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                Object.assign(
+                  new Error("send timed out after 90s — transaction MAY have broadcast"),
+                  { maybeSent: true }
+                )
+              ),
+            90_000
+          )
+        ),
+      ]);
       await prisma.$transaction([
         prisma.withdrawal.update({
           where: { id: wd.id },
@@ -171,7 +188,25 @@ async function processQueue() {
       ]);
       console.log(`✓ ${wd.id}: paid ${wd.amountRaw} raw → ${wd.destination} (${signature})`);
     } catch (e) {
-      // Send failed before confirmation — release the claim for a retry.
+      // CRITICAL split: if the transaction may already be on the chain, a
+      // retry would PAY TWICE. Confirmation timeouts (web3.js attaches the
+      // signature) and our 90s ceiling both mean "maybe broadcast" — keep
+      // the row claimed, preserve the signature, and hand it to a human.
+      const sig = e?.signature;
+      if (sig || e?.maybeSent) {
+        if (sig) {
+          await prisma.withdrawal.updateMany({
+            where: { id: wd.id, status: "processing" },
+            data: { signature: sig },
+          });
+        }
+        console.error(
+          `⚠ ${wd.id}: ${e.message} — LEFT IN "processing"${sig ? ` (sig ${sig})` : ""}. ` +
+            "Verify on-chain, then resolve in /admin (mark sent, or release if nothing landed). Never auto-retried."
+        );
+        continue;
+      }
+      // Failed strictly BEFORE broadcast — safe to release for a retry.
       await prisma.withdrawal.updateMany({
         where: { id: wd.id, status: "processing" },
         data: { status: "pending" },
