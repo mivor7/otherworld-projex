@@ -18,7 +18,7 @@ const WINGS = [
     image: "/art/owp_hero.jpg",
     kicker: "Wing I",
     title: "The Arcade",
-    desc: "Provably-fair games at a published house edge. Credits bought with $RIBBIT — part burned forever, part funding the prizes. Verify every roll.",
+    desc: "Provably-fair games at a published house edge. Chips bought with $RIBBIT — part burned forever, part funding the prizes. Verify every roll.",
     cta: "Enter",
   },
   {
@@ -196,7 +196,7 @@ export default async function Home() {
           {[
             ["01", "Connect & sign", "A free message signature proves wallet ownership. No custody, no email, no password."],
             ["02", "Buy credits", `${houseCfg.ribbitPerCredit} $RIBBIT per credit, verified on-chain — ${Math.round(houseCfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes.`],
-            ["03", "Play, bid, hunt", "Wager credits in the arcade, bid escrowed $RIBBIT on lots, climb the bounty boards."],
+            ["03", "Play, bid, hunt", "Wager chips at the tables, bid escrowed $RIBBIT on lots, climb the bounty boards."],
             ["04", "Pools unlock with play", "Every bounty posts a fixed $RIBBIT pool and a spend meter sized to it. The meter fills — every eligible winner is paid pro-rata, automatically."],
           ].map(([n, title, desc], i) => (
             <Reveal key={n} delay={i * 60}>
@@ -276,7 +276,7 @@ export default async function Home() {
                                 : { background: "oklch(0.78 0.12 85 / 0.15)", color: "oklch(0.85 0.13 85)" }
                             }
                           >
-                            {e.free ? "Free" : "Credits"}
+                            {e.free ? "Free" : "Chips ⛁"}
                           </span>
                         )}
                         <span className="text-[0.66rem]" style={{ color: "var(--text-dim)" }}>

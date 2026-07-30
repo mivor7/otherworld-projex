@@ -47,14 +47,14 @@ export const GET = handler(async () => {
       id: "card-shark",
       icon: "🃏",
       name: "Card Shark",
-      desc: "Finish +100 credits net at blackjack",
+      desc: "Finish +100 chips net at blackjack",
       earned: bjNet >= 100,
     },
     {
       id: "high-roller",
       icon: "💰",
       name: "High Roller",
-      desc: "Bank a single payout of 100+ credits",
+      desc: "Bank a single payout of 100+ chips",
       earned: (maxPayout._max.payout ?? 0) >= 100,
     },
     {
@@ -68,7 +68,7 @@ export const GET = handler(async () => {
       id: "torch-bearer",
       icon: "🔥",
       name: "Torch Bearer",
-      desc: "Spend 10,000+ $RIBBIT on credits",
+      desc: "Spend 10,000+ $RIBBIT on chips",
       earned: spentRaw >= toRaw(10_000),
     },
     {

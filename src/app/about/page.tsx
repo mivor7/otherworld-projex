@@ -153,9 +153,9 @@ export default async function AboutPage() {
           <div className="kicker pt-1.5">02 — House rules</div>
           <div className="grid sm:grid-cols-2 gap-4">
             {[
-              ["Buy credits", `${cfg.ribbitPerCredit} $RIBBIT buys one credit in a single on-chain transaction — ${Math.round(cfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes. The arcade episodes are free.`],
+              ["Buy chips", `${cfg.ribbitPerCredit} $RIBBIT buys one table chip in a single on-chain transaction — ${Math.round(cfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes. The arcade episodes are free.`],
               ["Provably fair", "Every table outcome derives from a seed the house commits to before you play. Rotate your seed and re-check every round yourself."],
-              ["Pools that pay themselves", "Every bounty posts a fixed $RIBBIT prize with an unlock meter derived from it. When the game's credit-spend fills the meter, all eligible winners are paid pro-rata — automatically."],
+              ["Pools that pay themselves", "Every bounty posts a fixed $RIBBIT prize with an unlock meter derived from it. When the table's pot meter fills, all eligible winners are paid pro-rata — automatically."],
               ["Escrowed bids", "Auction bids lock deposited $RIBBIT held by the treasury. Outbid funds release instantly; withdrawals queue for the payout signer."],
             ].map(([title, desc]) => (
               <div key={title} className="panel panel-hover p-5">
@@ -216,7 +216,7 @@ export default async function AboutPage() {
             <p className="text-fog text-[0.95rem] leading-relaxed mb-5 max-w-xl">
               $RIBBIT launched fair on pump.fun — no premine, no team allocation
               held by the treasury. It is the only currency the house accepts:
-              it buys your credits (part of every purchase is burned at the
+              it buys your chips (part of every purchase is burned at the
               mint), backs your bids, and pays out of every bounty pool.
             </p>
             <div className="flex items-center gap-2 flex-wrap mb-5">

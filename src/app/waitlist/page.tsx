@@ -6,6 +6,9 @@
 // email on the old site) sees their own place here. No emails are ever shown.
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import bs58 from "bs58";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useSession } from "@/components/session";
 import { PageHero } from "@/components/hero";
 import { Notice } from "@/components/ui";
@@ -22,6 +25,8 @@ type You =
     }
   | { joined: false };
 
+type Checked = { joined: boolean; position?: number; referrals?: number; joinedAt?: string };
+
 type Data = {
   count: number;
   goal: number;
@@ -29,38 +34,75 @@ type Data = {
   minHoldRibbit: number;
   recent: { position: number; wallet: string; joinedAt: string }[];
   you: You | null;
+  checked: Checked | null;
 };
 
 const n = (x: number) => Math.round(x).toLocaleString();
 
 export default function WaitlistPage() {
   const { me } = useSession();
+  // The waitlist is deliberately open to wallets WITHOUT an app account (the
+  // invite gate guards accounts, never this list) — so the page talks to the
+  // wallet adapter directly and proves ownership with a signed message.
+  const { publicKey, signMessage } = useWallet();
+  const { setVisible } = useWalletModal();
   const [data, setData] = useState<Data | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [lookup, setLookup] = useState("");
+  const [lookupResult, setLookupResult] = useState<{ wallet: string; res: Checked } | null>(null);
+
+  const adapterWallet = publicKey?.toBase58() ?? null;
 
   const load = useCallback(() => {
-    fetch("/api/waitlist")
+    // Signed-in users get `you` from the session; a connected-but-accountless
+    // wallet is resolved through the public lookup instead.
+    const q = !me.signedIn && adapterWallet ? `?wallet=${adapterWallet}` : "";
+    fetch(`/api/waitlist${q}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setData(d))
       .catch(() => {});
-  }, []);
+  }, [me.signedIn, adapterWallet]);
 
   useEffect(() => {
     load();
-  }, [load, me.signedIn]);
+  }, [load]);
 
   const join = async () => {
+    if (!me.signedIn && !adapterWallet) {
+      setVisible(true); // open the wallet connect modal
+      return;
+    }
     setBusy(true);
     setMsg(null);
     try {
       // A referral link (?ref=wallet) credits whoever sent you.
       const ref = new URLSearchParams(window.location.search).get("ref") ?? undefined;
+      let proof: { wallet: string; signature: string } | null = null;
+      if (!me.signedIn && adapterWallet) {
+        // No app account needed: prove ownership by signing the nonce message.
+        if (!signMessage) {
+          setMsg({ kind: "err", text: "This wallet can't sign messages — try another wallet." });
+          return;
+        }
+        const nonceRes = await fetch("/api/auth/nonce", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet: adapterWallet }),
+        });
+        if (!nonceRes.ok) {
+          setMsg({ kind: "err", text: "Couldn't start — try again in a moment." });
+          return;
+        }
+        const { message } = await nonceRes.json();
+        const sig = await signMessage(new TextEncoder().encode(message));
+        proof = { wallet: adapterWallet, signature: bs58.encode(sig) };
+      }
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ref ? { ref } : {}),
+        body: JSON.stringify({ ...(ref ? { ref } : {}), ...(proof ?? {}) }),
       });
       const d = await res.json();
       if (res.ok) {
@@ -74,14 +116,47 @@ export default function WaitlistPage() {
       } else {
         setMsg({ kind: "err", text: d.error ?? "Couldn't join right now." });
       }
-    } catch {
-      setMsg({ kind: "err", text: "Connection hiccup — try again." });
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "";
+      setMsg({
+        kind: "err",
+        text: /reject|denied|cancel/i.test(m)
+          ? "Signing cancelled in your wallet."
+          : "Connection hiccup — try again.",
+      });
     } finally {
       setBusy(false);
     }
   };
 
-  const you = data?.you;
+  const checkWallet = async () => {
+    const w = lookup.trim();
+    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w)) {
+      setLookupResult({ wallet: w, res: { joined: false } });
+      return;
+    }
+    const d = await fetch(`/api/waitlist?wallet=${w}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (d?.checked) setLookupResult({ wallet: w, res: d.checked });
+  };
+
+  // Session users come back in `you`; accountless-but-connected wallets come
+  // back in `checked` (requested via ?wallet= above).
+  const you: You | null = me.signedIn
+    ? (data?.you ?? null)
+    : adapterWallet && data?.checked
+      ? data.checked.joined
+        ? {
+            joined: true,
+            position: data.checked.position!,
+            joinedAt: data.checked.joinedAt!,
+            referrals: data.checked.referrals ?? 0,
+            referralWallet: adapterWallet,
+            viaEmail: false,
+          }
+        : { joined: false }
+      : null;
   const joined = !!you && you.joined;
   const pct = data ? Math.min(100, Math.round((data.count / data.goal) * 100)) : 0;
   const refLink =
@@ -96,7 +171,7 @@ export default function WaitlistPage() {
         image="/art/art-bounty.jpg"
         imagePosition="center 40%"
         kicker="The airdrop"
-        badge={data ? (data.open ? "Sign-ups open" : "Sign-ups closed") : "Loading"}
+        badge={data ? (data.open ? "Sign-ups open" : "Sign-ups closed") : "The airdrop"}
         title="Airdrop"
         titleAccent="waitlist"
         subtitle="Hold $RIBBIT, take your place. The airdrop is guaranteed once the list is full — every member's position and referrals are locked in from the moment they join."
@@ -185,13 +260,16 @@ export default function WaitlistPage() {
                   </div>
                 )}
               </>
-            ) : !me.signedIn ? (
+            ) : !me.signedIn && !adapterWallet ? (
               <>
                 <div className="kicker !text-[0.65rem] mb-2">Join the waitlist</div>
                 <p className="text-sm text-fog mb-4">
-                  {`Connect your wallet (top right) to check your place or join. You need ${n(data.minHoldRibbit)} $RIBBIT held in that wallet — verified on-chain, nothing is transferred and nothing is locked.`}
+                  {`You need ${n(data.minHoldRibbit)} $RIBBIT held in your wallet — verified on-chain, nothing is transferred and nothing is locked. No invite or account needed: connecting and signing one message is enough.`}
                 </p>
                 <div className="flex flex-wrap gap-3">
+                  <button className="btn btn-primary btn-lg px-8" onClick={join} disabled={!data.open}>
+                    {data.open ? "Connect wallet to join" : "Sign-ups closed"}
+                  </button>
                   <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
                     Get $RIBBIT on pump.fun ↗
                   </a>
@@ -206,14 +284,20 @@ export default function WaitlistPage() {
               <>
                 <div className="kicker !text-[0.65rem] mb-2">Join the waitlist</div>
                 <p className="text-sm text-fog mb-4">
-                  {`Your wallet needs ${n(data.minHoldRibbit)} $RIBBIT held on-chain. We check the chain when you press the button — your tokens stay exactly where they are.`}
+                  {`Your wallet needs ${n(data.minHoldRibbit)} $RIBBIT held on-chain. We check the chain when you press the button — your tokens stay exactly where they are.${!me.signedIn ? " You'll sign one message to prove the wallet is yours — no account, no invite needed." : ""}`}
                 </p>
                 <button
                   className="btn btn-primary btn-lg px-8"
                   onClick={join}
                   disabled={busy || !data.open}
                 >
-                  {busy ? "Checking the chain…" : data.open ? "Take my place" : "Sign-ups closed"}
+                  {busy
+                    ? "Checking the chain…"
+                    : !data.open
+                      ? "Sign-ups closed"
+                      : me.signedIn
+                        ? "Take my place"
+                        : "Sign to take my place"}
                 </button>
                 {!data.open && (
                   <p className="text-xs mt-3" style={{ color: "var(--text-dim)" }}>
@@ -283,6 +367,28 @@ export default function WaitlistPage() {
               </tbody>
             </table>
           )}
+          <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--hairline)" }}>
+            <div className="kicker !text-[0.6rem] mb-2">Check a wallet</div>
+            <div className="flex gap-2">
+              <input
+                className="input !text-xs flex-1 min-w-0"
+                placeholder="Wallet address"
+                value={lookup}
+                onChange={(e) => setLookup(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && checkWallet()}
+              />
+              <button className="btn btn-ghost !text-xs" onClick={checkWallet}>
+                Check
+              </button>
+            </div>
+            {lookupResult && (
+              <p className="text-xs mt-2 text-fog">
+                {lookupResult.res.joined
+                  ? `${lookupResult.wallet.slice(0, 4)}…${lookupResult.wallet.slice(-4)} is on the list — position #${lookupResult.res.position}.`
+                  : `${lookupResult.wallet.slice(0, 4)}…${lookupResult.wallet.slice(-4)} hasn't joined yet.`}
+              </p>
+            )}
+          </div>
           <div className="mt-4 pt-3 border-t" style={{ borderColor: "var(--hairline)" }}>
             <Link href="/about" className="text-xs text-neon hover:underline">
               About $RIBBIT →

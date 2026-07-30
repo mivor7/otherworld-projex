@@ -21,11 +21,11 @@ export const POST = handler(async (req: Request) => {
   // burned — enforced here so the UI path can't be bypassed by calling the
   // endpoint directly.
   if (CONFIG.treasuryWallet) {
-    return err("Buy credits instead — burning-only is disabled", 400);
+    return err("Buy chips instead — burning-only is disabled", 400);
   }
   const cfg = await houseConfig();
   if (cfg.creditSalesPaused) {
-    return err("Credit sales are paused — back shortly", 423);
+    return err("Chip sales are paused — back shortly", 423);
   }
   const { signature } = body.parse(await req.json());
 

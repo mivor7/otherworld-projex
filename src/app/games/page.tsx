@@ -154,7 +154,7 @@ export default function GamesPage() {
         text:
           typeof granted === "number"
             ? `${canBuy ? "Purchase" : "Burn"} verified — ${granted} chips added.`
-            : "Payment verified — your credits are in your balance.",
+            : "Payment verified — your chips are in your balance.",
       });
       await refresh();
       window.dispatchEvent(new Event("owp:balance")); // update the top-panel $RIBBIT
@@ -226,7 +226,7 @@ export default function GamesPage() {
         badge="Tables open"
         title="Step into the"
         titleAccent="arcade"
-        subtitle="Casino tables run on credits bought with $RIBBIT — part burned forever, part funding the prize pools. Provably fair, published edge. The arcade episodes are free and pay weekly bounties."
+        subtitle="Casino tables run on chips bought with $RIBBIT — part burned forever, part funding the prize pools. Provably fair, published edge. The arcade episodes are free and pay weekly bounties."
       />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
@@ -314,7 +314,7 @@ export default function GamesPage() {
                   className="input"
                   min={house.ribbitPerCredit}
                   step={house.ribbitPerCredit}
-                  aria-label="Amount of $RIBBIT to spend on credits"
+                  aria-label="Amount of $RIBBIT to spend on chips"
                   value={burnAmount || ""}
                   onChange={(e) => setBurnAmount(Number(e.target.value))}
                 />

@@ -319,9 +319,9 @@ and clear payouts by hand in `/admin`. Never run it against the treasury key.
 
 ## 9. Testing
 
-- **`scripts/prod-smoke.mjs`** — the reliable one. 22 checks against live prod;
-  run it after every deploy.
-- **`economy-e2e.mjs`, `games-e2e.mjs`, `admin-e2e.mjs`** — end-to-end suites,
+- **`scripts/prod-smoke.mjs`** — the reliable one. ~32 checks against live
+  prod; run it after every deploy.
+- **`economy-e2e.mjs`, `games-e2e.mjs`, `admin-e2e.mjs`, `waitlist-e2e.mjs`** — end-to-end suites,
   self-cleaning (they create test users/bounties and delete them in a `finally`
   block, and park/restore any standing open bounties). Run with a base URL, e.g.
   `node scripts/economy-e2e.mjs https://otherworld-projex.vercel.app`.

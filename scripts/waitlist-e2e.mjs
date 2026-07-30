@@ -20,6 +20,8 @@ const { PrismaClient } = require_("@prisma/client");
 const BASE = process.argv[2] ?? "http://localhost:3000";
 const prisma = new PrismaClient();
 const E2E_INVITE = `OWP-E2E-${Date.now().toString(36).toUpperCase()}`;
+const clientKeys = new Map();
+const ghostKeyOf = (c) => clientKeys.get(c.wallet);
 
 let passed = 0, failed = 0;
 function check(name, cond, extra = "") {
@@ -30,6 +32,7 @@ function check(name, cond, extra = "") {
 function client() {
   const kp = nacl.sign.keyPair();
   const wallet = bs58.encode(Buffer.from(kp.publicKey));
+  clientKeys.set(wallet, kp.secretKey);
   const jar = new Map();
   async function api(pathname, init = {}) {
     const res = await fetch(BASE + pathname, {
@@ -103,6 +106,28 @@ try {
   check("a refused attempt creates no row",
     (await prisma.waitlistEntry.count()) === preCount);
 
+  // ---------------- accountless join (the invite gate must not block this) ----------------
+  console.log("— Accountless join: signature instead of a session");
+  const ghost = client(); // never signs in — no app account, no invite
+  wallets.push(ghost.wallet);
+  const nres = await ghost.api("/api/auth/nonce", {
+    method: "POST", body: JSON.stringify({ wallet: ghost.wallet }),
+  });
+  const gsig = nacl.sign.detached(new TextEncoder().encode(nres.data.message), ghostKeyOf(ghost));
+  const gjoin = await ghost.api("/api/waitlist", {
+    method: "POST",
+    body: JSON.stringify({ wallet: ghost.wallet, signature: bs58.encode(Buffer.from(gsig)) }),
+  });
+  check("accountless wallet reaches the balance gate (403, not 401)",
+    gjoin.status === 403, `got ${gjoin.status} ${JSON.stringify(gjoin.data).slice(0, 80)}`);
+  check("no app account was created for the accountless attempt",
+    (await prisma.user.findUnique({ where: { wallet: ghost.wallet } })) === null);
+  const badSig = await ghost.api("/api/waitlist", {
+    method: "POST",
+    body: JSON.stringify({ wallet: ghost.wallet, signature: bs58.encode(Buffer.from(new Uint8Array(64))) }),
+  });
+  check("garbage signature is rejected (401)", badSig.status === 401, `got ${badSig.status}`);
+
   // ---------------- position + referral bookkeeping ----------------
   // The holding check reads the chain, which a test wallet can't satisfy, so
   // membership itself is seeded directly — then verified through the API.
@@ -137,6 +162,16 @@ try {
   const bRow = await prisma.waitlistEntry.findFirst({ where: { wallet: b.wallet } });
   check("referred member records who sent them", bRow.referredBy === a.wallet);
   check("positions are sequential, never reused", bRow.position === maxPos + 2);
+
+  // ---------------- public wallet lookup ----------------
+  console.log("— Public lookup: anyone can see whether a wallet joined");
+  const lookA = await fetch(`${BASE}/api/waitlist?wallet=${a.wallet}`).then((r) => r.json());
+  check("member lookup shows joined + position",
+    lookA.checked?.joined === true && lookA.checked.position === maxPos + 1,
+    JSON.stringify(lookA.checked));
+  const lookNone = await fetch(`${BASE}/api/waitlist?wallet=${ghost.wallet}`).then((r) => r.json());
+  check("non-member lookup shows not joined", lookNone.checked?.joined === false);
+  check("lookup payload has no email either", !/@/.test(JSON.stringify(lookA)));
 
   // ---------------- imported members are untouched ----------------
   console.log("— Imported members");

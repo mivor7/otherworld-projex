@@ -53,12 +53,12 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Inline nav only from lg — at md widths (768–1024) links + brand +
-            wallet never actually fit (the old truncation was masking it);
-            tablets use the scrollable nav row below instead. justify-center:
-            the link cluster floats mid-gap so the slack splits evenly instead
-            of piling up in front of the wallet on wide screens. */}
-        <nav className="hidden lg:flex items-center justify-center gap-0.5 flex-1">
+        {/* Inline nav only from xl — with nine sections, links + brand +
+            wallet stopped fitting at lg (the wallet button clipped at
+            1024px); smaller widths use the scrollable nav row below instead.
+            justify-center: the link cluster floats mid-gap so the slack
+            splits evenly instead of piling up in front of the wallet. */}
+        <nav className="hidden xl:flex items-center justify-center gap-0.5 flex-1">
           {LINKS.map((l) => (
             <Link
               key={l.href}
@@ -97,7 +97,7 @@ export function Navbar() {
       </div>
 
       <nav
-        className="lg:hidden flex gap-0.5 px-3 pb-2 overflow-x-auto mobile-nav-scroll"
+        className="xl:hidden flex gap-0.5 px-3 pb-2 overflow-x-auto mobile-nav-scroll"
         aria-label="Sections"
       >
         {LINKS.map((l) => (

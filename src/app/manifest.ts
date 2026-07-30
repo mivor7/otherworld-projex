@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Other World Projex",
     short_name: "OWP",
     description:
-      "Provably-fair games, bounty boards and an auction house on Solana — turn $RIBBIT into credits and hunt pools that pay automatically.",
+      "Provably-fair games, bounty boards and an auction house on Solana — turn $RIBBIT into table chips and hunt pools that pay automatically.",
     id: "/",
     start_url: "/",
     display: "standalone",

@@ -55,36 +55,49 @@ export type SignInResult =
       reason: "bad-signature" | "banned" | "invite-required" | "invite-invalid";
     };
 
+
+/**
+ * Verify wallet ownership (nonce cookie + ed25519 signature over the standard
+ * sign-in message) WITHOUT touching accounts, invites or sessions. For flows
+ * open to wallets that don't have an app account yet — e.g. joining the
+ * airdrop waitlist while the invite gate is up.
+ */
+export async function verifyWalletSignature(
+  wallet: string,
+  signatureB58: string
+): Promise<boolean> {
+  const jar = await cookies();
+  const nonceJwt = jar.get(NONCE_COOKIE)?.value;
+  if (!nonceJwt) return false;
+  let nonce: string;
+  try {
+    const { payload } = await jwtVerify(nonceJwt, secretKey());
+    if (payload.wallet !== wallet) return false;
+    nonce = String(payload.nonce);
+  } catch {
+    return false;
+  }
+  try {
+    return nacl.sign.detached.verify(
+      new TextEncoder().encode(buildSignInMessage(wallet, nonce)),
+      bs58.decode(signatureB58),
+      bs58.decode(wallet)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function verifySignInAndCreateSession(
   wallet: string,
   signatureB58: string,
   inviteCode?: string
 ): Promise<SignInResult> {
-  const jar = await cookies();
-  const nonceJwt = jar.get(NONCE_COOKIE)?.value;
-  if (!nonceJwt) return { ok: false, reason: "bad-signature" };
-
-  let nonce: string;
-  try {
-    const { payload } = await jwtVerify(nonceJwt, secretKey());
-    if (payload.wallet !== wallet) return { ok: false, reason: "bad-signature" };
-    nonce = String(payload.nonce);
-  } catch {
+  // Ownership proof is shared with the sessionless flows — one implementation,
+  // no drift.
+  if (!(await verifyWalletSignature(wallet, signatureB58))) {
     return { ok: false, reason: "bad-signature" };
   }
-
-  const message = new TextEncoder().encode(buildSignInMessage(wallet, nonce));
-  let ok = false;
-  try {
-    ok = nacl.sign.detached.verify(
-      message,
-      bs58.decode(signatureB58),
-      bs58.decode(wallet)
-    );
-  } catch {
-    return { ok: false, reason: "bad-signature" };
-  }
-  if (!ok) return { ok: false, reason: "bad-signature" };
 
   // Invite-only gate: only the CREATION of a new account needs a code —
   // existing players (and the admins) sign in unaffected, and flipping the
@@ -132,6 +145,7 @@ export async function verifySignInAndCreateSession(
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
     .sign(secretKey());
+  const jar = await cookies();
   jar.delete(NONCE_COOKIE);
   jar.set(SESSION_COOKIE, session, {
     httpOnly: true,
