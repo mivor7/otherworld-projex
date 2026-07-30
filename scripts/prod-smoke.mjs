@@ -79,6 +79,17 @@ check(
   staking.status === 200 && (staking.json?.pool === null || staking.json?.pool?.totalStakedRibbit >= 0),
   `status ${staking.status}`
 );
+const wl = await get("/api/waitlist");
+check(
+  "/api/waitlist is public and reports the list",
+  wl.status === 200 && typeof wl.json?.count === "number" && typeof wl.json?.goal === "number",
+  `status ${wl.status}`
+);
+check(
+  "/api/waitlist never leaks emails",
+  !/@/.test(JSON.stringify(wl.json ?? {})),
+  "an @ appeared in the public payload"
+);
 const lb = await get("/api/leaderboard?game=worm");
 check("/api/leaderboard", lb.status === 200 && Array.isArray(lb.json), `status ${lb.status}`);
 const auctions = await get("/api/auctions");
@@ -93,6 +104,7 @@ for (const [p, marker] of [
   ["/treasury", ""],
   ["/fairness", ""],
   ["/staking", "streamflow"],
+  ["/waitlist", "waitlist"],
   ["/admin", ""],
 ]) {
   const r = await get(p);
@@ -115,6 +127,7 @@ check("admin bounty create w/o session → 401", (await post("/api/admin/bountie
 check("admin invites w/o session → 401", (await post("/api/admin/invites", { action: "create" })) === 401);
 check("admin settings w/o session → 401", (await post("/api/admin/settings", { key: "houseEdge", value: 0.05 })) === 401);
 check("withdrawal w/o session → 401", (await post("/api/withdrawals", { amountRaw: "1000000" })) === 401);
+check("waitlist join w/o session → 401", (await post("/api/waitlist", {})) === 401);
 const adminOverview = await get("/api/admin/overview");
 check("admin overview w/o session → 401", adminOverview.status === 401, `status ${adminOverview.status}`);
 for (const p of ["/api/me/notifications", "/api/admin/notifications", "/api/admin/pulse"]) {

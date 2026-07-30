@@ -136,6 +136,24 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   },
   // ---- Switches ----
   {
+    key: "waitlistOpen",
+    label: "Waitlist sign-ups open",
+    desc: "Holders can join the airdrop waitlist from the site. Turn off to freeze the list — existing members keep their positions either way.",
+    group: "Switches",
+    kind: "bool",
+    envDefault: CONFIG.waitlistOpen,
+  },
+  {
+    key: "waitlistMinHoldRibbit",
+    label: "Waitlist holding requirement",
+    desc: "Whole $RIBBIT a wallet must hold on-chain to join the airdrop waitlist. Verified live at join time.",
+    group: "Eligibility",
+    kind: "number",
+    min: 0,
+    max: 1_000_000_000,
+    envDefault: CONFIG.waitlistMinHoldRibbit,
+  },
+  {
     key: "inviteRequired",
     label: "Invite-only sign-ups",
     desc: "New wallets need a valid invite code to create an account. Existing players sign in unaffected. Mint codes in the Invite codes panel.",
@@ -193,6 +211,8 @@ export type HouseConfig = {
   rankedMinBurnedRibbit: number;
   rankedMinWindowBurnedRibbit: number;
   rankedMinTableVolume: number;
+  waitlistOpen: boolean;
+  waitlistMinHoldRibbit: number;
   inviteRequired: boolean;
   bountyAutoPay: boolean;
   gamesPaused: boolean;

@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/bounties", label: "Bounties" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/staking", label: "Staking" },
+  { href: "/waitlist", label: "Airdrop" },
   { href: "/treasury", label: "Treasury" },
   { href: "/fairness", label: "Fairness" },
   { href: "/about", label: "About" },

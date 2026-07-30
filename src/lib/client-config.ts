@@ -23,6 +23,12 @@ export const CLIENT_CONFIG = {
   devFaucet: process.env.NEXT_PUBLIC_DEV_FAUCET === "true",
   pumpFunUrl:
     "https://pump.fun/coin/EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump",
+  // Meteora liquidity pool, shown alongside PumpSwap wherever trading links
+  // appear. Set NEXT_PUBLIC_METEORA_POOL_URL to the pool's page URL; empty
+  // hides the link entirely rather than shipping a dead one.
+  meteoraUrl:
+    process.env.NEXT_PUBLIC_METEORA_POOL_URL ??
+    "https://app.meteora.ag/dlmm/7AyDNiDaQbGAeKu6YDh21s6TJgHA3zSSuKh4186hXJsH",
   xUrl: "https://x.com/OWProjex",
 } as const;
 

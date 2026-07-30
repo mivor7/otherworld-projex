@@ -232,6 +232,11 @@ export default async function AboutPage() {
               <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
                 pump.fun ↗
               </a>
+              {CLIENT_CONFIG.meteoraUrl && (
+                <a href={CLIENT_CONFIG.meteoraUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                  Meteora pool ↗
+                </a>
+              )}
               <a href={CLIENT_CONFIG.xUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
                 @OWProjex ↗
               </a>

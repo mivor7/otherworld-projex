@@ -264,14 +264,26 @@ model WaitlistEntry {
   id          String   @id @default(cuid())
   position    Int
   displayName String
-  email       String   @unique
+  // Imported members joined by email on the old signup site; members who join
+  // on-site do it with a wallet and have no email. Exactly one of the two is
+  // always present — both are unique so nobody can hold two places.
+  email       String?  @unique
+  // NOT unique: 11 imported wallets hold 13 duplicate places (multiple email
+  // signups from one wallet on the old site) and those earned positions are
+  // never rewritten. One place per wallet is enforced in the join path for
+  // new sign-ups instead.
   wallet      String?
   joinedAt    DateTime
   referrals   Int      @default(0)
+  // Who referred them: an imported code/name, or a referrer's wallet.
   referredBy  String?
+  // On-chain $RIBBIT held at the moment of joining (raw units) — the proof
+  // the holding requirement was met, kept for the record.
+  heldRibbitRaw BigInt @default(0)
   importedAt  DateTime @default(now())
 
   @@index([position])
+  @@index([wallet])
 }
 
 // One row per winner paid for a bounty. The prize is split across the top

@@ -43,6 +43,18 @@ export function Footer() {
                 pump.fun ↗
               </a>
             </li>
+            {CLIENT_CONFIG.meteoraUrl && (
+              <li>
+                <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.meteoraUrl} target="_blank" rel="noreferrer">
+                  Meteora pool ↗
+                </a>
+              </li>
+            )}
+            <li>
+              <Link className="hover:text-frost transition-colors" href="/waitlist">
+                Airdrop waitlist
+              </Link>
+            </li>
             <li>
               <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.xUrl} target="_blank" rel="noreferrer">
                 @OWProjex ↗

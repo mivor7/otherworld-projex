@@ -56,6 +56,13 @@ export const CONFIG = {
   // table boards additionally require this many credits wagered in-window.
   rankedMinBurnedRibbit: nonneg(process.env.RANKED_MIN_BURNED_RIBBIT, 1_000),
   rankedMinTableVolume: nonneg(process.env.RANKED_MIN_TABLE_VOLUME, 100),
+
+  // Airdrop waitlist: on-site signups need this much $RIBBIT held on-chain
+  // (whole tokens), and the list can be closed with a switch. The airdrop is
+  // guaranteed once the list reaches WAITLIST_GOAL members.
+  waitlistMinHoldRibbit: nonneg(process.env.WAITLIST_MIN_HOLD_RIBBIT, 250_000),
+  waitlistGoal: nonneg(process.env.WAITLIST_GOAL, 1000),
+  waitlistOpen: process.env.WAITLIST_OPEN !== "false",
   // Active-burner rule: prize eligibility additionally requires this many
   // whole $RIBBIT burned INSIDE the board/bounty window. Splitting play
   // across N sybil wallets therefore costs N× fresh burns every window.
