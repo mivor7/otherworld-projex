@@ -33,7 +33,10 @@ export function Navbar() {
         borderBottom: "1px solid var(--hairline)",
       }}
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-5">
+      {/* Wider than the page content on purpose: eleven signed-in items need
+          the room, and a nav bar spanning wider than the copy below it is a
+          standard pattern. Content pages stay at max-w-6xl. */}
+      <div className="max-w-[1520px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-5">
         {/* Responsive brand lockup: full name where there's room (lg+), the
             OWP monogram below that — a 3-letter wordmark can never truncate
             into 'O…'. shrink-0: the brand is never the thing that gets
@@ -53,12 +56,13 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Inline nav only from xl — with nine sections, links + brand +
-            wallet stopped fitting at lg (the wallet button clipped at
-            1024px); smaller widths use the scrollable nav row below instead.
-            justify-center: the link cluster floats mid-gap so the slack
-            splits evenly instead of piling up in front of the wallet. */}
-        <nav className="hidden xl:flex items-center justify-center gap-0.5 flex-1">
+        {/* Inline nav only from 2xl — the SIGNED-IN row (nine links + Admin +
+            bell + balance chip) needs ~1450px; anything tighter overflowed
+            the centered container and spilled asymmetrically to the right.
+            Below 2xl every viewport uses the scrollable nav row, signed in or
+            not. justify-center: the link cluster floats mid-gap so slack
+            splits evenly. */}
+        <nav className="hidden 2xl:flex items-center justify-center gap-0.5 flex-1">
           {LINKS.map((l) => (
             <Link
               key={l.href}
@@ -97,7 +101,7 @@ export function Navbar() {
       </div>
 
       <nav
-        className="xl:hidden flex gap-0.5 px-3 pb-2 overflow-x-auto mobile-nav-scroll"
+        className="2xl:hidden flex gap-0.5 px-3 pb-2 overflow-x-auto mobile-nav-scroll"
         aria-label="Sections"
       >
         {LINKS.map((l) => (

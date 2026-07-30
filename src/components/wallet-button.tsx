@@ -10,6 +10,13 @@ import { useRibbitBalance } from "./use-ribbit-balance";
 import { useHouseConfig } from "./use-house-config";
 import { fmtRibbit, shortWallet } from "@/lib/client-config";
 
+/** 263,289 → "263.3k" — the navbar chip stays narrow at any balance. */
+function abbrev(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 10_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
 export function WalletButton() {
   const { publicKey, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
@@ -114,14 +121,15 @@ export function WalletButton() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
+        {/* Compact chip: abbreviated balance, address only on very wide
+            screens — the dropdown always has the exact figures. A signed-in
+            admin's full chip + 10 nav links used to overflow the centered
+            container and spill asymmetrically to the right edge. */}
         <span className="mono text-gold hidden sm:inline" title="$RIBBIT in your wallet">
-          {ribbit === null
-            ? "…"
-            : ribbit.toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
-          $RIBBIT
+          {ribbit === null ? "…" : abbrev(ribbit)} $RIBBIT
         </span>
         <span className="mono text-neon" title="Table chips">⛁ {me.credits ?? 0}</span>
-        <span className="mono hidden sm:inline">{shortWallet(me.wallet ?? "")}</span>
+        <span className="mono hidden min-[1700px]:inline">{shortWallet(me.wallet ?? "")}</span>
         <span
           className="text-fog transition-transform"
           style={{ transform: open ? "rotate(180deg)" : undefined }}
