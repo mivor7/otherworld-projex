@@ -69,9 +69,24 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     let v = 0;
     try {
-      v = Number(localStorage.getItem(SEEN_KEY) ?? 0);
+      const stored = localStorage.getItem(SEEN_KEY);
+      if (stored === null) {
+        // FIRST EVER load on this device: start the watermark at NOW and
+        // persist it. Without this, a watermark of 0 marks every event in the
+        // 60-day lookback as unread — so a new device, a cleared cache, a
+        // private window, or the installed PWA lights the bell with a pile of
+        // OLD, already-known events that no amount of refreshing clears
+        // (only opening the panel does). Only genuinely new events should
+        // ever ring.
+        v = Date.now();
+        localStorage.setItem(SEEN_KEY, String(v));
+      } else {
+        v = Number(stored) || 0;
+      }
     } catch {
-      /* private mode / storage disabled — treat as never-seen (0) */
+      /* private mode / storage disabled — nothing to remember, so treat
+         everything as already seen rather than crying wolf every load */
+      v = Date.now();
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSeenAt(v);
