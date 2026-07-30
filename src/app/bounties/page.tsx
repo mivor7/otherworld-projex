@@ -377,7 +377,7 @@ export default function BountiesPage() {
                   <span className="mono text-neon text-sm shrink-0 pt-0.5">02</span>
                   <p className="text-sm text-fog leading-relaxed">
                     <span className="text-frost font-medium">{`The tables keep ${edgePct}% — and that is the only cost in the whole house.`}</span>{" "}
-                    {`For every 100 chips placed on a table, 96 come back to players as winnings — on long-run average, per bet. Three honest notes. One: it's an average — any single bet wins or loses in full, and short sessions are pure luck. Two: it's per bet, not per bankroll — chips you win back and wager again meet the same ${edgePct}% again, every time they cross the table. Three: there is no other cost anywhere — no fee on buying chips, no fee on winning, no fee on payouts. This per-bet ${edgePct}% is the house's entire income from play, and every deal and roll is verifiable.`}
+                    {`For every 100 chips placed on a table, ${payback} come back to players as winnings — on long-run average, per bet. Three honest notes. One: it's an average — any single bet wins or loses in full, and short sessions are pure luck. Two: it's per bet, not per bankroll — chips you win back and wager again meet the same ${edgePct}% again, every time they cross the table. Three: there is no other cost anywhere — no fee on buying chips, no fee on winning, no fee on payouts. This per-bet ${edgePct}% is the house's entire income from play, and every deal and roll is verifiable.`}
                   </p>
                 </li>
                 <li className="flex gap-4">

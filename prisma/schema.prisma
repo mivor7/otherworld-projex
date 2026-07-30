@@ -254,6 +254,26 @@ model Bounty {
   @@index([status, endsAt])
 }
 
+// The pre-launch airdrop waitlist, imported from the final snapshot of the
+// old signup site. A member's position and referral count are their EARNED
+// place — preserve exactly as imported. Entry required holding 250k $RIBBIT
+// at signup; the airdrop is guaranteed once the list reaches 1,000 people
+// (amount to be announced by the owners). Import is idempotent by email
+// (scripts/import-waitlist.mjs) — the newest snapshot always wins.
+model WaitlistEntry {
+  id          String   @id @default(cuid())
+  position    Int
+  displayName String
+  email       String   @unique
+  wallet      String?
+  joinedAt    DateTime
+  referrals   Int      @default(0)
+  referredBy  String?
+  importedAt  DateTime @default(now())
+
+  @@index([position])
+}
+
 // One row per winner paid for a bounty. The prize is split across the top
 // ranks; each award queues a treasury-funded Withdrawal (kind "bounty") that
 // the off-server payout worker pays out — the same audited path as balance

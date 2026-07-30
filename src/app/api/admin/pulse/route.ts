@@ -32,6 +32,7 @@ export const GET = handler(async () => {
     buy1,
     top,
     holders,
+    waitlistCount,
   ] = await Promise.all([
     prisma.gameRound.groupBy({ by: ["userId"], where: { createdAt: { gte: d1 } } }),
     prisma.gameRound.groupBy({ by: ["userId"], where: { createdAt: { gte: d7 } } }),
@@ -63,6 +64,9 @@ export const GET = handler(async () => {
       orderBy: { credits: "desc" },
       take: 200,
     }),
+    // Airdrop waitlist: guaranteed airdrop at 1,000 members (imported
+    // snapshot — see scripts/import-waitlist.mjs).
+    prisma.waitlistEntry.count(),
   ]);
 
   const activeCount = (a: { userId: string }[], b: { userId: string }[]) =>
@@ -99,5 +103,6 @@ export const GET = handler(async () => {
       since: h.createdAt,
     })),
     creditsOutstanding: holders.reduce((s, h) => s + h.credits, 0),
+    waitlistCount,
   });
 });

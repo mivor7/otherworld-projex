@@ -87,6 +87,7 @@ type Pulse = {
   topPlayers: { wallet: string; rounds: number; volume: number; net: number }[];
   creditHolders: { wallet: string; credits: number; since: string }[];
   creditsOutstanding: number;
+  waitlistCount?: number;
 };
 
 type ReviewEntry = {
@@ -689,7 +690,9 @@ export default function AdminPage() {
                 <div className="kicker !text-[0.65rem]">Credit balances</div>
                 <span className="text-xs" style={{ color: "var(--text-dim)" }}>
                   {pulse.creditHolders.length} wallet{pulse.creditHolders.length === 1 ? "" : "s"} ·{" "}
-                  {pulse.creditsOutstanding.toLocaleString()} credits outstanding
+                  {pulse.creditsOutstanding.toLocaleString()} chips outstanding
+                  {typeof pulse.waitlistCount === "number" &&
+                    ` · airdrop waitlist ${pulse.waitlistCount.toLocaleString()} / 1,000`}
                 </span>
               </div>
               {pulse.creditHolders.length === 0 ? (
