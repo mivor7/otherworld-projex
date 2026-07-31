@@ -1881,66 +1881,51 @@ export default function AdminPage() {
               Mint {inviteForm.count} code{inviteForm.count === 1 ? "" : "s"}
             </button>
           </div>
+          {/* Compact by owner request — the full historical table grew huge.
+              Only LIVE codes render (as copyable chips); spent/disabled are a
+              counter. Disabling a live code is one click on its ✕. */}
           {invites.length === 0 ? (
             <p className="text-fog text-sm">No codes yet — mint a batch above.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ color: "var(--text-dim)" }}>
-                    <th className="pb-2 text-left font-medium">Code</th>
-                    <th className="pb-2 text-right font-medium">Used</th>
-                    <th className="pb-2 text-left font-medium pl-4">Note</th>
-                    <th className="pb-2 text-right font-medium">Status</th>
-                    <th className="pb-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {invites.map((c) => {
-                    const spent = c.uses >= c.maxUses;
-                    return (
-                      <tr key={c.id} className="table-row">
-                        <td className="py-1.5 pr-3">
-                          <span className="inline-flex items-center gap-2">
-                            <span className={`mono text-xs ${c.disabled || spent ? "line-through" : ""}`}
-                              style={c.disabled || spent ? { color: "var(--text-dim)" } : undefined}>
-                              {c.code}
-                            </span>
-                            {!c.disabled && !spent && <CopyChip text={c.code} label="copy" />}
-                          </span>
-                        </td>
-                        <td className="py-1.5 text-right mono text-xs">{c.uses}/{c.maxUses}</td>
-                        <td className="py-1.5 pl-4 text-xs text-fog">{c.note ?? "—"}</td>
-                        <td className="py-1.5 text-right">
-                          {c.disabled ? (
-                            <span className="badge !text-danger">disabled</span>
-                          ) : spent ? (
-                            <span className="badge">spent</span>
-                          ) : (
-                            <span className="badge badge-live">live</span>
-                          )}
-                        </td>
-                        <td className="py-1.5 text-right">
-                          <button
-                            className="btn btn-ghost !text-xs !min-h-[1.8rem]"
-                            disabled={busy}
-                            onClick={() =>
-                              act("/api/admin/invites", {
-                                action: c.disabled ? "enable" : "disable",
-                                id: c.id,
-                              })
-                            }
-                          >
-                            {c.disabled ? "enable" : "disable"}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          ) : (() => {
+            const live = invites.filter((c) => !c.disabled && c.uses < c.maxUses);
+            const spent = invites.filter((c) => !c.disabled && c.uses >= c.maxUses).length;
+            const disabled = invites.filter((c) => c.disabled).length;
+            return (
+              <>
+                <p className="text-xs mb-3" style={{ color: "var(--text-dim)" }}>
+                  {live.length} live · {spent} spent · {disabled} disabled ·{" "}
+                  {invites.reduce((n, c) => n + c.uses, 0)} sign-ups via codes
+                </p>
+                {live.length === 0 ? (
+                  <p className="text-fog text-sm">No live codes — mint a batch above.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {live.map((c) => (
+                      <span
+                        key={c.id}
+                        className="inline-flex items-center gap-2 rounded-md px-2.5 py-1.5"
+                        style={{ border: "1px solid var(--hairline-strong)", background: "oklch(1 0 0 / 0.03)" }}
+                      >
+                        <span className="mono text-xs">{c.code}</span>
+                        <span className="mono text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
+                          {c.uses}/{c.maxUses}
+                        </span>
+                        <CopyChip text={c.code} label="copy" />
+                        <button
+                          className="text-fog hover:text-danger text-xs leading-none"
+                          title="Disable this code"
+                          disabled={busy}
+                          onClick={() => act("/api/admin/invites", { action: "disable", id: c.id })}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 

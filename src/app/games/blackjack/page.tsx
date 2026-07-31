@@ -163,7 +163,7 @@ function splitResultCopy(a: string, b: string): string {
 }
 
 export default function BlackjackPage() {
-  const { me, refresh, loading } = useSession();
+  const { me, refresh, setCredits, loading } = useSession();
   const [round, setRound] = useState<View | null>(null);
   const [wager, setWager] = useState(10);
   const [busy, setBusy] = useState(false);
@@ -209,12 +209,15 @@ export default function BlackjackPage() {
       const data = await res.json();
       if (res.ok) {
         setRound(data);
+        // The response carries the fresh balance — paint it NOW. The old
+        // awaited refresh() cost a full extra round-trip per action, which is
+        // exactly the "counter lags behind fast play" a tester reported.
+        if (typeof data.credits === "number") setCredits(data.credits);
+        else refresh().catch(() => {});
         if (data.phase === "done") {
           if (data.result === "win" || data.result === "blackjack" || data.split?.result === "win") celebrate();
-          await refresh();
           window.dispatchEvent(new Event("owp:round")); // live-update the bounty meter
         }
-        if (body.action === "deal" || body.action === "double" || body.action === "split") await refresh();
       } else {
         setError(data.error ?? "Something went wrong");
       }

@@ -32,6 +32,9 @@ type SessionCtx = {
   /** Server asked for an invite code (invite-only launch) — show the input. */
   needsInvite: boolean;
   refresh: () => Promise<void>;
+  /** Apply a server-reported chip balance instantly (game responses carry
+   *  it) — no refetch round-trip, so counters never lag fast play. */
+  setCredits: (credits: number) => void;
   signIn: (inviteCode?: string) => Promise<boolean>;
   signOut: () => Promise<void>;
 };
@@ -132,6 +135,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [publicKey, signMessage, refresh]);
 
+  const setCredits = useCallback((credits: number) => {
+    setMe((m) => (m.signedIn ? { ...m, credits } : m));
+  }, []);
+
   const signOut = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setMe({ signedIn: false });
@@ -148,8 +155,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // Memoize the context value — a fresh object every render would re-render
   // every useSession consumer app-wide whenever the provider re-renders.
   const value = useMemo(
-    () => ({ me, loading, signingIn, signInError, needsInvite, refresh, signIn, signOut }),
-    [me, loading, signingIn, signInError, needsInvite, refresh, signIn, signOut]
+    () => ({ me, loading, signingIn, signInError, needsInvite, refresh, setCredits, signIn, signOut }),
+    [me, loading, signingIn, signInError, needsInvite, refresh, setCredits, signIn, signOut]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -326,6 +326,11 @@ export async function deal(userId: string, wager: number, clientSeed: string) {
     let credits: number | undefined;
     if (payout > 0) {
       credits = await adjustCredits(tx, userId, payout, "payout", round.id);
+    } else {
+      // Always report the balance — the client paints it instantly instead
+      // of refetching, so the chips counter never lags fast play.
+      const u = await tx.user.findUnique({ where: { id: userId }, select: { credits: true } });
+      credits = u?.credits;
     }
     return { ...publicView(round), credits };
   });
@@ -412,6 +417,10 @@ export async function act(
     let credits: number | undefined;
     if (payout > 0) {
       credits = await adjustCredits(tx, userId, payout, "payout", round.id);
+    } else {
+      // Always report the balance — instant client-side counter, no refetch.
+      const u = await tx.user.findUnique({ where: { id: userId }, select: { credits: true } });
+      credits = u?.credits;
     }
     return {
       ...publicView({ ...round, wager: totalWager, outcome: JSON.stringify(s), payout }),

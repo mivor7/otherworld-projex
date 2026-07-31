@@ -23,7 +23,7 @@ type DiceResult = {
 };
 
 export default function DicePage() {
-  const { me, refresh, loading } = useSession();
+  const { me, refresh, setCredits, loading } = useSession();
   const [target, setTarget] = useState(50);
   const [wager, setWager] = useState(5);
   const [rolling, setRolling] = useState(false);
@@ -89,7 +89,9 @@ export default function DicePage() {
       } else {
         setResult(data);
         if (data.win) celebrate();
-        await refresh();
+        // Fresh balance rides on the response — no extra round-trip.
+        if (typeof data.credits === "number") setCredits(data.credits);
+        else refresh().catch(() => {});
         window.dispatchEvent(new Event("owp:round")); // live-update the bounty meter
       }
     } catch {

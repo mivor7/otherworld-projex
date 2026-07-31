@@ -23,7 +23,7 @@ type FlipResult = {
 };
 
 export default function FlipPage() {
-  const { me, refresh, loading } = useSession();
+  const { me, refresh, setCredits, loading } = useSession();
   const [side, setSide] = useState<"frog" | "fly">("frog");
   const [wager, setWager] = useState(5);
   const [spinning, setSpinning] = useState(false);
@@ -72,7 +72,10 @@ export default function FlipPage() {
         setPendingWin(false);
       }
       if (!sandbox) {
-        await refresh();
+        // The round response carried the fresh balance — paint it instantly;
+        // only fall back to a refetch if it's somehow missing.
+        if (typeof data.credits === "number") setCredits(data.credits);
+        else refresh().catch(() => {});
         window.dispatchEvent(new Event("owp:round")); // live-update the bounty meter
       }
     }, 1150);
