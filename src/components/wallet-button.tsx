@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletReadyState } from "@solana/wallet-adapter-base";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useSession } from "./session";
 import { CopyChip } from "./copy-chip";
@@ -18,7 +19,7 @@ function abbrev(n: number): string {
 }
 
 export function WalletButton() {
-  const { publicKey, disconnect } = useWallet();
+  const { publicKey, disconnect, wallets } = useWallet();
   const { setVisible } = useWalletModal();
   const { me, signIn, signOut, signingIn, signInError, needsInvite } = useSession();
   const ribbit = useRibbitBalance();
@@ -44,14 +45,73 @@ export function WalletButton() {
   if (!publicKey) {
     // Clean bar until someone actually starts connecting — the invite field
     // appears at the NEXT step (wallet connected, not yet signed in).
+    //
+    // Phones (plain Chrome/Safari or the installed PWA) have no injected
+    // wallet, so the adapter modal offers Mobile Wallet Adapter at best —
+    // Android-only and unreliable from a standalone PWA. Offer the wallets'
+    // own in-app browsers instead: this page reopens inside Phantom/Solflare
+    // where connecting works exactly like desktop. UA is only read in event
+    // handlers and in the click-opened menu, never in SSR'd markup.
+    const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+    const isAndroid = /android/i.test(ua);
+    const isMobile = isAndroid || /iphone|ipad|ipod/i.test(ua);
+    const hasInjectedWallet = wallets.some(
+      (w) =>
+        w.readyState === WalletReadyState.Installed &&
+        w.adapter.name !== "Mobile Wallet Adapter" // the auto-registered MWA
+    );
+    const walletHref = (base: string) =>
+      `${base}${encodeURIComponent(window.location.href)}?ref=${encodeURIComponent(window.location.origin)}`;
     return (
-      <button
-        className="btn btn-primary whitespace-nowrap"
-        onClick={() => setVisible(true)}
-        title={house.inviteRequired ? "Invite-only beta — you'll enter your code after connecting" : undefined}
-      >
-        Connect wallet
-      </button>
+      <div className="relative" ref={menuRef}>
+        <button
+          className="btn btn-primary whitespace-nowrap"
+          onClick={() =>
+            isMobile && !hasInjectedWallet ? setOpen((v) => !v) : setVisible(true)
+          }
+          aria-expanded={open}
+          title={house.inviteRequired ? "Invite-only beta — you'll enter your code after connecting" : undefined}
+        >
+          Connect wallet
+        </button>
+        {open && (
+          <div className="wallet-menu" role="menu">
+            <div className="kicker !text-[0.6rem] mb-2">Connect on mobile</div>
+            <div className="grid gap-1.5 mb-3">
+              <a
+                href={walletHref("https://phantom.app/ul/browse/")}
+                className="btn btn-primary w-full !justify-start"
+                onClick={() => setOpen(false)}
+              >
+                Open in Phantom
+              </a>
+              <a
+                href={walletHref("https://solflare.com/ul/v1/browse/")}
+                className="btn btn-ghost w-full !justify-start"
+                onClick={() => setOpen(false)}
+              >
+                Open in Solflare
+              </a>
+              {isAndroid && (
+                <button
+                  className="btn btn-ghost w-full !justify-start"
+                  onClick={() => {
+                    setOpen(false);
+                    setVisible(true);
+                  }}
+                >
+                  Other wallet (Android)
+                </button>
+              )}
+            </div>
+            <p className="text-[0.65rem] leading-snug" style={{ color: "var(--text-dim)" }}>
+              This page reopens inside your wallet&apos;s built-in browser — tap
+              Connect there and you&apos;re in. No wallet yet? The link shows you
+              where to get one.
+            </p>
+          </div>
+        )}
+      </div>
     );
   }
 
