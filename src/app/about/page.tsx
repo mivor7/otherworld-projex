@@ -173,7 +173,10 @@ export default async function AboutPage() {
           <div className="kicker pt-1.5">03 — The episodes</div>
           <div className="panel overflow-hidden">
             {EPISODES.map((e) => (
-              <div key={e.ep} className="table-row ep-row">
+              // key must be unique — two episodes share ep "Table", and duplicate
+              // keys corrupt hydration of this streamed list (rows detached to
+              // the page bottom on slow connections).
+              <div key={`${e.ep}-${e.name}`} className="table-row ep-row">
                 <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
                   {e.ep}
                 </span>

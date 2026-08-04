@@ -241,7 +241,8 @@ export default async function Home() {
             </div>
 
             {/* the games, each with its live bounty pool */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 sm:px-6">
+            {/* 4-up only when there's room — at tablet widths 4 columns clipped card titles */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 sm:px-6">
               {GAME_SLATE.map((e, i) => {
                 const poolRaw = e.game ? poolByGame.get(e.game) : undefined;
                 const live = !!e.href;
@@ -338,10 +339,7 @@ export default async function Home() {
                               +{fromRaw(a.amountRaw).toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
                               $RIBBIT
                             </td>
-                            <td
-                              className="py-2.5 pr-6 text-xs text-right whitespace-nowrap"
-                              style={{ color: "var(--text-dim)" }}
-                            >
+                            <td className="py-2.5 pr-6 text-xs text-right whitespace-nowrap text-fog">
                               {ago(a.createdAt)}
                             </td>
                           </tr>

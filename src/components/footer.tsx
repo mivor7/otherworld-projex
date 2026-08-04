@@ -23,7 +23,7 @@ export function Footer() {
           </p>
         </div>
         <div>
-          <h4 className="kicker mb-4">The house</h4>
+          <h3 className="kicker mb-4">The house</h3>
           <ul className="space-y-2.5 text-fog">
             <li><Link className="hover:text-frost transition-colors" href="/games">Arcade</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/auctions">Auction House</Link></li>
@@ -36,7 +36,7 @@ export function Footer() {
           </ul>
         </div>
         <div>
-          <h4 className="kicker mb-4">$RIBBIT</h4>
+          <h3 className="kicker mb-4">$RIBBIT</h3>
           <ul className="space-y-2.5 text-fog">
             <li>
               <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer">

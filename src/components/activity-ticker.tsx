@@ -6,7 +6,23 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type Event = { at: string; kind: string; text: string; href?: string };
+type Event = { at: string; kind: string; text: string; href?: string; n?: number };
+
+// A player repeating the same action produces identical adjacent lines
+// ("…played Blackjack" ×4) that read as a rendering bug — collapse runs
+// into one item with a count.
+function collapseRuns(rows: Event[]): Event[] {
+  const out: Event[] = [];
+  for (const e of rows) {
+    const last = out[out.length - 1];
+    if (last && last.text === e.text && last.kind === e.kind && last.href === e.href) {
+      last.n = (last.n ?? 1) + 1;
+    } else {
+      out.push({ ...e });
+    }
+  }
+  return out;
+}
 
 const DOT: Record<string, string> = {
   win: "var(--color-gold)",
@@ -24,7 +40,7 @@ export function ActivityTicker() {
     const load = () =>
       fetch("/api/activity")
         .then((r) => r.json())
-        .then((rows) => Array.isArray(rows) && setEvents(rows))
+        .then((rows) => Array.isArray(rows) && setEvents(collapseRuns(rows)))
         .catch(() => {});
     load();
     const t = setInterval(load, 30_000);
@@ -39,6 +55,11 @@ export function ActivityTicker() {
         <>
           <span className="ticker-dot" style={{ background: DOT[e.kind] ?? DOT.play }} />
           {e.text}
+          {(e.n ?? 1) > 1 && (
+            <span className="mono" style={{ color: "var(--text-dim)", marginLeft: "0.4em" }}>
+              ×{e.n}
+            </span>
+          )}
         </>
       );
       return e.href ? (
@@ -61,7 +82,10 @@ export function ActivityTicker() {
     <div className="ticker-strip mt-4" aria-label="Recent house activity">
       <div className="ticker-track">
         {items("a")}
-        {items("b")}
+        {/* second copy exists only for the seamless marquee loop */}
+        <span aria-hidden="true" style={{ display: "contents" }}>
+          {items("b")}
+        </span>
       </div>
     </div>
   );

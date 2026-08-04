@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHero } from "@/components/hero";
 import { Countdown } from "@/components/ui";
@@ -50,6 +51,7 @@ const GAME_ART: Record<string, string> = {
 };
 
 export default function BountiesPage() {
+  const router = useRouter();
   const [open, setOpen] = useState<Bounty[]>([]);
   const [closed, setClosed] = useState<Bounty[]>([]);
   const [totals, setTotals] = useState<{ openPrizeRaw: string; paidOutRaw: string } | null>(null);
@@ -142,7 +144,21 @@ export default function BountiesPage() {
             />
           )}
           {open.map((b) => (
-            <div key={b.id} className="panel panel-hover p-6">
+            // The whole card navigates to its game (tester ask) — real links and
+            // buttons inside keep working, and text selection still wins.
+            <div
+              key={b.id}
+              className={`panel panel-hover p-6${b.game ? " cursor-pointer" : ""}`}
+              onClick={
+                b.game
+                  ? (e) => {
+                      if ((e.target as HTMLElement).closest("a,button,input,textarea")) return;
+                      if (!(window.getSelection()?.isCollapsed ?? true)) return;
+                      router.push(`/games/${b.game}`);
+                    }
+                  : undefined
+              }
+            >
               <div className="flex gap-4">
                 {b.game && GAME_ART[b.game] && (
                   <Link

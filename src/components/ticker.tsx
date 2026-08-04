@@ -13,7 +13,9 @@ export function Ticker({ text, duration = 900 }: { text: string; duration?: numb
   const suffix = match?.[2] ?? "";
 
   const ref = useRef<HTMLSpanElement>(null);
-  const [value, setValue] = useState(0);
+  // Starts at the REAL value: server HTML, no-JS and failed-hydration visitors
+  // see the true stat, never a 0. The count-up only zeroes once it actually runs.
+  const [value, setValue] = useState(target);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
