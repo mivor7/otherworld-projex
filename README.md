@@ -90,10 +90,13 @@ Money out (never from the web server):
    address itself — deposits/escrow still verify against it.
 5. **Payout worker**: run `npm run payout-worker` on a separate box with
    `PAYOUT_WALLET_KEY` set to the house wallet (the same wallet as
-   `ADMIN_WALLETS` / `TREASURY_WALLET` / Phantom). The worker refuses to
-   start until `OWP_MINT` is set. You can skip it and pay withdrawals by
-   hand in `/admin`. `PAYOUT_INTERVAL_MS` tunes the polling cadence; the
-   admin panel's "Pause the payout worker" switch stops it remotely.
+   `ADMIN_WALLETS` / `TREASURY_WALLET` / Phantom). `OWP_MINT` overrides the
+   published mint; leave it unset to use that default. The worker waits if
+   the mint account is not on mainnet yet. You can skip it and pay
+   withdrawals by hand in `/admin`. `PAYOUT_INTERVAL_MS` tunes the polling
+   cadence; the admin panel's "Pause the payout worker" switch stops it
+   remotely. Website buys (`/api/owp/buy`) are SOL in, $OWP out, from this
+   same wallet, at the pump.fun price.
 6. Leave `DEV_FAUCET` **unset** in production (the route also hard-refuses
    when `NODE_ENV=production`).
 

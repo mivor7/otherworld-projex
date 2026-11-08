@@ -1,5 +1,6 @@
 // Central configuration. Everything security-relevant is env-driven so the
 // same code runs in local demo mode and in production on Vercel.
+import { OWP_MINT_ADDRESS } from "./owp-mint";
 
 const num = (v: string | undefined, fallback: number) => {
   const n = Number(v);
@@ -25,10 +26,9 @@ export const CONFIG = {
   appName: "Other World Projex",
   ticker: "$OWP",
 
-  // $OWP mint. Empty until launch — set OWP_MINT. There is no baked-in
-  // address: the retired Ribbit mint must never be implied.
+  // $OWP mint. The launched coin is the default. OWP_MINT overrides it.
   // Field name `ribbitMint` is the historical identifier; the value is $OWP.
-  ribbitMint: process.env.OWP_MINT ?? "",
+  ribbitMint: process.env.OWP_MINT || OWP_MINT_ADDRESS,
   ribbitDecimals: num(process.env.OWP_DECIMALS ?? process.env.RIBBIT_DECIMALS, 6),
 
   rpcUrl:

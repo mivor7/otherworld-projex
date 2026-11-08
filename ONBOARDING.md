@@ -24,24 +24,24 @@ These are the things that are NOT obvious from the code and will cost you a day
 each if you learn them the hard way. They are why the app broke repeatedly during
 its build-out.
 
-### 1.1 $OWP is an SPL **Token-2022** token — not a classic SPL token
-This is the single biggest gotcha. $OWP is not launched yet, so the repo has
-**no mint address baked in**. Set `OWP_MINT` (server, payout worker) and
-`NEXT_PUBLIC_OWP_MINT` (browser, baked at build time) when the token exists.
+### 1.1 The $OWP mint, and do not hardcode its token program
+The launched mint is `GE8JGUE6ssrnFh4FSv9iwniYCwucB15PupT97uVRpump`
+(`src/lib/owp-mint.ts`). `OWP_MINT` and `NEXT_PUBLIC_OWP_MINT` override it.
 Do not point either at the retired Ribbit mint
-`EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump`. Until those vars are set,
-deposits, waitlist balance checks, and the payout worker stay closed.
+`EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump`.
 
-The new mint will be owned by the Token-2022 program
-(`TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`), **not** the classic Token
-program — same as the retired one. Every `@solana/spl-token` call —
-`getAssociatedTokenAddressSync`, transfer/burn instructions, ATA creation —
-**must** be passed `TOKEN_2022_PROGRAM_ID`. If you omit it, the SDK silently
-defaults to the classic program, derives the wrong ATA, and the transaction
-fails on-chain with `InvalidAccountData`. This affects
-`src/components/use-chain.ts`, `src/lib/solana.ts`, and
-`scripts/payout-worker.mjs`. When in doubt, `simulateTransaction` against
-mainnet — classic fails, 2022 succeeds.
+Pump.fun `create_v2` coins are Token-2022. Older coins are classic SPL. The
+server, the browser, and the payout worker read the mint account's owner and
+pass that program id into every ATA and transfer. Do not hardcode
+`TOKEN_2022_PROGRAM_ID` again. Until the mint account exists on mainnet,
+buys, deposits, and payouts fail closed.
+
+Buys (`POST /api/owp/buy`): the user sends SOL to the house wallet. The
+server prices it from the pump.fun bonding curve (spot, not a curve swap;
+Dexscreener only after the curve migrates) and queues a `Withdrawal` of kind
+`buy`. The payout worker sends $OWP from that same wallet. Rejecting a buy
+does not credit app balance, and the SOL stays in the house wallet. The
+private key stays on the payout box, never on Vercel.
 
 ### 1.2 This is a **modified** Next.js 16 (see `AGENTS.md` / `CLAUDE.md`)
 APIs, conventions, and file layout can differ from the Next.js you know and from
@@ -99,6 +99,10 @@ data. Prefer a separate Neon branch for development.
 - Users **deposit $OWP**. The transfer goes to the house wallet and is
   verified on-chain (`POST /api/deposits/verify`). The full amount credits
   `User.ribbitBalance`. There are no chips and no burn-to-play.
+- Users can **buy $OWP** with SOL (`POST /api/owp/buy`). That SOL lands in
+  the house wallet. The payout is $OWP at the live pump.fun price, queued as
+  a `Withdrawal` kind `buy`. It does not credit `ribbitBalance`. Pausing
+  deposits does not pause this buy.
 - Games and bids spend that balance. `adjustOwp` moves whole tokens and
   refuses a debit that would eat $OWP locked in bids. The ledger
   (`src/lib/credits.ts`) is append-only. **Respect that pattern.**
@@ -199,11 +203,11 @@ program/            Anchor treasury vault (SOL custody, daily cap, multisig)
 | `games.ts`, `blackjack.ts`, `*-sim.ts` | per-game logic |
 | `bounty.ts` | bounty ranking, triggers, pro-rata payout, auto-settle |
 | `ranked.ts` | prize-board eligibility (burn/spend gates), bounty pool budget |
-| `solana.ts` | on-chain verification + treasury/wallet balance reads (Token-2022!) |
+| `solana.ts` | on-chain verification + treasury/wallet balance reads (token program detected from the mint) |
 | `session.ts` | ed25519 sign-in, JWT cookie, admin check |
 | `ratelimit.ts` | request throttling |
 
-**`src/app/api/` domains:** `auth`, `burn`, `deposits`, `credits`, `games`,
+**`src/app/api/` domains:** `auth`, `burn`, `deposits`, `owp`, `credits`, `games`,
 `arcade`, `auctions`, `listings`, `bounties`, `withdrawals`, `treasury`,
 `leaderboard`, `activity`, `me`, `config`, `upload`, `dev`, and `admin/*`
 (`overview`, `settings`, `bounties`, `bounty-review`, `auctions`, `applications`,
@@ -230,9 +234,12 @@ admin wallet, the treasury, and the payout signer. Do not split them back apart.
    (`chmod 600`, never in a repo). This is deliberate: the Phantom wallet is
    the treasury and the signer. A stolen payout box can move the whole
    treasury. **Never put the private key in Vercel.**
-4. **Big payouts wait for a human.** Withdrawals above `MAX_PAYOUT_RIBBIT` are
-   not auto-sent; an admin processes them in `/admin`. "Pay now" signs from
-   the connected admin wallet, which is this same wallet.
+4. **Big payouts wait for a human.** Withdrawals above `MAX_PAYOUT_OWP`
+   (default 1,000,000 whole tokens) are not auto-sent; an admin processes
+   them in `/admin`. SOL buys use `MAX_BUY_OWP` (default 1,000,000,000),
+   because a small SOL buy is already more than the withdrawal cap at the
+   launch price. "Pay now" signs from the connected admin wallet, which is
+   this same wallet.
 5. SOL custody is a separate Anchor program in `program/` (multisig admin +
    on-chain daily cap). **It ships with tests but has NOT been audited.** It
    is not the $OWP wallet.
@@ -252,8 +259,9 @@ Two layers:
   UI, not by redeploying.
 
 Before a real launch: `ADMIN_WALLETS`, `TREASURY_WALLET`, `PAYOUT_WALLET`, and
-`NEXT_PUBLIC_TREASURY_WALLET` should all be the same pubkey. Set `OWP_MINT` and
-`NEXT_PUBLIC_OWP_MINT`. Reset any test-override House settings, and raise
+`NEXT_PUBLIC_TREASURY_WALLET` should all be the same pubkey. The mint defaults
+to the published $OWP address; set `OWP_MINT` / `NEXT_PUBLIC_OWP_MINT` only to
+override it. Reset any test-override House settings, and raise
 `RANKED_MIN_WINDOW_BURNED_RIBBIT` from any low test value to a meaningful bar.
 
 ---
@@ -298,7 +306,7 @@ migrations apply automatically on deploy** — no manual migration step in prod.
 - **Bounty management** — create/edit/delete/close/award bounties; one-open-per-
   game enforced; shows award counts.
 - **Payouts** — process queued withdrawals directly ("Pay now" signs from the
-  connected admin wallet via Token-2022), or mark ones paid elsewhere. Shows the
+  connected admin wallet), or mark ones paid elsewhere. Shows the
   house-wallet float.
 - **Users / auctions / applications** — moderation, ban, listing review.
 
@@ -306,8 +314,11 @@ migrations apply automatically on deploy** — no manual migration step in prod.
 A long-running Node process: every `PAYOUT_INTERVAL_MS` (~15s) it polls the
 shared Neon DB for pending `Withdrawal` rows and sends them from the house
 wallet. It needs that wallet's key (`PAYOUT_WALLET_KEY` or
-`PAYOUT_KEYPAIR_PATH`), the `.env` (`DATABASE_URL`, `SOLANA_RPC_URL`,
-`OWP_MINT`), and internet. Run it on any always-on box — **systemd**
+`PAYOUT_KEYPAIR_PATH`), the `.env` (`DATABASE_URL`, `SOLANA_RPC_URL`), and
+internet. `OWP_MINT` is optional — the published mint is the fallback. The
+worker reads the mint's token program itself and waits, rather than exiting,
+if the mint account is not on mainnet yet. SOL buys (kind `buy`) auto-send
+up to `MAX_BUY_OWP`. Run it on any always-on box — **systemd**
 (auto-restart on boot/crash, recommended for launch), **pm2**, or **tmux**
 (testing only; dies on reboot). It's optional: you can skip it entirely and
 clear payouts by hand in `/admin`. The key on this box is the treasury key.
@@ -378,7 +389,7 @@ first line of defense; the smoke test is the second.
 
 ---
 
-*When something behaves inexplicably on-chain, your first suspect is Token-2022
-(§1.1). When a deploy "didn't take," your first suspect is the alias step (§7).
+*When something behaves inexplicably on-chain, your first suspect is the mint's
+token program (§1.1). When a deploy "didn't take," your first suspect is the alias step (§7).
 When the numbers look off, read `bounty.ts` and `ranked.ts` before assuming a bug
 — the economy is more deliberate than it looks.*

@@ -40,6 +40,7 @@ model User {
   arcadeRuns   ArcadeRun[]
   bountyAwards BountyAward[]
   purchases    CreditPurchase[]
+  owpPurchases OwpPurchase[]
 }
 
 // A "buy credits" event: the player pays $OWP in one signed tx that is
@@ -146,14 +147,27 @@ model Withdrawal {
   status      String    @default("pending") // "pending" | "processing" | "sent" | "rejected"
   signature   String? // payout tx signature once sent
   // "balance" = user withdrawing their own escrow; "bounty" = a prize payout
-  // funded by the treasury (no user-balance debit). Both flow through the
-  // same off-server payout worker.
+  // funded by the treasury (no user-balance debit); "buy" = $OWP sold for SOL
+  // (no user-balance debit). All three flow through the same payout worker.
   kind        String    @default("balance")
-  ref         String? // bounty id for bounty payouts
+  ref         String? // bounty id, or the OwpPurchase id for a buy
   createdAt   DateTime  @default(now())
   processedAt DateTime?
 
   @@index([status, createdAt])
+}
+
+// SOL paid to the house wallet in exchange for $OWP sent back at the
+// pump.fun price. The payout itself is a Withdrawal (kind "buy").
+model OwpPurchase {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  paySignature String   @unique
+  solLamports  BigInt
+  owpRaw       BigInt
+  withdrawalId String   @unique
+  createdAt    DateTime @default(now())
 }
 
 model Auction {
@@ -357,7 +371,7 @@ model TreasuryEvent {
 // its whole transaction rolls back.
 model RedeemedSignature {
   signature String   @id
-  kind      String // "buy" | "deposit" | "burn"
+  kind      String // "buy" | "deposit" | "burn" | "owp-buy"
   createdAt DateTime @default(now())
 }
 

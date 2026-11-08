@@ -6,17 +6,15 @@ import {
   LAMPORTS_PER_SOL,
   ParsedInstruction,
   PublicKey,
+  SystemProgram,
 } from "@solana/web3.js";
-import {
-  getAssociatedTokenAddressSync,
-  TOKEN_2022_PROGRAM_ID,
-} from "@solana/spl-token";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { CONFIG } from "./config";
+import { detectTokenProgram } from "./token-program";
 
-// $OWP is an SPL Token-2022 mint (owner program TokenzQdB…), NOT the
-// classic Token program. Every ATA derivation and instruction MUST specify
-// this program id or it targets the wrong account/program and fails.
-const RIBBIT_TOKEN_PROGRAM = TOKEN_2022_PROGRAM_ID;
+// SOL a website buy will accept. The house prices the $OWP; the buyer pays SOL.
+export const MIN_BUY_LAMPORTS = 10_000_000n; // 0.01 SOL
+export const MAX_BUY_LAMPORTS = 50_000_000_000n; // 50 SOL
 
 let _conn: Connection | null = null;
 export function connection(): Connection {
@@ -41,7 +39,7 @@ function parsedInstructions(tx: Awaited<ReturnType<Connection["getParsedTransact
 
 async function getVerifiedTx(signature: string) {
   const tx = await connection().getParsedTransaction(signature, {
-    maxSupportedTransactionVersion: 0,
+    maxSupportedTransactionVersion: 1,
     commitment: "confirmed",
   });
   if (!tx || tx.meta?.err) return null;
@@ -78,6 +76,18 @@ export async function verifyBurnTx(
   return total > 0n ? total : null;
 }
 
+async function treasuryAta(): Promise<string | null> {
+  if (!CONFIG.treasuryWallet || !CONFIG.ribbitMint) return null;
+  const program = await detectTokenProgram(connection(), new PublicKey(CONFIG.ribbitMint));
+  if (!program) return null;
+  return getAssociatedTokenAddressSync(
+    new PublicKey(CONFIG.ribbitMint),
+    new PublicKey(CONFIG.treasuryWallet),
+    true,
+    program
+  ).toBase58();
+}
+
 /**
  * Verify `signature` is a confirmed tx in which `wallet` transferred $OWP
  * to the treasury's associated token account (auction deposit).
@@ -86,13 +96,8 @@ export async function verifyDepositTx(
   signature: string,
   wallet: string
 ): Promise<bigint | null> {
-  if (!CONFIG.treasuryWallet || !CONFIG.ribbitMint) return null;
-  const treasuryAta = getAssociatedTokenAddressSync(
-    new PublicKey(CONFIG.ribbitMint),
-    new PublicKey(CONFIG.treasuryWallet),
-    true,
-    RIBBIT_TOKEN_PROGRAM
-  ).toBase58();
+  const treasuryAtaAddress = await treasuryAta();
+  if (!treasuryAtaAddress) return null;
 
   const tx = await getVerifiedTx(signature);
   if (!tx) return null;
@@ -104,7 +109,7 @@ export async function verifyDepositTx(
     };
     if (type !== "transfer" && type !== "transferChecked") continue;
     if (type === "transferChecked" && info.mint !== CONFIG.ribbitMint) continue;
-    if (info.destination !== treasuryAta) continue;
+    if (info.destination !== treasuryAtaAddress) continue;
     const authority = (info.authority ?? info.multisigAuthority) as string;
     if (authority !== wallet) continue;
     const amount =
@@ -126,13 +131,8 @@ export async function verifyBuyTx(
   signature: string,
   wallet: string
 ): Promise<{ burnedRaw: bigint; houseRaw: bigint } | null> {
-  if (!CONFIG.treasuryWallet || !CONFIG.ribbitMint) return null;
-  const treasuryAta = getAssociatedTokenAddressSync(
-    new PublicKey(CONFIG.ribbitMint),
-    new PublicKey(CONFIG.treasuryWallet),
-    true,
-    RIBBIT_TOKEN_PROGRAM
-  ).toBase58();
+  const treasuryAtaAddress = await treasuryAta();
+  if (!treasuryAtaAddress) return null;
 
   const tx = await getVerifiedTx(signature);
   if (!tx) return null;
@@ -156,7 +156,7 @@ export async function verifyBuyTx(
       burnedRaw += BigInt(amount);
     } else if (type === "transfer" || type === "transferChecked") {
       if (type === "transferChecked" && info.mint !== CONFIG.ribbitMint) continue;
-      if (info.destination !== treasuryAta) continue;
+      if (info.destination !== treasuryAtaAddress) continue;
       const amount =
         type === "transferChecked"
           ? (info.tokenAmount as { amount: string }).amount
@@ -168,6 +168,41 @@ export async function verifyBuyTx(
   // Both legs required, and each must be non-zero.
   if (burnedRaw <= 0n || houseRaw <= 0n) return null;
   return { burnedRaw, houseRaw };
+}
+
+export type SolPayment =
+  | { status: "ok"; lamports: bigint }
+  | { status: "pending" }
+  | { status: "no-payment" }
+  | { status: "too-small"; lamports: bigint }
+  | { status: "too-large"; lamports: bigint };
+
+/**
+ * A confirmed System Program transfer of SOL from `wallet` to the house
+ * wallet. The network fee is not part of the payment. `pending` means the
+ * transaction is not visible yet — the caller must not consume the signature.
+ */
+export async function verifySolPayment(signature: string, wallet: string): Promise<SolPayment> {
+  if (!CONFIG.treasuryWallet) return { status: "no-payment" };
+  const tx = await getVerifiedTx(signature);
+  if (!tx) return { status: "pending" };
+  const top = tx.transaction.message.instructions;
+  const inner = (tx.meta?.innerInstructions ?? []).flatMap((i) => i.instructions);
+  let total = 0n;
+  for (const ix of [...top, ...inner]) {
+    if (!("parsed" in ix)) continue;
+    if (!ix.programId.equals(SystemProgram.programId)) continue;
+    const parsed = ix.parsed as { type: string; info: Record<string, unknown> };
+    if (parsed.type !== "transfer") continue;
+    const { source, destination, lamports } = parsed.info;
+    if (source !== wallet || destination !== CONFIG.treasuryWallet) continue;
+    if (typeof lamports !== "number" && typeof lamports !== "string") continue;
+    total += BigInt(lamports);
+  }
+  if (total <= 0n) return { status: "no-payment" };
+  if (total < MIN_BUY_LAMPORTS) return { status: "too-small", lamports: total };
+  if (total > MAX_BUY_LAMPORTS) return { status: "too-large", lamports: total };
+  return { status: "ok", lamports: total };
 }
 
 export type TreasuryStats = {

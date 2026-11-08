@@ -1,7 +1,9 @@
 // Client-side config (NEXT_PUBLIC_*). Mirrors src/lib/config.ts defaults —
 // keep the two in sync when overriding via env.
 // `ribbitMint` is the historical field name; the value is the $OWP mint.
-const owpMint = process.env.NEXT_PUBLIC_OWP_MINT ?? "";
+import { OWP_MINT_ADDRESS } from "./owp-mint";
+
+const owpMint = process.env.NEXT_PUBLIC_OWP_MINT || OWP_MINT_ADDRESS;
 
 export const CLIENT_CONFIG = {
   ribbitMint: owpMint,
@@ -32,8 +34,7 @@ export const CLIENT_CONFIG = {
   houseEdge: Number(process.env.NEXT_PUBLIC_HOUSE_EDGE ?? 0.04),
   bountyPotShare: Number(process.env.NEXT_PUBLIC_BOUNTY_POT_SHARE ?? 0.5),
   devFaucet: process.env.NEXT_PUBLIC_DEV_FAUCET === "true",
-  // Hidden until the mint exists, so the site never links the retired token.
-  pumpFunUrl: owpMint ? `https://pump.fun/coin/${owpMint}` : "",
+  pumpFunUrl: `https://pump.fun/coin/${owpMint}`,
   // Meteora liquidity pool, shown alongside pump.fun wherever trading links
   // appear. Set NEXT_PUBLIC_METEORA_POOL_URL to the pool's page URL; empty
   // hides the link entirely rather than shipping a dead one.

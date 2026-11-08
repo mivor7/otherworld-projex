@@ -1,14 +1,15 @@
 "use client";
 
-// The connected wallet's live $OWP balance (Token-2022), for the top panel.
+// The connected wallet's live $OWP balance, for the top panel.
 // Refreshes on mount, on a slow poll, and whenever a buy/burn dispatches
 // "owp:balance" so it reflects a purchase immediately. Returns null until the
 // first read (or when no wallet is connected).
 import { useCallback, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { CLIENT_CONFIG } from "@/lib/client-config";
+import { detectTokenProgram } from "@/lib/token-program";
 
 export function useRibbitBalance(): number | null {
   const { connection } = useConnection();
@@ -21,12 +22,13 @@ export function useRibbitBalance(): number | null {
       return;
     }
     try {
-      const ata = getAssociatedTokenAddressSync(
-        new PublicKey(CLIENT_CONFIG.ribbitMint),
-        publicKey,
-        false,
-        TOKEN_2022_PROGRAM_ID
-      );
+      const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
+      const program = await detectTokenProgram(connection, mint);
+      if (!program) {
+        setBalance(0);
+        return;
+      }
+      const ata = getAssociatedTokenAddressSync(mint, publicKey, false, program);
       const b = await connection.getTokenAccountBalance(ata);
       setBalance(b.value.uiAmount ?? 0);
     } catch {

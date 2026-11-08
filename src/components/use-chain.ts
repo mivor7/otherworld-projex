@@ -5,21 +5,16 @@
 // the tx signature is submitted to the API for server-side verification.
 import { useCallback } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createBurnCheckedInstruction,
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
-  TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 import { CLIENT_CONFIG, toRawClient } from "@/lib/client-config";
-
-// $OWP is an SPL Token-2022 mint. Every ATA derivation and token
-// instruction MUST pass this program id — the spl-token defaults target the
-// classic Token program, which derives the wrong ATA and builds instructions
-// the mint's program can't execute (the transaction just fails).
-const TP = TOKEN_2022_PROGRAM_ID;
+import { owpRawForQuote } from "@/lib/owp-quote";
+import { detectTokenProgram } from "@/lib/token-program";
 
 export type ChainResult =
   | { ok: true; data: Record<string, unknown> }
@@ -155,15 +150,17 @@ export async function redeemSignature(url: string, signature: string): Promise<C
 // instead of a cryptic wallet/RPC error after signing. Returns an error
 // message string, or null if funds are sufficient.
 const MINT_NOT_LIVE = "$OWP is not live yet — the mint has not been set.";
+const MINT_NOT_ON_CHAIN = "The $OWP mint is not on mainnet yet.";
 
 async function insufficientFundsReason(
   connection: Connection,
   owner: PublicKey,
-  neededRibbitRaw: bigint
+  neededRibbitRaw: bigint,
+  program: PublicKey
 ): Promise<string | null> {
   if (!CLIENT_CONFIG.ribbitMint) return MINT_NOT_LIVE;
   const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
-  const ata = getAssociatedTokenAddressSync(mint, owner, false, TP);
+  const ata = getAssociatedTokenAddressSync(mint, owner, false, program);
   let balance = 0n;
   try {
     const b = await connection.getTokenAccountBalance(ata);
@@ -195,6 +192,11 @@ export function useChain() {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
 
+  const mintProgram = useCallback(async (): Promise<PublicKey | null> => {
+    if (!CLIENT_CONFIG.ribbitMint) return null;
+    return detectTokenProgram(connection, new PublicKey(CLIENT_CONFIG.ribbitMint));
+  }, [connection]);
+
   /** Burn $OWP from the user's wallet, then redeem play credits. */
   const burnForCredits = useCallback(
     async (ribbitAmount: number): Promise<ChainResult> => {
@@ -202,11 +204,14 @@ export function useChain() {
       if (!CLIENT_CONFIG.ribbitMint) return { ok: false, error: MINT_NOT_LIVE };
       try {
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
-        const ata = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
+        const program = await mintProgram();
+        if (!program) return { ok: false, error: MINT_NOT_ON_CHAIN };
+        const ata = getAssociatedTokenAddressSync(mint, publicKey, false, program);
         const shortfall = await insufficientFundsReason(
           connection,
           publicKey,
-          toRawClient(ribbitAmount)
+          toRawClient(ribbitAmount),
+          program
         );
         if (shortfall) return { ok: false, error: shortfall };
         const tx = new Transaction().add(
@@ -217,7 +222,7 @@ export function useChain() {
             toRawClient(ribbitAmount),
             CLIENT_CONFIG.ribbitDecimals,
             [],
-            TP
+            program
           )
         );
         return await sendAndRedeem(
@@ -229,7 +234,7 @@ export function useChain() {
         return { ok: false, error: e instanceof Error ? e.message : "Burn failed" };
       }
     },
-    [publicKey, sendTransaction, connection]
+    [publicKey, sendTransaction, connection, mintProgram]
   );
 
   /**
@@ -256,9 +261,11 @@ export function useChain() {
           // fall back to the build-time split; the server re-verifies anyway
         }
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
+        const program = await mintProgram();
+        if (!program) return { ok: false, error: MINT_NOT_ON_CHAIN };
         const treasury = new PublicKey(CLIENT_CONFIG.treasuryWallet);
-        const ata = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
-        const treasuryAta = getAssociatedTokenAddressSync(mint, treasury, true, TP);
+        const ata = getAssociatedTokenAddressSync(mint, publicKey, false, program);
+        const treasuryAta = getAssociatedTokenAddressSync(mint, treasury, true, program);
         // Split the payment; the burned side takes the rounding remainder so
         // burn + house exactly equals what the player intends to pay.
         const total = toRawClient(ribbitAmount);
@@ -267,7 +274,7 @@ export function useChain() {
         const burnRaw = total - houseRaw;
         if (burnRaw <= 0n || houseRaw <= 0n)
           return { ok: false, error: "Amount too small to split" };
-        const shortfall = await insufficientFundsReason(connection, publicKey, total);
+        const shortfall = await insufficientFundsReason(connection, publicKey, total, program);
         if (shortfall) return { ok: false, error: shortfall };
         const tx = new Transaction().add(
           createAssociatedTokenAccountIdempotentInstruction(
@@ -275,7 +282,7 @@ export function useChain() {
             treasuryAta,
             treasury,
             mint,
-            TP
+            program
           ),
           createBurnCheckedInstruction(
             ata,
@@ -284,7 +291,7 @@ export function useChain() {
             burnRaw,
             CLIENT_CONFIG.ribbitDecimals,
             [],
-            TP
+            program
           ),
           createTransferCheckedInstruction(
             ata,
@@ -294,7 +301,7 @@ export function useChain() {
             houseRaw,
             CLIENT_CONFIG.ribbitDecimals,
             [],
-            TP
+            program
           )
         );
         return await sendAndRedeem(
@@ -306,7 +313,7 @@ export function useChain() {
         return { ok: false, error: e instanceof Error ? e.message : "Purchase failed" };
       }
     },
-    [publicKey, sendTransaction, connection]
+    [publicKey, sendTransaction, connection, mintProgram]
   );
 
   /** Transfer $OWP to the treasury. It becomes withdrawable app balance. */
@@ -326,13 +333,16 @@ export function useChain() {
       if (!treasuryAddr) return { ok: false, error: "Treasury not configured yet" };
       try {
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
+        const program = await mintProgram();
+        if (!program) return { ok: false, error: MINT_NOT_ON_CHAIN };
         const treasury = new PublicKey(treasuryAddr);
-        const from = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
-        const to = getAssociatedTokenAddressSync(mint, treasury, true, TP);
+        const from = getAssociatedTokenAddressSync(mint, publicKey, false, program);
+        const to = getAssociatedTokenAddressSync(mint, treasury, true, program);
         const shortfall = await insufficientFundsReason(
           connection,
           publicKey,
-          toRawClient(ribbitAmount)
+          toRawClient(ribbitAmount),
+          program
         );
         if (shortfall) return { ok: false, error: shortfall };
         const tx = new Transaction().add(
@@ -341,7 +351,7 @@ export function useChain() {
             to,
             treasury,
             mint,
-            TP
+            program
           ),
           createTransferCheckedInstruction(
             from,
@@ -351,7 +361,7 @@ export function useChain() {
             toRawClient(ribbitAmount),
             CLIENT_CONFIG.ribbitDecimals,
             [],
-            TP
+            program
           )
         );
         return await sendAndRedeem(
@@ -363,7 +373,7 @@ export function useChain() {
         return { ok: false, error: e instanceof Error ? e.message : "Deposit failed" };
       }
     },
-    [publicKey, sendTransaction, connection]
+    [publicKey, sendTransaction, connection, mintProgram]
   );
 
   /**
@@ -378,13 +388,15 @@ export function useChain() {
       if (!CLIENT_CONFIG.ribbitMint) return { ok: false, error: MINT_NOT_LIVE };
       try {
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
+        const program = await mintProgram();
+        if (!program) return { ok: false, error: MINT_NOT_ON_CHAIN };
         const dest = new PublicKey(destination);
-        const from = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
-        const to = getAssociatedTokenAddressSync(mint, dest, true, TP);
-        const shortfall = await insufficientFundsReason(connection, publicKey, amountRaw);
+        const from = getAssociatedTokenAddressSync(mint, publicKey, false, program);
+        const to = getAssociatedTokenAddressSync(mint, dest, true, program);
+        const shortfall = await insufficientFundsReason(connection, publicKey, amountRaw, program);
         if (shortfall) return { ok: false, error: shortfall };
         const tx = new Transaction().add(
-          createAssociatedTokenAccountIdempotentInstruction(publicKey, to, dest, mint, TP),
+          createAssociatedTokenAccountIdempotentInstruction(publicKey, to, dest, mint, program),
           createTransferCheckedInstruction(
             from,
             mint,
@@ -393,7 +405,7 @@ export function useChain() {
             amountRaw,
             CLIENT_CONFIG.ribbitDecimals,
             [],
-            TP
+            program
           )
         );
         const signature = await sendTransaction(tx, connection);
@@ -417,8 +429,69 @@ export function useChain() {
         return { ok: false, error: e instanceof Error ? e.message : "Payout failed" };
       }
     },
+    [publicKey, sendTransaction, connection, mintProgram]
+  );
+
+  /**
+   * Pay SOL to the house wallet. The server prices $OWP at the pump.fun spot
+   * when the payment confirms, and the house wallet sends the tokens.
+   */
+  const buyOwpWithSol = useCallback(
+    async (sol: number): Promise<ChainResult> => {
+      if (!publicKey) return { ok: false, error: "Connect your wallet first" };
+      if (!Number.isFinite(sol) || sol < 0.01) return { ok: false, error: "Minimum buy is 0.01 SOL." };
+      if (sol > 50) return { ok: false, error: "Maximum buy is 50 SOL." };
+      try {
+        const priceRes = await fetch("/api/owp/price");
+        const price = await priceRes.json();
+        if (!price?.available) {
+          return { ok: false, error: price?.reason ?? "No pump.fun price yet." };
+        }
+        if (price.houseOwp === 0) {
+          return {
+            ok: false,
+            error: "The house wallet has no $OWP to sell right now. Tokens still sitting in the pump.fun curve are not part of this balance.",
+          };
+        }
+        if (price.houseOwp == null) {
+          return { ok: false, error: "Could not read the house wallet's $OWP balance." };
+        }
+        const lamports = BigInt(Math.round(sol * 1_000_000_000));
+        const owpRaw = owpRawForQuote(lamports, price);
+        const need = Number(owpRaw) / 10 ** price.decimals;
+        if (owpRaw <= 0n) return { ok: false, error: "That amount is too small to buy any $OWP." };
+        if (price.houseOwp < need) {
+          return { ok: false, error: "The house wallet doesn't hold enough $OWP for this amount." };
+        }
+        const treasuryAddr =
+          (typeof price.treasuryWallet === "string" && price.treasuryWallet) ||
+          CLIENT_CONFIG.treasuryWallet;
+        if (!treasuryAddr) return { ok: false, error: "The house wallet is not set." };
+        const solBal = await connection.getBalance(publicKey);
+        if (solBal < Number(lamports) + 1_000_000) {
+          return {
+            ok: false,
+            error: "Not enough SOL. The payment has to fit with a little left for the network fee.",
+          };
+        }
+        const tx = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: new PublicKey(treasuryAddr),
+            lamports: Number(lamports),
+          })
+        );
+        return await sendAndRedeem(
+          () => sendTransaction(tx, connection),
+          (sig) => connection.confirmTransaction(sig, "confirmed"),
+          "/api/owp/buy"
+        );
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "Buy failed" };
+      }
+    },
     [publicKey, sendTransaction, connection]
   );
 
-  return { burnForCredits, buyCredits, depositForBidding, payRibbit };
+  return { burnForCredits, buyCredits, depositForBidding, payRibbit, buyOwpWithSol };
 }

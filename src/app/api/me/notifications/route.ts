@@ -73,13 +73,16 @@ export const GET = handler(async () => {
   for (const w of payouts) {
     const amt = Math.round(fromRaw(w.amountRaw));
     const when = (w.processedAt ?? w.createdAt).toISOString();
+    const buy = w.kind === "buy";
     if (w.status === "sent") {
       items.push({
         id: `wd:${w.id}`,
         type: "payout_sent",
         time: when,
-        title: w.kind === "bounty" ? "Prize paid" : "Withdrawal sent",
-        body: `${fmt(amt)} $OWP landed in your wallet.`,
+        title: buy ? "$OWP purchased" : w.kind === "bounty" ? "Prize paid" : "Withdrawal sent",
+        body: buy
+          ? `${fmt(amt)} $OWP from your purchase is in your wallet.`
+          : `${fmt(amt)} $OWP landed in your wallet.`,
         amountRibbit: amt,
         href: "/account",
         tone: "neon",
@@ -90,8 +93,10 @@ export const GET = handler(async () => {
         id: `wd:${w.id}`,
         type: "payout_rejected",
         time: when,
-        title: "Withdrawal declined",
-        body: `Your ${fmt(amt)} $OWP withdrawal was declined and refunded to your balance.`,
+        title: buy ? "Purchase declined" : "Withdrawal declined",
+        body: buy
+          ? `The house declined this purchase of ${fmt(amt)} $OWP. The SOL stayed in the house wallet.`
+          : `Your ${fmt(amt)} $OWP withdrawal was declined and refunded to your balance.`,
         href: "/account",
         tone: "danger",
       });

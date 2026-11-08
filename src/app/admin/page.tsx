@@ -1019,8 +1019,10 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <div className="flex gap-1.5">
-                      <span className={`badge ${w.kind === "bounty" ? "badge-gold" : ""}`}>
-                        {w.kind === "bounty" ? "prize" : "withdrawal"}
+                      <span
+                        className={`badge ${w.kind === "bounty" ? "badge-gold" : w.kind === "buy" ? "badge-portal" : ""}`}
+                      >
+                        {w.kind === "bounty" ? "prize" : w.kind === "buy" ? "buy" : "withdrawal"}
                       </span>
                       {w.status === "processing" && (
                         <span className="badge badge-live">processing</span>
@@ -1047,7 +1049,9 @@ export default function AdminPage() {
                         act(
                           `/api/admin/withdrawals/${w.id}`,
                           { action: "reject" },
-                          "Reject and refund this payout?"
+                          w.kind === "buy"
+                            ? "Reject this buy? The SOL stays in the house wallet. Their app balance is not credited."
+                            : "Reject and refund this payout?"
                         )
                       }
                     >

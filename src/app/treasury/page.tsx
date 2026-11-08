@@ -230,15 +230,21 @@ export default function TreasuryPage() {
                           <span className="badge">{e.kind}</span>
                         </td>
                         <td className="py-2.5 pr-3 stat-number">
-                          {e.asset.startsWith("RIBBIT") || e.asset.startsWith("OWP")
-                            ? fmtRibbit(e.amount)
-                            : e.amount}{" "}
+                          {e.asset === "SOL"
+                            ? (Number(e.amount) / 1e9).toLocaleString(undefined, {
+                                maximumFractionDigits: 4,
+                              })
+                            : e.asset.startsWith("RIBBIT") || e.asset.startsWith("OWP")
+                              ? fmtRibbit(e.amount)
+                              : e.amount}{" "}
                           <span className="text-fog text-xs font-normal">
-                            {e.asset.startsWith("RIBBIT") || e.asset.startsWith("OWP")
-                              ? e.asset.includes("BURN")
-                                ? "$OWP burned"
-                                : "$OWP"
-                              : e.asset}
+                            {e.asset === "SOL"
+                              ? "SOL"
+                              : e.asset.startsWith("RIBBIT") || e.asset.startsWith("OWP")
+                                ? e.asset.includes("BURN")
+                                  ? "$OWP burned"
+                                  : "$OWP"
+                                : e.asset}
                           </span>
                         </td>
                         <td className="py-2.5 pr-3 text-fog">{e.note}</td>

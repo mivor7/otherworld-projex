@@ -56,10 +56,14 @@ export const POST = handler(
           data: { status: "rejected", processedAt: new Date() },
         });
         if (claimed.count === 0) return false;
-        await tx.user.update({
-          where: { id: wd.userId },
-          data: { ribbitBalance: { increment: wd.amountRaw } },
-        });
+        // A buy paid SOL, not app balance. Rejecting it must not credit
+        // ribbitBalance. The SOL stays in the house wallet.
+        if (wd.kind !== "buy") {
+          await tx.user.update({
+            where: { id: wd.userId },
+            data: { ribbitBalance: { increment: wd.amountRaw } },
+          });
+        }
         return true;
       });
       if (!refunded) return err("Already processed by another action", 409);
@@ -88,7 +92,10 @@ export const POST = handler(
           kind: "payout",
           amount: wd.amountRaw,
           asset: "RIBBIT",
-          note: `Withdrawal to ${wd.destination.slice(0, 4)}…`,
+          note:
+            wd.kind === "buy"
+              ? `Sold $OWP to ${wd.destination.slice(0, 4)}…`
+              : `Withdrawal to ${wd.destination.slice(0, 4)}…`,
           ref: data.signature,
         },
       });

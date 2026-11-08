@@ -1,13 +1,15 @@
-// Payout worker — pays queued $OWP withdrawals/prizes from a DEDICATED
-// hot wallet (a float the owners top up), NEVER the treasury key. Run it OFF
-// the web server (ops box, or a locked-down container) so no deployment ever
-// holds a private key:
+// Payout worker — sends queued $OWP from the house wallet. That wallet is
+// the same one that receives deposits and SOL buys: admin, treasury, and
+// payout are one key. Run this OFF the web server so Vercel never holds
+// the private key:
 //
-//   PAYOUT_KEYPAIR_PATH=~/payout-hot-wallet.json node scripts/payout-worker.mjs
+//   PAYOUT_WALLET_KEY='[...]' node scripts/payout-worker.mjs
 //
 // Safety rails:
-//   - MAX_PAYOUT_RIBBIT per withdrawal (default 1,000,000) — bigger ones wait
-//     for a human in /admin.
+//   - MAX_PAYOUT_OWP per withdrawal or prize (default 1,000,000 whole tokens).
+//   - MAX_BUY_OWP per SOL purchase (default 1,000,000,000). A launch-curve
+//     buy of a fraction of a SOL is already more than the withdrawal cap.
+//   - Bigger rows wait for a human in /admin.
 //   - Marks the row "sent" with the tx signature before moving on; re-running
 //     never double-pays.
 import fs from "node:fs";
@@ -24,34 +26,18 @@ import {
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
-// $OWP is an SPL Token-2022 mint — pass its program id to every ATA
-// derivation and transfer or the payout targets the wrong account/program.
-const TP = TOKEN_2022_PROGRAM_ID;
-
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
-const MINT_ADDRESS = process.env.OWP_MINT ?? "";
-if (!MINT_ADDRESS) {
-  console.error(
-    "Set OWP_MINT to the $OWP mint before running the payout worker. The retired Ribbit mint is not a fallback."
-  );
-  process.exit(1);
-}
+// Public mint. OWP_MINT overrides it. The retired Ribbit mint is not a fallback.
+const OWP_MINT_FALLBACK = "GE8JGUE6ssrnFh4FSv9iwniYCwucB15PupT97uVRpump";
+const MINT_ADDRESS = process.env.OWP_MINT || OWP_MINT_FALLBACK;
 const MINT = new PublicKey(MINT_ADDRESS);
-const DECIMALS = Number(process.env.OWP_DECIMALS ?? process.env.RIBBIT_DECIMALS ?? 6);
-const MAX_PAYOUT = BigInt(
-  Math.round(
-    Number(process.env.MAX_PAYOUT_OWP ?? process.env.MAX_PAYOUT_RIBBIT ?? 1_000_000) *
-      10 ** DECIMALS
-  )
-);
 const INTERVAL_MS = Number(process.env.PAYOUT_INTERVAL_MS ?? 15_000);
 
-// The worker signs with a dedicated PAYOUT HOT WALLET — NOT the treasury.
-// Keep only a working float in it, topped up from the treasury (ideally a
-// cold/multisig). That way the treasury key never lives on this box, and the
-// most this process could ever move is the hot-wallet balance.
+// The signer is the house wallet (the same key as admin / treasury / Phantom).
+// It can move the whole treasury. Keep it on this box only — never in Vercel.
 //
 // Key material, in order of preference (never log it, never write it back out):
 //   1. PAYOUT_WALLET_KEY        — the keypair JSON array itself, via env /
@@ -78,7 +64,7 @@ if (!secretJson) {
     "No payout hot-wallet key. Provide ONE of: PAYOUT_WALLET_KEY (the keypair " +
       "JSON array, via env/secrets manager), a systemd credential named " +
       "'payout-wallet' (LoadCredential), or PAYOUT_KEYPAIR_PATH (key file). " +
-      "Use a SEPARATE hot wallet funded from the treasury — never the treasury key."
+      "This key is the house wallet. Do not put it in Vercel."
   );
   process.exit(1);
 }
@@ -93,14 +79,52 @@ try {
 
 const prisma = new PrismaClient();
 const connection = new Connection(RPC, "confirmed");
-const fromAta = getAssociatedTokenAddressSync(MINT, signer.publicKey, true, TP);
 
 const payoutWallet = signer.publicKey.toBase58();
-console.log(`Payout worker up. Hot wallet: ${payoutWallet}`);
-if (process.env.TREASURY_WALLET && process.env.TREASURY_WALLET === payoutWallet) {
-  console.log(
-    "Single-wallet mode: this signer is the treasury. Deposits land here and withdrawals leave from here."
+console.log(`Payout worker up. Wallet: ${payoutWallet}. Mint: ${MINT_ADDRESS}`);
+if (process.env.TREASURY_WALLET && process.env.TREASURY_WALLET !== payoutWallet) {
+  console.warn(
+    "TREASURY_WALLET differs from this signer. The house is meant to be one wallet."
   );
+} else {
+  console.log("Single-wallet mode: deposits, SOL buys, and payouts use this signer.");
+}
+
+// The mint account's owner is the token program. Until that account exists,
+// payouts wait in the queue instead of this process exiting.
+let mintReady = false;
+let tokenProgram = null;
+let decimals = Number(process.env.OWP_DECIMALS ?? process.env.RIBBIT_DECIMALS ?? 6);
+let fromAta = null;
+
+async function ensureMint() {
+  if (mintReady) return true;
+  try {
+    const info = await connection.getAccountInfo(MINT);
+    if (!info || info.data.length < 45) {
+      console.error("$OWP mint account is not on mainnet yet — payouts wait.");
+      return false;
+    }
+    const owner = info.owner.toBase58();
+    if (owner === TOKEN_PROGRAM_ID.toBase58()) tokenProgram = TOKEN_PROGRAM_ID;
+    else if (owner === TOKEN_2022_PROGRAM_ID.toBase58()) tokenProgram = TOKEN_2022_PROGRAM_ID;
+    else {
+      console.error(`$OWP mint owner ${owner} is not a token program — payouts wait.`);
+      return false;
+    }
+    decimals = info.data[44];
+    fromAta = getAssociatedTokenAddressSync(MINT, signer.publicKey, true, tokenProgram);
+    mintReady = true;
+    console.log(`$OWP mint ready. Decimals ${decimals}. Program ${owner}.`);
+    return true;
+  } catch (e) {
+    console.error(`mint lookup failed: ${e.message}`);
+    return false;
+  }
+}
+
+function wholeToRaw(whole) {
+  return BigInt(Math.round(Number(whole) * 10 ** decimals));
 }
 
 // Rows stuck in "processing" mean a previous run died between sending and
@@ -115,6 +139,9 @@ for (const wd of limbo) {
 }
 
 async function processQueue() {
+  if (!(await ensureMint())) return;
+  const maxPayout = wholeToRaw(process.env.MAX_PAYOUT_OWP ?? process.env.MAX_PAYOUT_RIBBIT ?? 1_000_000);
+  const maxBuy = wholeToRaw(process.env.MAX_BUY_OWP ?? 1_000_000_000);
   // Admin kill switch: the queue keeps accepting requests, but nothing is
   // claimed or sent while payouts are paused from the House controls panel.
   const paused = await prisma.houseSetting.findUnique({
@@ -131,8 +158,11 @@ async function processQueue() {
   });
 
   for (const wd of pending) {
-    if (wd.amountRaw > MAX_PAYOUT) {
-      console.log(`↷ ${wd.id}: above MAX_PAYOUT, leaving for manual review`);
+    const cap = wd.kind === "buy" ? maxBuy : maxPayout;
+    if (wd.amountRaw > cap) {
+      console.log(
+        `↷ ${wd.id}: above ${wd.kind === "buy" ? "MAX_BUY_OWP" : "MAX_PAYOUT"}, leaving for manual review`
+      );
       continue;
     }
     // Claim the row BEFORE touching the chain — if an admin rejected (and
@@ -148,13 +178,13 @@ async function processQueue() {
     }
     try {
       const dest = new PublicKey(wd.destination);
-      const toAta = getAssociatedTokenAddressSync(MINT, dest, true, TP);
+      const toAta = getAssociatedTokenAddressSync(MINT, dest, true, tokenProgram);
       const tx = new Transaction().add(
         createAssociatedTokenAccountIdempotentInstruction(
-          signer.publicKey, toAta, dest, MINT, TP
+          signer.publicKey, toAta, dest, MINT, tokenProgram
         ),
         createTransferCheckedInstruction(
-          fromAta, MINT, toAta, signer.publicKey, wd.amountRaw, DECIMALS, [], TP
+          fromAta, MINT, toAta, signer.publicKey, wd.amountRaw, decimals, [], tokenProgram
         )
       );
       // Hard ceiling: the public RPC can hang indefinitely (it wedged the
@@ -188,7 +218,9 @@ async function processQueue() {
             note:
               wd.kind === "bounty"
                 ? `Bounty prize → ${wd.destination.slice(0, 4)}…`
-                : `Withdrawal to ${wd.destination.slice(0, 4)}…`,
+                : wd.kind === "buy"
+                  ? `Sold $OWP to ${wd.destination.slice(0, 4)}…`
+                  : `Withdrawal to ${wd.destination.slice(0, 4)}…`,
             ref: signature,
           },
         }),

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHero } from "@/components/hero";
 import { Reveal } from "@/components/reveal";
 import { ActivityTicker } from "@/components/activity-ticker";
+import { BuyOwp } from "@/components/buy-owp";
 import { CopyChip } from "@/components/copy-chip";
 import { MatteMedia } from "@/components/matte-media";
 import { prisma } from "@/lib/db";
@@ -120,7 +121,10 @@ export default async function Home() {
         }
         actions={
           <>
-            <Link href="/games" className="btn btn-primary btn-lg" data-magnetic>
+            <Link href="#buy" className="btn btn-primary btn-lg" data-magnetic>
+              Buy $OWP
+            </Link>
+            <Link href="/games" className="btn btn-ghost btn-lg" data-magnetic>
               Enter the arcade
             </Link>
             <Link href="/auctions" className="btn btn-ghost btn-lg" data-magnetic>
@@ -142,6 +146,8 @@ export default async function Home() {
         ]}
         brand
       />
+
+      <BuyOwp />
 
       <ActivityTicker />
 
@@ -357,11 +363,10 @@ export default async function Home() {
               <div className="kicker mb-2">Settlement currency</div>
               <h2 className="text-[1.5rem] mb-3">$OWP</h2>
               <p className="text-fog text-[0.9375rem] leading-relaxed max-w-lg mb-5">
-                $OWP is the balance. Deposit it, play and bid with it, and
-                withdraw it. Bounty pools pay in the same token, automatically.
-                {CLIENT_CONFIG.ribbitMint
-                  ? " The live mint is below."
-                  : " The contract is published here the moment $OWP launches."}
+                $OWP is the balance. Buy it from the house wallet at the live
+                pump.fun price, deposit it, play and bid with it, and withdraw
+                it. Bounty pools pay in the same token, automatically. The live
+                mint is below.
               </p>
               {CLIENT_CONFIG.ribbitMint && (
                 <div className="flex items-center gap-2 flex-wrap mb-6">
@@ -375,9 +380,12 @@ export default async function Home() {
                 </div>
               )}
               <div className="flex flex-wrap gap-2.5">
+                <a href="#buy" className="btn btn-primary">
+                  Buy from the house
+                </a>
                 {CLIENT_CONFIG.pumpFunUrl && (
-                  <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
-                    Acquire on pump.fun ↗
+                  <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                    pump.fun ↗
                   </a>
                 )}
                 <a href={CLIENT_CONFIG.xUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
