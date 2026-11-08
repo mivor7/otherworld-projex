@@ -30,6 +30,22 @@ import {
 } from "@solana/spl-token";
 
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
+const RPC_FALLBACKS = [
+  "https://solana-rpc.publicnode.com",
+  "https://api.mainnet-beta.solana.com",
+];
+function rpcFetch(primary) {
+  const urls = [...new Set([primary, ...RPC_FALLBACKS])];
+  return async (_input, init) => {
+    let last = null;
+    for (const url of urls) {
+      const res = await fetch(url, init);
+      if (res.status !== 403 && res.status !== 429) return res;
+      last = res;
+    }
+    return last;
+  };
+}
 // Public mint. OWP_MINT overrides it. The retired Ribbit mint is not a fallback.
 const OWP_MINT_FALLBACK = "GE8JGUE6ssrnFh4FSv9iwniYCwucB15PupT97uVRpump";
 const MINT_ADDRESS = process.env.OWP_MINT || OWP_MINT_FALLBACK;
@@ -78,7 +94,10 @@ try {
 }
 
 const prisma = new PrismaClient();
-const connection = new Connection(RPC, "confirmed");
+const connection = new Connection(RPC, {
+  commitment: "confirmed",
+  fetch: rpcFetch(RPC),
+});
 
 const payoutWallet = signer.publicKey.toBase58();
 console.log(`Payout worker up. Wallet: ${payoutWallet}. Mint: ${MINT_ADDRESS}`);

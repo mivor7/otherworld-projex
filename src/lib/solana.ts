@@ -10,6 +10,7 @@ import {
 } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { CONFIG } from "./config";
+import { rpcFetch } from "./rpc";
 import { detectTokenProgram } from "./token-program";
 
 // SOL a website buy will accept. The house prices the $OWP; the buyer pays SOL.
@@ -18,7 +19,12 @@ export const MAX_BUY_LAMPORTS = 50_000_000_000n; // 50 SOL
 
 let _conn: Connection | null = null;
 export function connection(): Connection {
-  if (!_conn) _conn = new Connection(CONFIG.rpcUrl, "confirmed");
+  if (!_conn) {
+    _conn = new Connection(CONFIG.rpcUrl, {
+      commitment: "confirmed",
+      fetch: rpcFetch(CONFIG.rpcUrl),
+    });
+  }
   return _conn;
 }
 
