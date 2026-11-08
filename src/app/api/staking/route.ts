@@ -12,8 +12,9 @@ import { poolSnapshot } from "@/lib/staking";
 export const dynamic = "force-dynamic";
 
 export const GET = handler(async () => {
+  if (!CONFIG.stakePool) return ok({ pool: null, you: null, configured: false });
   const [session, snap] = await Promise.all([getSession(), poolSnapshot()]);
-  if (!snap) return ok({ pool: null, you: null });
+  if (!snap) return ok({ pool: null, you: null, configured: true });
 
   let you: { stakedRibbit: number; unlockAt: string | null } | null = null;
   if (session) {
@@ -29,6 +30,7 @@ export const GET = handler(async () => {
   }
 
   return ok({
+    configured: true,
     pool: {
       address: CONFIG.stakePool,
       streamflowUrl: `https://app.streamflow.finance/staking/solana/mainnet/${CONFIG.stakePool}`,

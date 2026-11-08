@@ -178,7 +178,7 @@ export default function AuctionDetailPage({
                   )}
                 </div>
                 <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
-                  $RIBBIT
+                  $OWP
                 </div>
               </div>
               <div className="text-right">
@@ -251,7 +251,7 @@ export default function AuctionDetailPage({
                     <p className="text-gold">
                       Not enough bidding balance —{" "}
                       <Link href="/auctions" className="text-neon hover:underline">
-                        deposit $RIBBIT
+                        deposit $OWP
                       </Link>{" "}
                       to place this bid.
                     </p>

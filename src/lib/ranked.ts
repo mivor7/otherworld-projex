@@ -1,6 +1,6 @@
 // Prize-board eligibility helpers — one source of truth for the
 // skin-in-the-game rules:
-//   1. lifetime $RIBBIT spent on credits ≥ RANKED_MIN_BURNED_RIBBIT, and
+//   1. lifetime $OWP spent on credits ≥ RANKED_MIN_BURNED_RIBBIT, and
 //   2. spend INSIDE the board window ≥ RANKED_MIN_WINDOW_BURNED_RIBBIT
 // "Spend" counts BOTH pure burns AND credit purchases (a buyer is a spender —
 // they burn part and pay the house the rest; both are skin in the game). Rule
@@ -11,7 +11,7 @@ import { CONFIG, toRaw } from "./config";
 import { houseConfig } from "./settings";
 
 /**
- * Total $RIBBIT a user has committed to credits (burns + buys), optionally
+ * Total $OWP a user has committed to credits (burns + buys), optionally
  * restricted to a window. Buys count their full amount — the whole payment is
  * real spend, regardless of the burn/house split.
  */

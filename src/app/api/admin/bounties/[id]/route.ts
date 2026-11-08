@@ -1,6 +1,6 @@
 // Manage one bounty: edit it, close it early, cancel it, delete it, or award
 // & pay the prize. Awarding recomputes the authoritative ranking server-side
-// and queues real $RIBBIT payouts — see lib/bounty.awardBounty. Editing the
+// and queues real $OWP payouts — see lib/bounty.awardBounty. Editing the
 // prize of an auto-pay credit-game bounty re-derives its spend trigger, so
 // the house-margin guarantee always holds.
 import { z } from "zod";

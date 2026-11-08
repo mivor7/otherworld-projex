@@ -97,10 +97,10 @@ export function PageHero({
             <div className="page-hero-brand-card">
               <div className="page-hero-brand-mark">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/art/ribbit-mark.jpg" alt="" />
+                <img src="/art/logo.png" alt="" />
               </div>
               <div>
-                <span className="page-hero-brand-name">$RIBBIT</span>
+                <span className="page-hero-brand-name">$OWP</span>
                 <span className="page-hero-brand-line">Settlement currency</span>
               </div>
             </div>

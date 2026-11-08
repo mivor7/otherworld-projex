@@ -65,7 +65,7 @@ function LotCard({ a, now }: { a: AuctionRow; now: number }) {
               {BigInt(a.currentRaw) > 0n ? "Current bid" : "Opening bid"}
             </div>
             <div className="price text-neon">
-              {fmtRibbit(current)} <span className="text-fog text-xs font-normal">RIBBIT</span>
+              {fmtRibbit(current)} <span className="text-fog text-xs font-normal">$OWP</span>
             </div>
           </div>
           <div className="text-right">
@@ -174,7 +174,7 @@ export default function AuctionsPage() {
         badge={`${live.length} lots live`}
         title="The"
         titleAccent="Auction House"
-        subtitle="Escrowed $RIBBIT bids, instant refunds when outbid, two-minute anti-snipe closings. Community members consign their own lots."
+        subtitle="Escrowed $OWP bids, instant refunds when outbid, two-minute anti-snipe closings. Community members consign their own lots."
         actions={
           <Link href="/auctions/apply" className="btn btn-portal">
             Apply to consign a lot
@@ -245,7 +245,7 @@ export default function AuctionsPage() {
           <div className="kicker mb-3">Bidding account</div>
           {!me.signedIn ? (
             <Notice kind="info">
-              Connect &amp; sign in to deposit $RIBBIT and bid on lots.
+              Connect &amp; sign in to deposit $OWP and bid on lots.
             </Notice>
           ) : (
             <>
@@ -263,7 +263,7 @@ export default function AuctionsPage() {
                   </div>
                 </div>
               </div>
-              <label className="kicker !text-[0.6rem]">Deposit $RIBBIT</label>
+              <label className="kicker !text-[0.6rem]">Deposit $OWP</label>
               <div className="flex gap-2 mt-1.5 mb-2.5">
                 <input
                   type="number"

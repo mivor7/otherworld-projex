@@ -1,4 +1,4 @@
-# Taking over Other World Projex ($RIBBIT)
+# Taking over Other World Projex ($OWP)
 
 A practical handoff for the next developer. This is the **operator's guide** — the
 non-obvious knowledge, mental models, and runbook. For the product/architecture
@@ -6,9 +6,9 @@ overview read `README.md`; for the raw deploy checklist read `DEPLOY.md`; every
 env var is documented in `.env.example`. This file is what those don't tell you.
 
 **What it is:** a production Solana gaming app. Users buy play-credits with the
-$RIBBIT token (part burned, part to the house treasury), play provably-fair
+$OWP token (part burned, part to the house treasury), play provably-fair
 games (Frog Flip, Pond Dice, Blackjack, plus free arcade games Hopper / Frogris
-/ Worm), bid in auctions, and hunt fixed-prize bounties paid in real $RIBBIT.
+/ Worm), bid in auctions, and hunt fixed-prize bounties paid in real $OWP.
 It is **live in production** on Vercel + Neon + Solana mainnet.
 
 **Stack:** Next.js 16 (App Router) · TypeScript · Tailwind 4 · Prisma 6 +
@@ -23,16 +23,23 @@ These are the things that are NOT obvious from the code and will cost you a day
 each if you learn them the hard way. They are why the app broke repeatedly during
 its build-out.
 
-### 1.1 $RIBBIT is an SPL **Token-2022** token — not a classic SPL token
-This is the single biggest gotcha. The mint
-`EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump` is owned by the Token-2022
-program (`TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`), **not** the classic
-Token program. Every `@solana/spl-token` call — `getAssociatedTokenAddressSync`,
-transfer/burn instructions, ATA creation — **must** be passed
-`TOKEN_2022_PROGRAM_ID`. If you omit it, the SDK silently defaults to the classic
-program, derives the wrong ATA, and the transaction fails on-chain with
-`InvalidAccountData`. This affects `src/components/use-chain.ts`, `src/lib/solana.ts`,
-and `scripts/payout-worker.mjs`. When in doubt, `simulateTransaction` against
+### 1.1 $OWP is an SPL **Token-2022** token — not a classic SPL token
+This is the single biggest gotcha. $OWP is not launched yet, so the repo has
+**no mint address baked in**. Set `OWP_MINT` (server, payout worker) and
+`NEXT_PUBLIC_OWP_MINT` (browser, baked at build time) when the token exists.
+Do not point either at the retired Ribbit mint
+`EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump`. Until those vars are set, chip
+sales, deposits, waitlist balance checks, and the payout worker stay closed.
+
+The new mint will be owned by the Token-2022 program
+(`TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`), **not** the classic Token
+program — same as the retired one. Every `@solana/spl-token` call —
+`getAssociatedTokenAddressSync`, transfer/burn instructions, ATA creation —
+**must** be passed `TOKEN_2022_PROGRAM_ID`. If you omit it, the SDK silently
+defaults to the classic program, derives the wrong ATA, and the transaction
+fails on-chain with `InvalidAccountData`. This affects
+`src/components/use-chain.ts`, `src/lib/solana.ts`, and
+`scripts/payout-worker.mjs`. When in doubt, `simulateTransaction` against
 mainnet — classic fails, 2022 succeeds.
 
 ### 1.2 This is a **modified** Next.js 16 (see `AGENTS.md` / `CLAUDE.md`)
@@ -88,10 +95,10 @@ data. Prefer a separate Neon branch for development.
 ## 3. The mental models
 
 ### 3.1 The economy (money in)
-- Users **buy credits** with $RIBBIT in one on-chain transaction. The purchase
+- Users **buy credits** with $OWP in one on-chain transaction. The purchase
   is split: `BUY_BURN_SHARE` (default 50%) is **burned** (deflation), the rest
   is transferred to the **treasury** as real house revenue. Price is
-  `RIBBIT_PER_CREDIT` (default 100 $RIBBIT / credit).
+  `RIBBIT_PER_CREDIT` (default 100 $OWP / credit).
 - Pure **burn-for-credits** (100% burn, no treasury) remains as a fallback and
   works even before a treasury is configured.
 - Every burn/deposit is **verified on-chain** server-side (the client POSTs a tx
@@ -111,7 +118,7 @@ This is the most-iterated, most-subtle subsystem. The final design:
   **seed** (`Bounty.seedRibbit`, the house's declared head start = its only
   cost per fill). The pot earns
   `bountyPotShare × houseEdge × (1 − buyBurnShare) × ribbitPerCredit`
-  $RIBBIT per credit wagered — its share of the edge the house actually
+  $OWP per credit wagered — its share of the edge the house actually
   collects — and pays the moment it reaches the prize. If the bounty's
   **`autoRenew`** switch is on (the default; editable live in the admin
   create/edit forms) a fresh round opens automatically with the same
@@ -188,7 +195,7 @@ program/            Anchor treasury vault (SOL custody, daily cap, multisig)
 **`src/lib/` — where the logic lives:**
 | File | Responsibility |
 | --- | --- |
-| `config.ts` / `client-config.ts` | env → typed config; `toRaw`/`fromRaw` (6-dp $RIBBIT) |
+| `config.ts` / `client-config.ts` | env → typed config; `toRaw`/`fromRaw` (6-dp $OWP) |
 | `settings.ts` | `houseConfig()` — live-tunable settings (HouseSetting table, 10s cache) |
 | `db.ts` | Prisma client + `jsonSafe` (BigInt-safe JSON) |
 | `api.ts` | `handler`/`ok`/`err`/`requireSession`/`requireAdmin` wrappers |
@@ -356,7 +363,7 @@ first line of defense; the smoke test is the second.
 - **Gambling compliance is jurisdiction-specific.** Burn-to-play with credit
   prizes is a legal gray area in many places — get advice before marketing this
   as real-money gaming.
-- **Treasury solvency is a manual responsibility.** Keep enough $RIBBIT in the
+- **Treasury solvency is a manual responsibility.** Keep enough $OWP in the
   treasury to cover queued withdrawals and bounty pools; `/treasury` shows both
   sides.
 

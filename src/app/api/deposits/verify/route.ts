@@ -1,4 +1,4 @@
-// Auction bidding balance: users transfer $RIBBIT to the treasury's token
+// Auction bidding balance: users transfer $OWP to the treasury's token
 // account from their own wallet, then submit the tx signature. Verified
 // deposits credit the in-app bidding balance 1:1.
 import { z } from "zod";
@@ -27,7 +27,7 @@ export const POST = handler(async (req: Request) => {
   const amountRaw = await verifyDepositTx(signature, session.wallet);
   if (amountRaw === null) {
     return err(
-      "Could not verify a $RIBBIT transfer to the treasury in that transaction",
+      "Could not verify a $OWP transfer to the treasury in that transaction",
       422
     );
   }

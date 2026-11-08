@@ -419,7 +419,7 @@ export default function FairnessPage() {
           server</strong>, which recomputes the score itself and rejects
           anything that doesn&apos;t reproduce — including runs faster than
           real time. Leaderboard and bounty placements only count for wallets
-          with real $RIBBIT credit spend behind them.
+          with real $OWP credit spend behind them.
         </p>
       </div>
     </div>

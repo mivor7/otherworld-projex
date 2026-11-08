@@ -154,7 +154,7 @@ export default function LeaderboardPage() {
       <p className="text-xs mt-4 leading-relaxed max-w-lg" style={{ color: "var(--text-dim)" }}>
         <span className="text-neon">Skin in the game:</span> prize boards rank
         wallets with {""}
-        {house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT spent on
+        {house.rankedMinBurnedRibbit.toLocaleString()}+ $OWP spent on
         credits lifetime and {house.rankedMinWindowBurnedRibbit.toLocaleString()}+
         spent inside the board week (table boards also need in-window wagering
         volume). Anyone can play; buying credits mid-week ranks your best score

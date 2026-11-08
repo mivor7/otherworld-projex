@@ -98,7 +98,7 @@ export default function BountiesPage() {
         badge={house.inviteRequired ? "Invite-only beta" : "The hunt is always open"}
         title="Bounties &"
         titleAccent="competitions"
-        subtitle="Fixed $RIBBIT pools, pre-funded by the house. Table bounties unlock as their game gets played; free episodes pay weekly. Every eligible winner shares the pool — paid automatically."
+        subtitle="Fixed $OWP pools, pre-funded by the house. Table bounties unlock as their game gets played; free episodes pay weekly. Every eligible winner shares the pool — paid automatically."
       />
 
       {totals && (
@@ -106,13 +106,13 @@ export default function BountiesPage() {
           <span>
             <span className="kicker !text-[0.6rem] mr-3">On the board now</span>
             <span className="stat-number text-neon">
-              {fmtRibbit(totals.openPrizeRaw)} $RIBBIT
+              {fmtRibbit(totals.openPrizeRaw)} $OWP
             </span>
           </span>
           <span>
             <span className="kicker !text-[0.6rem] mr-3">Paid to hunters</span>
             <span className="stat-number text-gold">
-              {fmtRibbit(totals.paidOutRaw)} $RIBBIT
+              {fmtRibbit(totals.paidOutRaw)} $OWP
             </span>
           </span>
           <span className="text-xs" style={{ color: "var(--text-dim)" }}>
@@ -184,7 +184,7 @@ export default function BountiesPage() {
                 <div className="min-w-0">
                   <div className="flex gap-1.5 mb-2.5 flex-wrap">
                     <span className="badge badge-gold">
-                      {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`}
+                      {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $OWP`}
                     </span>
                     <span className="badge">{b.kind}</span>
                     {b.game && (
@@ -235,7 +235,7 @@ export default function BountiesPage() {
                     </span>
                     <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
                       {b.progress.potRibbit != null
-                        ? `pot ${b.progress.potRibbit.toLocaleString()} / ${b.progress.targetRibbit?.toLocaleString()} $RIBBIT · ${b.progress.pct}%`
+                        ? `pot ${b.progress.potRibbit.toLocaleString()} / ${b.progress.targetRibbit?.toLocaleString()} $OWP · ${b.progress.pct}%`
                         : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} chips · ${b.progress.pct}%`}
                     </span>
                   </div>
@@ -254,7 +254,7 @@ export default function BountiesPage() {
                   </div>
                   <p className="text-xs mt-1.5" style={{ color: "var(--text-dim)" }}>
                     The pot grows with every chip wagered — its share of the house edge. The
-                    moment it reaches {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`} it pays
+                    moment it reaches {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $OWP`} it pays
                     out automatically, split across all eligible winners by how well they did — and a
                     fresh pot opens.
                   </p>
@@ -296,7 +296,7 @@ export default function BountiesPage() {
                         </span>
                       )}
                       <span className="text-fog text-sm ml-3">
-                        {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $RIBBIT`}
+                        {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $OWP`}
                       </span>
                     </div>
                   </div>
@@ -349,9 +349,9 @@ export default function BountiesPage() {
           )}
           <p className="text-xs mt-4 leading-relaxed" style={{ color: "var(--text-dim)" }}>
             Arcade boards rank best score; the tables rank net chips won.
-            Pools pay in $RIBBIT the moment a bounty triggers.{" "}
+            Pools pay in $OWP the moment a bounty triggers.{" "}
             <span className="text-neon">Prize boards rank active spenders only</span> —{" "}
-            {house.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT
+            {house.rankedMinBurnedRibbit.toLocaleString()}+ $OWP
             spent on chips lifetime and{" "}
             {house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside
             the board week (a rolling 7 days). Anyone can play free; only spenders collect.
@@ -386,7 +386,7 @@ export default function BountiesPage() {
                   <span className="mono text-neon text-sm shrink-0 pt-0.5">01</span>
                   <p className="text-sm text-fog leading-relaxed">
                     <span className="text-frost font-medium">⛁ Chips only travel one way.</span>{" "}
-                    {`${price.toLocaleString()} $RIBBIT buys one chip. Chips play the tables — blackjack, dice, flip — and never convert back to $RIBBIT. Winning $RIBBIT here happens through the bounty pots, and playing with chips is what enters you. (The free arcade never touches chips.)`}
+                    {`${price.toLocaleString()} $OWP buys one chip. Chips play the tables — blackjack, dice, flip — and never convert back to $OWP. Winning $OWP here happens through the bounty pots, and playing with chips is what enters you. (The free arcade never touches chips.)`}
                   </p>
                 </li>
                 <li className="flex gap-4">
@@ -406,13 +406,13 @@ export default function BountiesPage() {
               </ol>
 
               <p className="text-xs text-fog mt-6 max-w-3xl">
-                {`The arcade is a different world: free, no chips, ever. When an episode is live the week's best verified scores split a $RIBBIT pool at the deadline — no live episode means scores are just for bragging until the next one opens.`}
+                {`The arcade is a different world: free, no chips, ever. When an episode is live the week's best verified scores split a $OWP pool at the deadline — no live episode means scores are just for bragging until the next one opens.`}
               </p>
 
               <div className="panel p-4 mt-6 max-w-3xl">
                 <div className="kicker !text-[0.6rem] mb-2">For the auditors — the exact live numbers</div>
                 <p className="mono text-[0.72rem] leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                  {`chip price ${price.toLocaleString()} $RIBBIT · of every chip purchase ${burnPct}% is burned forever and ${100 - burnPct}% funds the treasury · table edge ${edgePct}% · the pot's share ${potPct}% of the take → the open pot climbs ${rate} $RIBBIT per chip wagered. Example: a 4,000 $RIBBIT pot opening on a 2,000 house seed needs ${Math.ceil(2000 / rate).toLocaleString()} chips of play across all players, then it pays. All values are read live from the house settings.`}
+                  {`chip price ${price.toLocaleString()} $OWP · of every chip purchase ${burnPct}% is burned forever and ${100 - burnPct}% funds the treasury · table edge ${edgePct}% · the pot's share ${potPct}% of the take → the open pot climbs ${rate} $OWP per chip wagered. Example: a 4,000 $OWP pot opening on a 2,000 house seed needs ${Math.ceil(2000 / rate).toLocaleString()} chips of play across all players, then it pays. All values are read live from the house settings.`}
                 </p>
                 <Link href="/fairness" className="text-neon hover:underline text-xs inline-block mt-2">
                   Verify the fairness →

@@ -1,4 +1,4 @@
-// Auction engine. Bids spend from the user's deposited $RIBBIT balance;
+// Auction engine. Bids spend from the user's deposited $OWP balance;
 // the high bid stays locked, outbid amounts unlock instantly. Settlement is
 // lazy (checked on read) so no cron is required, and an anti-snipe window
 // extends any auction that receives a bid in its final minutes.
@@ -139,7 +139,7 @@ export async function placeBid(
       throw new ApiError(
         `Bid must be at least ${fromRaw(minBid).toLocaleString(undefined, {
           maximumFractionDigits: 2,
-        })} $RIBBIT`
+        })} $OWP`
       );
     }
 
@@ -160,7 +160,7 @@ export async function placeBid(
     `;
     if (locked === 0) {
       throw new ApiError(
-        "Insufficient deposited $RIBBIT — deposit more to bid",
+        "Insufficient deposited $OWP — deposit more to bid",
       );
     }
 

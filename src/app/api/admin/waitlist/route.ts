@@ -1,6 +1,6 @@
 // The airdrop waitlist, for the admin console. Positions and referral counts
 // are members' EARNED place (imported snapshot — scripts/import-waitlist.mjs);
-// signup required holding 250k $RIBBIT; the airdrop is guaranteed once the
+// signup required holding 250k $OWP; the airdrop is guaranteed once the
 // list reaches 1,000 members (amount TBA by the owners). PII (emails) is
 // admin-gated — this list must never appear on a public surface.
 import { handler, ok, requireAdmin } from "@/lib/api";

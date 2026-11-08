@@ -31,7 +31,7 @@ export const GET = handler(async () => {
           target: b.target,
           game: b.game!,
           status: b.status,
-          prize: b.prizeText ?? `${fromRaw(b.prizeRibbit).toLocaleString()} $RIBBIT`,
+          prize: b.prizeText ?? `${fromRaw(b.prizeRibbit).toLocaleString()} $OWP`,
           prizeRibbit: fromRaw(b.prizeRibbit),
           endsAt: b.endsAt,
         },

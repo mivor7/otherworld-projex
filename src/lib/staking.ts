@@ -1,4 +1,4 @@
-// Read-only window onto the official $RIBBIT staking pool on Streamflow.
+// Read-only window onto the official $OWP staking pool on Streamflow.
 //
 // STRICTLY OBSERVATIONAL: the app never signs, never custodies, never builds
 // a staking transaction. Users stake on app.streamflow.finance with their own
@@ -20,7 +20,7 @@ export type PoolSnapshot = {
   totalStakedRaw: bigint;
   capRaw: bigint | null; // null = uncapped
   lockupSeconds: number;
-  aprPct: number | null; // null when no live reward stream in $RIBBIT
+  aprPct: number | null; // null when no live reward stream in $OWP
   fundedRaw: bigint;
   claimedRaw: bigint;
   expiresAt: Date | null;
@@ -54,7 +54,7 @@ async function fetchSnapshot(): Promise<PoolSnapshot> {
     c.searchStakeEntries({ stakePool: poolKey }),
   ]);
 
-  // APR from live reward streams paying in $RIBBIT: the stored rewardAmount
+  // APR from live reward streams paying in $OWP: the stored rewardAmount
   // is (reward tokens per staked token per period) × 10^9 — Streamflow's
   // REWARD_AMOUNT_PRECISION — so yearly rate = amount/1e9 × periods/year.
   let aprPct: number | null = null;
@@ -111,6 +111,8 @@ async function fetchSnapshot(): Promise<PoolSnapshot> {
  *  very first successful read. Hard 8s ceiling — this feeds hot routes (live
  *  standings), so a hanging RPC must degrade to stale/empty, never stall. */
 export async function poolSnapshot(): Promise<PoolSnapshot | null> {
+  // No $OWP pool published yet — don't read a leftover address.
+  if (!CONFIG.stakePool) return null;
   if (cache && Date.now() - cache.fetchedAt < TTL_MS) return cache;
   if (!inflight) {
     inflight = Promise.race([

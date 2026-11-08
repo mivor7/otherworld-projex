@@ -20,9 +20,9 @@ model User {
   // Invite code this wallet joined with (invite-only launch); null = joined
   // while the gate was off, or pre-dates it.
   invitedVia    String?
-  // Play credits earned by burning $RIBBIT (integer, smallest unit = 1 credit)
+  // Play credits earned by burning $OWP (integer, smallest unit = 1 credit)
   credits       Int      @default(0)
-  // Auction balance: $RIBBIT deposited to the treasury for bidding (raw token units)
+  // Auction balance: $OWP deposited to the treasury for bidding (raw token units)
   ribbitBalance BigInt   @default(0)
   // Portion of ribbitBalance currently locked in active bids
   ribbitLocked  BigInt   @default(0)
@@ -42,7 +42,7 @@ model User {
   purchases    CreditPurchase[]
 }
 
-// A "buy credits" event: the player pays $RIBBIT in one signed tx that is
+// A "buy credits" event: the player pays $OWP in one signed tx that is
 // split — part burned (deflation), part transferred to the treasury (real
 // house revenue). Unlike a pure burn, this is what funds the reward pools.
 // Unique signature prevents replay, same as BurnEvent.
@@ -51,7 +51,7 @@ model CreditPurchase {
   userId      String
   user        User     @relation(fields: [userId], references: [id])
   signature   String   @unique
-  ribbitRaw   BigInt // total $RIBBIT paid (burned + house)
+  ribbitRaw   BigInt // total $OWP paid (burned + house)
   burnedRaw   BigInt // portion destroyed
   houseRaw    BigInt // portion sent to treasury
   credits     Int
@@ -71,7 +71,7 @@ model LedgerEntry {
   @@index([userId, createdAt])
 }
 
-// A verified on-chain burn of $RIBBIT that granted play credits.
+// A verified on-chain burn of $OWP that granted play credits.
 model BurnEvent {
   id        String   @id @default(cuid())
   userId    String
@@ -127,7 +127,7 @@ model GameRound {
 
 // ------------------------- Auction house -------------------------
 
-// $RIBBIT deposited to the treasury token account to fund bidding.
+// $OWP deposited to the treasury token account to fund bidding.
 model Deposit {
   id        String   @id @default(cuid())
   userId    String
@@ -163,7 +163,7 @@ model Auction {
   imageUrl     String?
   category     String   @default("collectible")
   sellerWallet String? // null = house listing
-  // amounts in raw $RIBBIT units
+  // amounts in raw $OWP units
   startBidRaw  BigInt
   minIncrement BigInt
   currentRaw   BigInt   @default(0)
@@ -204,7 +204,7 @@ model ListingApplication {
   description String
   imageUrl    String?
   category    String   @default("collectible")
-  askRaw      BigInt // suggested starting bid, raw $RIBBIT
+  askRaw      BigInt // suggested starting bid, raw $OWP
   contact     String? // X handle / discord etc.
   status      String   @default("pending") // "pending" | "approved" | "rejected"
   reviewNote  String?
@@ -223,12 +223,12 @@ model Bounty {
   target      String?
   game        String? // linked game for leaderboard bounties ("hopper", "flip", "dice")
   kind        String   @default("leaderboard") // "leaderboard" | "challenge"
-  prizeRibbit BigInt // prize pool in raw $RIBBIT units
-  // House-contributed head start on the pot (raw $RIBBIT). The pot opens at
+  prizeRibbit BigInt // prize pool in raw $OWP units
+  // House-contributed head start on the pot (raw $OWP). The pot opens at
   // seed and play (the pot's share of the realized edge) funds prize − seed.
   // This is the house's DECLARED cost per fill; 0 = fully self-funded pot.
   seedRibbit  BigInt   @default(0)
-  prizeText   String? // display override e.g. "5,000 $RIBBIT + badge"
+  prizeText   String? // display override e.g. "5,000 $OWP + badge"
   status      String   @default("open") // "open" | "closed" | "paid"
   paidAt      DateTime?
   // Auto-pay: when true, the bounty settles itself and pays every eligible
@@ -256,7 +256,7 @@ model Bounty {
 
 // The pre-launch airdrop waitlist, imported from the final snapshot of the
 // old signup site. A member's position and referral count are their EARNED
-// place — preserve exactly as imported. Entry required holding 250k $RIBBIT
+// place — preserve exactly as imported. Entry required holding 250k $OWP
 // at signup; the airdrop is guaranteed once the list reaches 1,000 people
 // (amount to be announced by the owners). Import is idempotent by email
 // (scripts/import-waitlist.mjs) — the newest snapshot always wins.
@@ -277,7 +277,7 @@ model WaitlistEntry {
   referrals   Int      @default(0)
   // Who referred them: an imported code/name, or a referrer's wallet.
   referredBy  String?
-  // On-chain $RIBBIT held at the moment of joining (raw units) — the proof
+  // On-chain $OWP held at the moment of joining (raw units) — the proof
   // the holding requirement was met, kept for the record.
   heldRibbitRaw BigInt @default(0)
   importedAt  DateTime @default(now())
@@ -339,7 +339,7 @@ model TreasuryEvent {
   id        String   @id @default(cuid())
   kind      String // "house_take" | "payout" | "prize" | "deposit" | "ops"
   amount    BigInt // lamports (SOL) or raw RIBBIT depending on `asset`
-  asset     String   @default("RIBBIT") // "SOL" | "RIBBIT" | "CREDITS"
+  asset     String   @default("RIBBIT") // stored ledger code. "RIBBIT" / "RIBBIT_BURNED" display as $OWP. Also "SOL" | "CREDITS" | "OWP"
   note      String?
   ref       String?
   createdAt DateTime @default(now())

@@ -148,7 +148,7 @@ export default function FlipPage() {
 
       <FirstVisitHint id="how-games-work">
         New here? When a game shows a live bounty, playing enters you in a shared
-        $RIBBIT prize — the panel tracks your standing in real time.
+        $OWP prize — the panel tracks your standing in real time.
       </FirstVisitHint>
 
       <div className="lg:hidden">
@@ -180,7 +180,7 @@ export default function FlipPage() {
           {sandbox && (
             <div className="mb-5 text-left">
               <Notice kind="info">
-                Sandbox — no wallet needed, no $RIBBIT involved. Same odds,
+                Sandbox — no wallet needed, no $OWP involved. Same odds,
                 bottomless practice bankroll: play as long as you like.
               </Notice>
             </div>

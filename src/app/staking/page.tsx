@@ -1,6 +1,6 @@
 "use client";
 
-// The Vault — read-only window onto the official $RIBBIT staking pool on
+// The Vault — read-only window onto the official $OWP staking pool on
 // Streamflow. Staking happens on Streamflow with the player's own wallet;
 // this page watches the chain, shows the pool and your position, and links
 // out. The House never touches staked funds.
@@ -31,6 +31,7 @@ export default function StakingPage() {
   const [pool, setPool] = useState<Pool | null>(null);
   const [you, setYou] = useState<You | null>(null);
   const [failed, setFailed] = useState(false);
+  const [unconfigured, setUnconfigured] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -43,8 +44,15 @@ export default function StakingPage() {
             setPool(d.pool);
             setYou(d.you);
             setFailed(false);
+            setUnconfigured(false);
+          } else if (d?.configured === false) {
+            setPool(null);
+            setYou(null);
+            setFailed(false);
+            setUnconfigured(true);
           } else if (d) {
             setFailed(true);
+            setUnconfigured(false);
           }
         })
         .catch(() => alive && setFailed(true));
@@ -67,11 +75,17 @@ export default function StakingPage() {
         compact
         kicker="The Vault"
         title="Staking"
-        desc="Lock $RIBBIT in the official Streamflow pool and earn rewards while it sits out of circulation. Non-custodial: your tokens live in Streamflow's audited on-chain program — the House never holds them."
+        desc="Lock $OWP in the official Streamflow pool and earn rewards while it sits out of circulation. Non-custodial: your tokens live in Streamflow's audited on-chain program — the House never holds them."
       />
 
       <div className="panel panel-glow panel-etched p-6 sm:p-8 mb-6">
-        {!pool && !failed && <p className="text-fog text-sm">Reading the chain…</p>}
+        {!pool && !failed && !unconfigured && <p className="text-fog text-sm">Reading the chain…</p>}
+        {unconfigured && (
+          <p className="text-fog text-sm">
+            No $OWP staking pool is live yet. This page will show the Streamflow
+            pool once its address is set.
+          </p>
+        )}
         {!pool && failed && (
           <p className="text-fog text-sm">
             The chain isn&apos;t answering right now — the pool itself is unaffected.
@@ -84,7 +98,7 @@ export default function StakingPage() {
               <div>
                 <div className="kicker !text-[0.6rem] mb-1">Total staked</div>
                 <div className="stat-number text-neon text-xl leading-none">
-                  {fmt(pool.totalStakedRibbit)} <span className="text-xs">$RIBBIT</span>
+                  {fmt(pool.totalStakedRibbit)} <span className="text-xs">$OWP</span>
                 </div>
               </div>
               <div>
@@ -107,7 +121,7 @@ export default function StakingPage() {
               <div>
                 <div className="kicker !text-[0.6rem] mb-1">Rewards funded</div>
                 <div className="stat-number text-frost text-xl leading-none">
-                  {fmt(pool.rewardsFundedRibbit)} <span className="text-xs">$RIBBIT</span>
+                  {fmt(pool.rewardsFundedRibbit)} <span className="text-xs">$OWP</span>
                 </div>
               </div>
               <div>
@@ -125,7 +139,7 @@ export default function StakingPage() {
                 <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--text-dim)" }}>
                   <span>Pool capacity</span>
                   <span className="mono">
-                    {fmt(pool.totalStakedRibbit)} / {fmt(pool.capRibbit)} $RIBBIT · {pctFull}%
+                    {fmt(pool.totalStakedRibbit)} / {fmt(pool.capRibbit)} $OWP · {pctFull}%
                   </span>
                 </div>
                 <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.01 165)" }}>
@@ -153,7 +167,7 @@ export default function StakingPage() {
             {you.stakedRibbit > 0 ? (
               <>
                 <span className="staker-mark mr-2">staker</span>
-                You have <span className="stat-number text-neon">{fmt(you.stakedRibbit)} $RIBBIT</span> staked
+                You have <span className="stat-number text-neon">{fmt(you.stakedRibbit)} $OWP</span> staked
                 {you.unlockAt && (
                   <>
                     {" "}· unlocks{" "}
@@ -170,25 +184,27 @@ export default function StakingPage() {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-3">
-          <a
-            href={pool?.streamflowUrl ?? `https://app.streamflow.finance/staking/solana/mainnet/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary btn-lg px-8"
-          >
-            Stake on Streamflow →
-          </a>
-          <span className="text-xs" style={{ color: "var(--text-dim)" }}>
-            Opens Streamflow — connect the same wallet you use here.
-          </span>
-        </div>
+        {pool && (
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href={pool.streamflowUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary btn-lg px-8"
+            >
+              Stake on Streamflow →
+            </a>
+            <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+              Opens Streamflow — connect the same wallet you use here.
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="panel p-5 text-sm text-fog space-y-3">
         <p>
           <span className="text-frost font-medium">How it works.</span> Staking locks your
-          $RIBBIT in Streamflow&apos;s on-chain program for the lockup period and pays rewards
+          $OWP in Streamflow&apos;s on-chain program for the lockup period and pays rewards
           from a pool the House funds — your share grows with how much you stake and for how
           long. When the lockup ends, tokens unstake automatically.
         </p>

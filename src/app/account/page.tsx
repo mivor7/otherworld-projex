@@ -200,7 +200,7 @@ export default function AccountPage() {
       {stake && stake.stakedRibbit > 0 && (
         <div className="-mt-3 mb-5 text-xs text-fog">
           <span className="staker-mark mr-1.5">staker</span>
-          {Math.round(stake.stakedRibbit).toLocaleString()} $RIBBIT staked
+          {Math.round(stake.stakedRibbit).toLocaleString()} $OWP staked
           {stake.unlockAt && (
             <> · unlocks {new Date(stake.unlockAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</>
           )}{" "}
@@ -211,7 +211,7 @@ export default function AccountPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard label="Table chips ⛁" value={String(me.credits ?? 0)} tone="neon" />
         <StatCard
-          label="$RIBBIT available"
+          label="$OWP available"
           value={fmtRibbit(me.ribbitAvailable ?? 0)}
           sub="in the bidding account"
         />
@@ -305,7 +305,7 @@ export default function AccountPage() {
                       </span>
                     </div>
                     <span className="stat-number text-gold text-xs whitespace-nowrap">
-                      {p.prizeRibbit.toLocaleString()} $RIBBIT
+                      {p.prizeRibbit.toLocaleString()} $OWP
                     </span>
                   </div>
 
@@ -344,14 +344,14 @@ export default function AccountPage() {
                     <span style={{ color: "var(--text-dim)" }}> · {valLine} · </span>
                     {winning ? (
                       <span className="text-neon">
-                        would take ~{Math.round(p.projectedRibbit).toLocaleString()} $RIBBIT
+                        would take ~{Math.round(p.projectedRibbit).toLocaleString()} $OWP
                         if it pays now
                       </span>
                     ) : !p.spendEligible ? (
                       <span className="text-fog">
                         not eligible —{" "}
                         {!p.lifetimeEligible
-                          ? "spend more $RIBBIT on chips"
+                          ? "spend more $OWP on chips"
                           : "buy chips during this bounty"}
                       </span>
                     ) : p.value > 0 ? (

@@ -1,7 +1,7 @@
 "use client";
 
 // Sandbox bankroll — practice credits that live in localStorage. No wallet,
-// no $RIBBIT, no server round-trips, and no limits: the bankroll quietly
+// no $OWP, no server round-trips, and no limits: the bankroll quietly
 // refills itself whenever it can't cover the next wager, so free players can
 // practice forever. The running number is just for fun between refills.
 import { useCallback, useEffect, useState } from "react";

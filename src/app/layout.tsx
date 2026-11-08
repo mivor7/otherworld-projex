@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://otherworldprojex.xyz"),
   title: "Other World Projex",
   description:
-    "Decentralized gaming on Solana. Turn $RIBBIT into table chips — part burned forever — play provably-fair games, bid in the auction house, and hunt bounties that pay automatically. One transparent treasury.",
+    "Decentralized gaming on Solana. Turn $OWP into table chips — part burned forever — play provably-fair games, bid in the auction house, and hunt bounties that pay automatically. One transparent treasury.",
   openGraph: {
     title: "Other World Projex",
     description:
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Other World Projex",
     description:
-      "Token holders become bounty hunters. Provably fair, paid in $RIBBIT.",
+      "Token holders become bounty hunters. Provably fair, paid in $OWP.",
     images: ["/og.png"],
   },
   // Installed-PWA chrome on iOS (Android reads the manifest).

@@ -1,7 +1,7 @@
 // Bounty ranking + payout. The authoritative ranking lives here so the
 // admin's payout-review preview and the actual award use the EXACT same
 // computation — a winner list is never supplied by the client. Prizes are
-// paid in real $RIBBIT through the same off-server payout worker as balance
+// paid in real $OWP through the same off-server payout worker as balance
 // withdrawals (Withdrawal kind "bounty"), so all the hardened, race-safe,
 // human-gated payout infrastructure applies unchanged.
 import { Prisma } from "@prisma/client";
@@ -139,24 +139,24 @@ export function splitPrize(prizeRaw: bigint, splits: number[]): bigint[] {
 // A credit-game bounty pays once enough credits have been WAGERED on that game
 // since the bounty was created. The threshold is derived straight from the
 // prize — no house edge involved. It's self-correcting for the house: those
-// credits were bought with $RIBBIT, so requiring enough credit-spend means the
-// house already took in more $RIBBIT (its share of the purchases) than the
+// credits were bought with $OWP, so requiring enough credit-spend means the
+// house already took in more $OWP (its share of the purchases) than the
 // prize. Nothing about creating a bounty waits on anything — the prize simply
 // isn't paid until the meter fills.
 
 /**
  * Credits that must be wagered on the game before a `prizeRaw` bounty pays.
- * Derived from the prize so the $RIBBIT the house netted selling those credits
+ * Derived from the prize so the $OWP the house netted selling those credits
  * (their price × the house's buy-split share) covers the prize plus margin:
  *   required = prize × (1 + margin) / ((1 − burnShare) × ribbitPerCredit).
  * Changing the credit price or buy-split re-derives it; the house edge never
  * enters into it.
  */
 /**
- * $RIBBIT the pot gains per credit wagered — the pot's share of the edge the
+ * $OWP the pot gains per credit wagered — the pot's share of the edge the
  * house realizes on that wager, valued at what a sold credit actually nets
  * the house: potShare × houseEdge × (1 − burnShare) × ribbitPerCredit.
- * (At defaults: 0.5 × 0.04 × 0.95 × 100 = 1.9 $RIBBIT per credit wagered.)
+ * (At defaults: 0.5 × 0.04 × 0.95 × 100 = 1.9 $OWP per credit wagered.)
  */
 export async function potRatePerCredit(): Promise<number> {
   const cfg = await houseConfig();
@@ -224,7 +224,7 @@ export async function bountyProgress(bounty: {
       spent: number;
       threshold: number;
       pct: number;
-      /** The live pot in whole $RIBBIT: seed + what play has earned it. */
+      /** The live pot in whole $OWP: seed + what play has earned it. */
       potRibbit: number;
       targetRibbit: number;
       seedRibbit: number;
@@ -274,7 +274,7 @@ export function proRataShares(prizeRaw: bigint, values: number[]): bigint[] {
 
 /**
  * Current projected payout for a bounty at this instant — the ranked eligible
- * entries, each with the raw $RIBBIT they'd receive if it triggered now. The
+ * entries, each with the raw $OWP they'd receive if it triggered now. The
  * estimate shifts as people play and only settles when the trigger fires. Uses
  * the full prize (the treasury-balance cap only applies at actual payout, and
  * the reserve normally covers it).
@@ -325,9 +325,9 @@ export type AwardResult = {
  * performance (score / net credits). Atomic + idempotent (bounty→paid guard).
  * Solvency is guaranteed upstream: the caller only fires this once the game's
  * NET credit-spend (house take) has reached the prize-derived threshold, which
- * means the house already banked more $RIBBIT than the prize. No treasury-
+ * means the house already banked more $OWP than the prize. No treasury-
  * balance cap — the full prize always pays. Queues withdrawals for the
- * pays out more $RIBBIT than the house actually holds. Queues withdrawals for
+ * pays out more $OWP than the house actually holds. Queues withdrawals for
  * the off-server worker; never signs.
  */
 export async function awardBountyProRata(bountyId: string): Promise<AwardResult | null> {
@@ -346,7 +346,7 @@ export async function awardBountyProRata(bountyId: string): Promise<AwardResult 
 
   // The full prize pays. The caller (autoSettle) only invokes this once the
   // required credit-spend has been reached, which already means the house took
-  // in more $RIBBIT than the prize — no separate revenue confirmation here.
+  // in more $OWP than the prize — no separate revenue confirmation here.
   const shares = proRataShares(prize, ranked.map((e) => e.value));
 
   const result = await prisma.$transaction(

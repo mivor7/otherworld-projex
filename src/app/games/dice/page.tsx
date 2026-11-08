@@ -54,7 +54,7 @@ export default function DicePage() {
     setError(null);
 
     if (sandbox) {
-      // Practice table: same odds, local roll, zero $RIBBIT. Bottomless
+      // Practice table: same odds, local roll, zero $OWP. Bottomless
       // bankroll — top up first so the roll can never be blocked.
       practice.ensure(wager);
       const rolled = Math.floor(Math.random() * 100 * 100) / 100;
@@ -116,7 +116,7 @@ export default function DicePage() {
 
       <FirstVisitHint id="how-games-work">
         New here? When a game shows a live bounty, playing enters you in a shared
-        $RIBBIT prize — the panel tracks your standing in real time.
+        $OWP prize — the panel tracks your standing in real time.
       </FirstVisitHint>
 
       {/* Mobile: the strip is the at-a-glance header (standings stack far
@@ -149,7 +149,7 @@ export default function DicePage() {
         {sandbox && (
           <div className="mb-5">
             <Notice kind="info">
-              Sandbox — no wallet needed, no $RIBBIT involved. Same odds,
+              Sandbox — no wallet needed, no $OWP involved. Same odds,
               bottomless practice bankroll: play as long as you like.
             </Notice>
           </div>

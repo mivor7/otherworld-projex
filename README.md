@@ -1,6 +1,6 @@
-# Other World Projex — $RIBBIT Bounty Arcade 🐸
+# Other World Projex — $OWP Bounty Arcade
 
-Decentralized gaming platform on Solana: buy credits with **$RIBBIT** (part
+Decentralized gaming platform on Solana: buy credits with **$OWP** (part
 burned, part to the house), play provably-fair games, bid in community
 auctions, hunt bounties — all backed by one transparent treasury.
 
@@ -13,10 +13,10 @@ auctions, hunt bounties — all backed by one transparent treasury.
 - **Buy credits**: one on-chain transaction splits between a verified burn
   (`BUY_BURN_SHARE`, default 50%) and a treasury transfer — deflation plus
   real house revenue. Pure burn-to-play remains as the pre-treasury fallback.
-- **Auction house**: bid deposited $RIBBIT on house or community listings.
+- **Auction house**: bid deposited $OWP on house or community listings.
   Escrowed bids, instant refunds on outbid, anti-snipe extensions, and a
   community "apply to list" flow with admin review.
-- **Bounties**: fixed $RIBBIT prizes with auto-derived unlock triggers — a
+- **Bounties**: fixed $OWP prizes with auto-derived unlock triggers — a
   credit-game pool pays the moment enough credits are *wagered* on that game (the
   meter counts gross wager, so it only ever rises; the trigger is sized so the
   house's revenue from selling those credits covers the prize). Free arcade pools
@@ -50,7 +50,7 @@ play without burning real tokens.
 ```
 Browser (wallet signs everything; keys never leave the user)
  │  sign-in: ed25519 signature over a server nonce  → JWT cookie
- │  burn:    user burns $RIBBIT  → POSTs tx sig     → server verifies on-chain → credits
+ │  burn:    user burns $OWP  → POSTs tx sig     → server verifies on-chain → credits
  │  deposit: user transfers to treasury ATA → POSTs tx sig → verified → bid balance
  ▼
 Next.js API routes (Vercel serverless)
@@ -61,7 +61,7 @@ Next.js API routes (Vercel serverless)
 Postgres (Prisma)          Solana RPC (verification + live treasury stats)
 
 Money out (never from the web server):
- - scripts/payout-worker.mjs  → $RIBBIT withdrawals, capped per-tx
+ - scripts/payout-worker.mjs  → $OWP withdrawals, capped per-tx
  - program/ (Anchor vault)    → SOL custody: multisig admin + on-chain daily cap
 ```
 
@@ -102,12 +102,12 @@ Money out (never from the web server):
 
 ## Honest limitations (read before launch)
 
-- **Withdrawal/prize payouts are semi-custodial**: $RIBBIT the users deposit
+- **Withdrawal/prize payouts are semi-custodial**: $OWP the users deposit
   for auctions sits in the treasury token account, and payouts are made by the
   ops keypair/multisig. The Anchor program hard-limits SOL custody, but SPL
   escrow with on-chain refunds would be the next upgrade if volume grows.
 - **The house edge math is transparent but the treasury must stay solvent** —
-  keep enough $RIBBIT in the treasury account to cover queued withdrawals and
+  keep enough $OWP in the treasury account to cover queued withdrawals and
   bounty pools. `/treasury` shows both sides.
 - **Gambling compliance is jurisdiction-specific.** Burn-to-play with
   credit prizes sits in a gray zone in many places; get advice before

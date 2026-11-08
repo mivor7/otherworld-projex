@@ -13,7 +13,7 @@ import {
 } from "@solana/spl-token";
 import { CONFIG } from "./config";
 
-// $RIBBIT is an SPL Token-2022 mint (owner program TokenzQdB…), NOT the
+// $OWP is an SPL Token-2022 mint (owner program TokenzQdB…), NOT the
 // classic Token program. Every ATA derivation and instruction MUST specify
 // this program id or it targets the wrong account/program and fails.
 const RIBBIT_TOKEN_PROGRAM = TOKEN_2022_PROGRAM_ID;
@@ -49,13 +49,14 @@ async function getVerifiedTx(signature: string) {
 }
 
 /**
- * Verify `signature` is a confirmed tx in which `wallet` burned $RIBBIT.
+ * Verify `signature` is a confirmed tx in which `wallet` burned $OWP.
  * Returns the total raw amount burned, or null if it doesn't check out.
  */
 export async function verifyBurnTx(
   signature: string,
   wallet: string
 ): Promise<bigint | null> {
+  if (!CONFIG.ribbitMint) return null;
   const tx = await getVerifiedTx(signature);
   if (!tx) return null;
   let total = 0n;
@@ -78,14 +79,14 @@ export async function verifyBurnTx(
 }
 
 /**
- * Verify `signature` is a confirmed tx in which `wallet` transferred $RIBBIT
+ * Verify `signature` is a confirmed tx in which `wallet` transferred $OWP
  * to the treasury's associated token account (auction deposit).
  */
 export async function verifyDepositTx(
   signature: string,
   wallet: string
 ): Promise<bigint | null> {
-  if (!CONFIG.treasuryWallet) return null;
+  if (!CONFIG.treasuryWallet || !CONFIG.ribbitMint) return null;
   const treasuryAta = getAssociatedTokenAddressSync(
     new PublicKey(CONFIG.ribbitMint),
     new PublicKey(CONFIG.treasuryWallet),
@@ -117,7 +118,7 @@ export async function verifyDepositTx(
 
 /**
  * Verify a "buy credits" tx: one tx, signed by `wallet`, that BOTH burns
- * $RIBBIT and transfers $RIBBIT to the treasury ATA. Returns the two raw
+ * $OWP and transfers $OWP to the treasury ATA. Returns the two raw
  * amounts, or null if it doesn't check out. Both legs must be present — a tx
  * that only burns (or only transfers) is not a valid buy.
  */
@@ -125,7 +126,7 @@ export async function verifyBuyTx(
   signature: string,
   wallet: string
 ): Promise<{ burnedRaw: bigint; houseRaw: bigint } | null> {
-  if (!CONFIG.treasuryWallet) return null;
+  if (!CONFIG.treasuryWallet || !CONFIG.ribbitMint) return null;
   const treasuryAta = getAssociatedTokenAddressSync(
     new PublicKey(CONFIG.ribbitMint),
     new PublicKey(CONFIG.treasuryWallet),
@@ -194,17 +195,18 @@ export async function getTreasuryStats(): Promise<TreasuryStats> {
   try {
     const owner = new PublicKey(CONFIG.treasuryWallet);
     const conn = connection();
-    const [lamports, tokenAccounts] = await Promise.all([
-      conn.getBalance(owner),
-      conn.getParsedTokenAccountsByOwner(owner, {
+    const lamports = await conn.getBalance(owner);
+    let ribbit: number | null = null;
+    if (CONFIG.ribbitMint) {
+      const tokenAccounts = await conn.getParsedTokenAccountsByOwner(owner, {
         mint: new PublicKey(CONFIG.ribbitMint),
-      }),
-    ]);
-    const ribbit = tokenAccounts.value.reduce(
-      (sum, a) =>
-        sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0),
-      0
-    );
+      });
+      ribbit = tokenAccounts.value.reduce(
+        (sum, a) =>
+          sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0),
+        0
+      );
+    }
     statsCache = {
       at: Date.now(),
       value: {
@@ -225,7 +227,7 @@ export async function getTreasuryStats(): Promise<TreasuryStats> {
   }
 }
 
-// SOL + $RIBBIT for any PUBLIC address (e.g. the payout hot wallet), read-only.
+// SOL + $OWP for any PUBLIC address (e.g. the payout hot wallet), read-only.
 // Cached per-instance. Never throws. Only a public address is ever needed —
 // the payout wallet's private key stays on the worker box.
 const walletCache = new Map<string, { at: number; value: TreasuryStats }>();
@@ -237,14 +239,17 @@ export async function getWalletBalances(address: string): Promise<TreasuryStats>
   try {
     const owner = new PublicKey(address);
     const conn = connection();
-    const [lamports, tokenAccounts] = await Promise.all([
-      conn.getBalance(owner),
-      conn.getParsedTokenAccountsByOwner(owner, { mint: new PublicKey(CONFIG.ribbitMint) }),
-    ]);
-    const ribbit = tokenAccounts.value.reduce(
-      (sum, a) => sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0),
-      0
-    );
+    const lamports = await conn.getBalance(owner);
+    let ribbit: number | null = null;
+    if (CONFIG.ribbitMint) {
+      const tokenAccounts = await conn.getParsedTokenAccountsByOwner(owner, {
+        mint: new PublicKey(CONFIG.ribbitMint),
+      });
+      ribbit = tokenAccounts.value.reduce(
+        (sum, a) => sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0),
+        0
+      );
+    }
     const value: TreasuryStats = {
       configured: true,
       solBalance: lamports / LAMPORTS_PER_SOL,

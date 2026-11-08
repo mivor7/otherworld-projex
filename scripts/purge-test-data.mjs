@@ -91,6 +91,6 @@ const [uAfter, bAfter, sAfter, aAfter, burnSum] = await Promise.all([
   prisma.burnEvent.aggregate({ _sum: { amountRaw: true } }),
 ]);
 console.log(
-  `\nnow — users ${uAfter} · burns ${bAfter} (${Number((burnSum._sum.amountRaw ?? 0n) / 10n ** 6n)} $RIBBIT) · scores ${sAfter} · auctions ${aAfter}`
+  `\nnow — users ${uAfter} · burns ${bAfter} (${Number((burnSum._sum.amountRaw ?? 0n) / 10n ** 6n)} $OWP) · scores ${sAfter} · auctions ${aAfter}`
 );
 await prisma.$disconnect();

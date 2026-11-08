@@ -37,8 +37,8 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   },
   {
     key: "ribbitPerCredit",
-    label: "$RIBBIT per credit",
-    desc: "Price of one play credit in whole $RIBBIT.",
+    label: "$OWP per credit",
+    desc: "Price of one play credit in whole $OWP.",
     group: "Economy",
     kind: "number",
     min: 1,
@@ -104,7 +104,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "rankedMinBurnedRibbit",
     label: "Lifetime spend to rank",
-    desc: "Whole $RIBBIT (burned or bought) a wallet needs lifetime before prize boards rank it. Mission rule: only spenders earn — so the panel can't set this below 1 (env can, for dev).",
+    desc: "Whole $OWP (burned or bought) a wallet needs lifetime before prize boards rank it. Mission rule: only spenders earn — so the panel can't set this below 1 (env can, for dev).",
     group: "Eligibility",
     kind: "number",
     min: 1,
@@ -115,7 +115,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "rankedMinWindowBurnedRibbit",
     label: "In-window spend to rank",
-    desc: "Whole $RIBBIT spent inside the board/bounty window. Repeat abusers must re-spend every window. 0 disables.",
+    desc: "Whole $OWP spent inside the board/bounty window. Repeat abusers must re-spend every window. 0 disables.",
     group: "Eligibility",
     kind: "number",
     min: 0,
@@ -146,7 +146,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "waitlistMinHoldRibbit",
     label: "Waitlist holding requirement",
-    desc: "Whole $RIBBIT a wallet must hold on-chain to join the airdrop waitlist. Verified live at join time.",
+    desc: "Whole $OWP a wallet must hold on-chain to join the airdrop waitlist. Verified live at join time.",
     group: "Eligibility",
     kind: "number",
     min: 0,
