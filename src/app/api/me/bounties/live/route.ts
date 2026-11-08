@@ -1,5 +1,5 @@
 // A player's LIVE positions across every open bounty they've played — their
-// current net/score, whether they're in the running, the $RIBBIT they'd earn
+// current net/score, whether they're in the running, the $OWP they'd earn
 // if it settled right now, and how full each pool is. This lets a player who
 // has stopped playing still watch their waiting share move as others fill the
 // pool, from their account page — not only on the game screen. The projection

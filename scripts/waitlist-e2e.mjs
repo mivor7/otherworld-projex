@@ -91,7 +91,7 @@ try {
   });
   check("join without a session is rejected (401)", anon.status === 401, `got ${anon.status}`);
 
-  // A throwaway wallet holds no $RIBBIT, so the on-chain gate must refuse it.
+  // A throwaway wallet holds no $OWP, so the on-chain gate must refuse it.
   const poor = client();
   wallets.push(poor.wallet);
   await poor.signIn();
@@ -99,7 +99,7 @@ try {
   check("wallet below the holding requirement is refused (403)", refused.status === 403,
     `got ${refused.status} ${JSON.stringify(refused.data).slice(0, 90)}`);
   check("refusal explains the requirement and what they hold",
-    /RIBBIT/.test(refused.data?.error ?? "") && /holding/i.test(refused.data?.error ?? ""),
+    /\$OWP/.test(refused.data?.error ?? "") && /holding/i.test(refused.data?.error ?? ""),
     refused.data?.error);
   const notJoined = await poor.api("/api/waitlist");
   check("refused wallet is NOT on the list", notJoined.data?.you?.joined === false);

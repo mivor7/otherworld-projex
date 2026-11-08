@@ -18,7 +18,7 @@ const WINGS = [
     image: "/art/owp_hero.jpg",
     kicker: "Wing I",
     title: "The Arcade",
-    desc: "Provably-fair games at a published house edge. Chips bought with $RIBBIT — part burned forever, part funding the prizes. Verify every roll.",
+    desc: "Provably-fair games at a published house edge. Chips bought with $OWP — part burned forever, part funding the prizes. Verify every roll.",
     cta: "Enter",
   },
   {
@@ -26,7 +26,7 @@ const WINGS = [
     image: "/art/hero-auction.jpg",
     kicker: "Wing II",
     title: "The Auction House",
-    desc: "Collectibles, 1/1s and services under the gavel. Escrowed $RIBBIT bids, anti-snipe closings, community consignments.",
+    desc: "Collectibles, 1/1s and services under the gavel. Escrowed $OWP bids, anti-snipe closings, community consignments.",
     cta: "View lots",
   },
   {
@@ -34,7 +34,7 @@ const WINGS = [
     image: "/art/art-bounty.jpg",
     kicker: "Wing III",
     title: "The Bounty Board",
-    desc: "Fixed $RIBBIT pools that unlock as each game is played. Every eligible winner is paid automatically, pro-rata — free episodes pay weekly.",
+    desc: "Fixed $OWP pools that unlock as each game is played. Every eligible winner is paid automatically, pro-rata — free episodes pay weekly.",
     cta: "Open board",
   },
 ];
@@ -117,7 +117,7 @@ export default async function Home() {
         titleAccent="bounty hunters."
         subtitle={
           <>
-            Turn $RIBBIT into credits — part burned forever, part funding the
+            Turn $OWP into credits — part burned forever, part funding the
             prize pool. Play provably-fair games, bid on lots, and hunt
             bounties that pay out automatically. Everything settles against
             one transparent treasury.
@@ -140,7 +140,7 @@ export default async function Home() {
           },
           {
             value: burned.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-            label: "$RIBBIT burned",
+            label: "$OWP burned",
           },
           { value: roundCount.toLocaleString(), label: "Rounds settled" },
           { value: openBounties.toLocaleString(), label: "Open bounties" },
@@ -195,9 +195,9 @@ export default async function Home() {
         <div className="mesh-band p-4 sm:p-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             ["01", "Connect & sign", "A free message signature proves wallet ownership. No custody, no email, no password."],
-            ["02", "Buy credits", `${houseCfg.ribbitPerCredit} $RIBBIT per credit, verified on-chain — ${Math.round(houseCfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes.`],
-            ["03", "Play, bid, hunt", "Wager chips at the tables, bid escrowed $RIBBIT on lots, climb the bounty boards."],
-            ["04", "Pools unlock with play", "Every bounty posts a fixed $RIBBIT pool and a spend meter sized to it. The meter fills — every eligible winner is paid pro-rata, automatically."],
+            ["02", "Buy credits", `${houseCfg.ribbitPerCredit} $OWP per credit, verified on-chain — ${Math.round(houseCfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes.`],
+            ["03", "Play, bid, hunt", "Wager chips at the tables, bid escrowed $OWP on lots, climb the bounty boards."],
+            ["04", "Pools unlock with play", "Every bounty posts a fixed $OWP pool and a spend meter sized to it. The meter fills — every eligible winner is paid pro-rata, automatically."],
           ].map(([n, title, desc], i) => (
             <Reveal key={n} delay={i * 60}>
               <div className="panel panel-hover p-5 h-full">
@@ -220,20 +220,20 @@ export default async function Home() {
                 <div className="kicker mb-2">The bounty board</div>
                 <h2 className="text-[1.5rem]">Active hunts</h2>
                 <p className="text-fog text-[0.85rem] mt-1.5 max-w-md leading-relaxed">
-                  Every live game carries a fixed $RIBBIT pool that unlocks as
+                  Every live game carries a fixed $OWP pool that unlocks as
                   it&apos;s played. Pick a target, fill the meter, split the pool.
                 </p>
               </div>
               <div className="flex items-baseline gap-6 text-right">
                 <div>
                   <div className="stat-number text-neon text-[1.35rem]">
-                    {openPrize.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT
+                    {openPrize.toLocaleString(undefined, { maximumFractionDigits: 0 })} $OWP
                   </div>
                   <div className="kicker !text-[0.6rem]">on the board now</div>
                 </div>
                 <div>
                   <div className="stat-number text-gold text-[1.35rem]">
-                    {paidOut.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT
+                    {paidOut.toLocaleString(undefined, { maximumFractionDigits: 0 })} $OWP
                   </div>
                   <div className="kicker !text-[0.6rem]">paid to hunters, all time</div>
                 </div>
@@ -261,7 +261,7 @@ export default async function Home() {
                       )}
                       {poolRaw !== undefined && (
                         <span className="badge badge-gold absolute bottom-2 left-2 !text-[0.6rem]">
-                          {fromRaw(poolRaw).toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT
+                          {fromRaw(poolRaw).toLocaleString(undefined, { maximumFractionDigits: 0 })} $OWP
                         </span>
                       )}
                     </div>
@@ -337,7 +337,7 @@ export default async function Home() {
                             </td>
                             <td className="py-2.5 pr-4 stat-number text-gold text-right whitespace-nowrap">
                               +{fromRaw(a.amountRaw).toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
-                              $RIBBIT
+                              $OWP
                             </td>
                             <td className="py-2.5 pr-6 text-xs text-right whitespace-nowrap text-fog">
                               {ago(a.createdAt)}
@@ -360,26 +360,32 @@ export default async function Home() {
           <div className="panel panel-glow overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_280px]">
             <div className="p-5 sm:p-8">
               <div className="kicker mb-2">Settlement currency</div>
-              <h2 className="text-[1.5rem] mb-3">$RIBBIT</h2>
+              <h2 className="text-[1.5rem] mb-3">$OWP</h2>
               <p className="text-fog text-[0.9375rem] leading-relaxed max-w-lg mb-5">
                 One token fuels the house: it buys your credits (part of every
                 purchase is burned at the mint), backs your bids, and pays out
-                of every bounty pool. Launched fair on pump.fun — the treasury
-                holds no premine.
+                of every bounty pool.
+                {CLIENT_CONFIG.ribbitMint
+                  ? " The live mint is below."
+                  : " The contract is published here the moment $OWP launches."}
               </p>
-              <div className="flex items-center gap-2 flex-wrap mb-6">
-                <div
-                  className="mono text-xs rounded-md border px-3.5 py-2.5 inline-block break-all"
-                  style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
-                >
-                  {CLIENT_CONFIG.ribbitMint}
+              {CLIENT_CONFIG.ribbitMint && (
+                <div className="flex items-center gap-2 flex-wrap mb-6">
+                  <div
+                    className="mono text-xs rounded-md border px-3.5 py-2.5 inline-block break-all"
+                    style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
+                  >
+                    {CLIENT_CONFIG.ribbitMint}
+                  </div>
+                  <CopyChip text={CLIENT_CONFIG.ribbitMint} />
                 </div>
-                <CopyChip text={CLIENT_CONFIG.ribbitMint} />
-              </div>
+              )}
               <div className="flex flex-wrap gap-2.5">
-                <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
-                  Acquire on pump.fun ↗
-                </a>
+                {CLIENT_CONFIG.pumpFunUrl && (
+                  <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
+                    Acquire on pump.fun ↗
+                  </a>
+                )}
                 <a href={CLIENT_CONFIG.xUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
                   @OWProjex ↗
                 </a>
@@ -391,10 +397,10 @@ export default async function Home() {
             <div className="hidden md:block relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/art/ribbit-mark.jpg"
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{ filter: "brightness(0.85)" }}
+                src="/art/logo.png"
+                alt="$OWP"
+                className="absolute inset-0 w-full h-full object-contain"
+                style={{ background: "#05070a" }}
               />
               <div
                 className="absolute inset-0"

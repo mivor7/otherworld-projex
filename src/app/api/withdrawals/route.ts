@@ -34,7 +34,7 @@ export const POST = handler(async (req: Request) => {
     const unlocked = (u?.ribbitBalance ?? 0n) - (u?.ribbitLocked ?? 0n);
     if (amountRaw < unlocked) {
       return err(
-        `Minimum withdrawal is ${MIN_WITHDRAW_RIBBIT} $RIBBIT — or withdraw your full balance in one go`
+        `Minimum withdrawal is ${MIN_WITHDRAW_RIBBIT} $OWP — or withdraw your full balance in one go`
       );
     }
   }

@@ -438,7 +438,7 @@ let parkedBounties = [];
 // race below creates a REAL pending withdrawal addressed to a throwaway test
 // wallet. Pause payouts for the run (the worker checks this switch every
 // pass) and lift it LAST in cleanup, after the rows are deleted. This exact
-// race once paid 1,000 real $RIBBIT to a discarded test wallet (2026-07-26).
+// race once paid 1,000 real $OWP to a discarded test wallet (2026-07-26).
 const prePayoutsPaused = await prisma.houseSetting.findUnique({
   where: { key: "payoutsPaused" },
 });

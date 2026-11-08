@@ -59,7 +59,7 @@ const EPISODES = [
     ep: "EP 06",
     name: "Blackjack",
     target: "The House Toad",
-    brief: "Beat the dealer. Hold the line. Bank the RIBBIT.",
+    brief: "Beat the dealer. Hold the line. Bank the $OWP.",
     game: "blackjack",
     href: "/games/blackjack",
   },
@@ -83,7 +83,7 @@ const EPISODES = [
     ep: "EP 07",
     name: "Poker Face",
     target: "The Swamp Bot Ring",
-    brief: "Outplay three swamp bots. Win the pot. Bank the RIBBIT.",
+    brief: "Outplay three swamp bots. Win the pot. Bank the $OWP.",
     reward: "pool TBA",
     href: null,
   },
@@ -110,7 +110,7 @@ export default async function AboutPage() {
     const prize = game ? poolByGame.get(game) : undefined;
     if (!prize) return "reward" in e ? ((e as { reward?: string }).reward ?? "pool TBA") : "pool TBA";
     const amount = Math.round(fromRaw(prize)).toLocaleString();
-    return ARCADE.has(game!) ? `${amount} $RIBBIT weekly pool` : `${amount} $RIBBIT unlock pool`;
+    return ARCADE.has(game!) ? `${amount} $OWP weekly pool` : `${amount} $OWP unlock pool`;
   };
 
   return (
@@ -137,7 +137,7 @@ export default async function AboutPage() {
               first. They run it like an old house: every cabinet is a{" "}
               <span className="text-frost">contract</span>, every contract names
               a target, and every target has a price on its head — paid in{" "}
-              <span className="text-neon">$RIBBIT</span>.
+              <span className="text-neon">$OWP</span>.
             </p>
             <p>
               Token holders become bounty hunters. Play the cabinets, beat the
@@ -153,10 +153,10 @@ export default async function AboutPage() {
           <div className="kicker pt-1.5">02 — House rules</div>
           <div className="grid sm:grid-cols-2 gap-4">
             {[
-              ["Buy chips", `${cfg.ribbitPerCredit} $RIBBIT buys one table chip in a single on-chain transaction — ${Math.round(cfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes. The arcade episodes are free.`],
+              ["Buy chips", `${cfg.ribbitPerCredit} $OWP buys one table chip in a single on-chain transaction — ${Math.round(cfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes. The arcade episodes are free.`],
               ["Provably fair", "Every table outcome derives from a seed the house commits to before you play. Rotate your seed and re-check every round yourself."],
-              ["Pools that pay themselves", "Every bounty posts a fixed $RIBBIT prize with an unlock meter derived from it. When the table's pot meter fills, all eligible winners are paid pro-rata — automatically."],
-              ["Escrowed bids", "Auction bids lock deposited $RIBBIT held by the treasury. Outbid funds release instantly; withdrawals queue for the payout signer."],
+              ["Pools that pay themselves", "Every bounty posts a fixed $OWP prize with an unlock meter derived from it. When the table's pot meter fills, all eligible winners are paid pro-rata — automatically."],
+              ["Escrowed bids", "Auction bids lock deposited $OWP held by the treasury. Outbid funds release instantly; withdrawals queue for the payout signer."],
             ].map(([title, desc]) => (
               <div key={title} className="panel panel-hover p-5">
                 <div className="font-medium tracking-tight mb-1.5">{title}</div>
@@ -217,24 +217,30 @@ export default async function AboutPage() {
           <div className="kicker pt-1.5">04 — The token</div>
           <div className="panel p-7">
             <p className="text-fog text-[0.95rem] leading-relaxed mb-5 max-w-xl">
-              $RIBBIT launched fair on pump.fun — no premine, no team allocation
-              held by the treasury. It is the only currency the house accepts:
-              it buys your chips (part of every purchase is burned at the
-              mint), backs your bids, and pays out of every bounty pool.
+              $OWP is the only currency the house accepts: it buys your chips
+              (part of every purchase is burned at the mint), backs your bids,
+              and pays out of every bounty pool.
+              {CLIENT_CONFIG.ribbitMint
+                ? " The live mint is below."
+                : " The mint is published here at launch."}
             </p>
-            <div className="flex items-center gap-2 flex-wrap mb-5">
-              <code
-                className="mono text-xs rounded-md border px-3.5 py-2.5 inline-block break-all"
-                style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
-              >
-                {CLIENT_CONFIG.ribbitMint}
-              </code>
-              <CopyChip text={CLIENT_CONFIG.ribbitMint} />
-            </div>
+            {CLIENT_CONFIG.ribbitMint && (
+              <div className="flex items-center gap-2 flex-wrap mb-5">
+                <code
+                  className="mono text-xs rounded-md border px-3.5 py-2.5 inline-block break-all"
+                  style={{ borderColor: "var(--hairline-strong)", color: "var(--color-neon)" }}
+                >
+                  {CLIENT_CONFIG.ribbitMint}
+                </code>
+                <CopyChip text={CLIENT_CONFIG.ribbitMint} />
+              </div>
+            )}
             <div className="flex flex-wrap gap-2.5">
-              <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
-                pump.fun ↗
-              </a>
+              {CLIENT_CONFIG.pumpFunUrl && (
+                <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
+                  pump.fun ↗
+                </a>
+              )}
               {CLIENT_CONFIG.meteoraUrl && (
                 <a href={CLIENT_CONFIG.meteoraUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
                   Meteora pool ↗
@@ -260,7 +266,7 @@ export default async function AboutPage() {
           <div className="kicker pt-1.5">05 — Fine print</div>
           <div className="panel p-7 text-[0.85rem] leading-relaxed space-y-3" style={{ color: "var(--text-dim)" }}>
             <p>
-              $RIBBIT is a memecoin. It is not a registered security and nothing
+              $OWP is a memecoin. It is not a registered security and nothing
               on this site is investment advice. Do your own research before
               holding or transacting.
             </p>

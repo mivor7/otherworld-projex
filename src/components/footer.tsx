@@ -17,7 +17,7 @@ export function Footer() {
             </span>
           </div>
           <p className="text-fog leading-relaxed max-w-sm">
-            A decentralized bounty arcade on Solana. Turn $RIBBIT into table chips,
+            A decentralized bounty arcade on Solana. Turn $OWP into table chips,
             play provably-fair games, bid in the auction house, hunt bounties
             that pay automatically — all against one transparent treasury.
           </p>
@@ -36,13 +36,15 @@ export function Footer() {
           </ul>
         </div>
         <div>
-          <h3 className="kicker mb-4">$RIBBIT</h3>
+          <h3 className="kicker mb-4">$OWP</h3>
           <ul className="space-y-2.5 text-fog">
-            <li>
-              <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer">
-                pump.fun ↗
-              </a>
-            </li>
+            {CLIENT_CONFIG.pumpFunUrl && (
+              <li>
+                <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer">
+                  pump.fun ↗
+                </a>
+              </li>
+            )}
             {CLIENT_CONFIG.meteoraUrl && (
               <li>
                 <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.meteoraUrl} target="_blank" rel="noreferrer">
@@ -60,16 +62,18 @@ export function Footer() {
                 @OWProjex ↗
               </a>
             </li>
-            <li>
-              <a
-                className="hover:text-frost transition-colors"
-                href={`https://solscan.io/token/${CLIENT_CONFIG.ribbitMint}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Mint record ↗
-              </a>
-            </li>
+            {CLIENT_CONFIG.ribbitMint && (
+              <li>
+                <a
+                  className="hover:text-frost transition-colors"
+                  href={`https://solscan.io/token/${CLIENT_CONFIG.ribbitMint}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Mint record ↗
+                </a>
+              </li>
+            )}
           </ul>
         </div>
       </div>
@@ -77,7 +81,7 @@ export function Footer() {
         className="py-5 text-center text-xs px-4"
         style={{ borderTop: "1px solid var(--hairline)", color: "var(--text-dim)" }}
       >
-        Games are for entertainment. $RIBBIT is a memecoin with no promise of financial
+        Games are for entertainment. $OWP is a memecoin with no promise of financial
         return. Play responsibly — never spend more than you can afford to lose.
       </div>
     </footer>

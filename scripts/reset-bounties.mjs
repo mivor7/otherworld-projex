@@ -43,7 +43,7 @@ for (const p of toCreate) {
   const trg = p.triggerCreditVolume
     ? `trigger ${p.triggerCreditVolume.toLocaleString()} credits`
     : "weekly";
-  console.log(`  + ${p.title} (${p.game}, ${Number(p.prizeRibbit / 10n ** 6n).toLocaleString()} $RIBBIT, ${trg})`);
+  console.log(`  + ${p.title} (${p.game}, ${Number(p.prizeRibbit / 10n ** 6n).toLocaleString()} $OWP, ${trg})`);
 }
 
 if (!apply) {

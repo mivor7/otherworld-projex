@@ -1,6 +1,6 @@
 "use client";
 
-// The connected wallet's live $RIBBIT balance (Token-2022), for the top panel.
+// The connected wallet's live $OWP balance (Token-2022), for the top panel.
 // Refreshes on mount, on a slow poll, and whenever a buy/burn dispatches
 // "owp:balance" so it reflects a purchase immediately. Returns null until the
 // first read (or when no wallet is connected).
@@ -16,7 +16,7 @@ export function useRibbitBalance(): number | null {
   const [balance, setBalance] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    if (!publicKey) {
+    if (!publicKey || !CLIENT_CONFIG.ribbitMint) {
       setBalance(null);
       return;
     }

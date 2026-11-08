@@ -14,12 +14,13 @@ const nonneg = (v: string | undefined, fallback: number) => {
 
 export const CONFIG = {
   appName: "Other World Projex",
-  ticker: "$RIBBIT",
+  ticker: "$OWP",
 
-  // $RIBBIT mint (pump.fun launch). Override with RIBBIT_MINT if it migrates.
-  ribbitMint:
-    process.env.RIBBIT_MINT ?? "EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump",
-  ribbitDecimals: num(process.env.RIBBIT_DECIMALS, 6),
+  // $OWP mint. Empty until launch — set OWP_MINT. There is no baked-in
+  // address: the retired Ribbit mint must never be implied.
+  // Field name `ribbitMint` is the historical identifier; the value is $OWP.
+  ribbitMint: process.env.OWP_MINT ?? "",
+  ribbitDecimals: num(process.env.OWP_DECIMALS ?? process.env.RIBBIT_DECIMALS, 6),
 
   rpcUrl:
     process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com",
@@ -34,15 +35,15 @@ export const CONFIG = {
   // can display the float that actually pays withdrawals/prizes.
   payoutWallet: process.env.PAYOUT_WALLET ?? "",
 
-  // The official $RIBBIT staking pool on Streamflow (public account address,
-  // READ-ONLY — staking itself happens on Streamflow with the user's own
-  // wallet; the app only watches the chain and never holds staked funds).
-  stakePool:
-    process.env.STAKE_POOL_ADDRESS ??
-    "8vxnUP7QEbtE1RJqih5o1b7BYJRMPbt8cvgruWp82Y78",
+  // Streamflow staking pool for $OWP (public account address, READ-ONLY).
+  // Empty until a pool exists — staking then shows "not live" instead of
+  // another token's pool. The app never holds staked funds.
+  stakePool: process.env.STAKE_POOL_ADDRESS ?? "",
 
-  // Burn-to-play: how many whole $RIBBIT one play credit costs.
-  ribbitPerCredit: num(process.env.RIBBIT_PER_CREDIT, 100),
+  // Burn-to-play: how many whole $OWP one play credit costs.
+  // OWP_PER_CREDIT wins; RIBBIT_PER_CREDIT still reads so an existing
+  // host doesn't reset the price on deploy.
+  ribbitPerCredit: num(process.env.OWP_PER_CREDIT ?? process.env.RIBBIT_PER_CREDIT, 100),
 
   // House edge applied to game payouts (0.04 = 4%).
   houseEdge: Math.min(0.15, Math.max(0.005, num(process.env.HOUSE_EDGE, 0.04))),
@@ -52,22 +53,29 @@ export const CONFIG = {
   maxWager: num(process.env.MAX_WAGER, 1_000),
 
   // Sybil economics: prize leaderboards only rank wallets with skin in the
-  // game. Eligibility = lifetime verified burns ≥ this many whole $RIBBIT;
+  // game. Eligibility = lifetime verified burns ≥ this many whole $OWP;
   // table boards additionally require this many credits wagered in-window.
-  rankedMinBurnedRibbit: nonneg(process.env.RANKED_MIN_BURNED_RIBBIT, 1_000),
+  rankedMinBurnedRibbit: nonneg(
+    process.env.OWP_RANKED_MIN_BURNED ?? process.env.RANKED_MIN_BURNED_RIBBIT,
+    1_000
+  ),
   rankedMinTableVolume: nonneg(process.env.RANKED_MIN_TABLE_VOLUME, 100),
 
-  // Airdrop waitlist: on-site signups need this much $RIBBIT held on-chain
+  // Airdrop waitlist: on-site signups need this much $OWP held on-chain
   // (whole tokens), and the list can be closed with a switch. The airdrop is
   // guaranteed once the list reaches WAITLIST_GOAL members.
-  waitlistMinHoldRibbit: nonneg(process.env.WAITLIST_MIN_HOLD_RIBBIT, 250_000),
+  waitlistMinHoldRibbit: nonneg(
+    process.env.OWP_WAITLIST_MIN_HOLD ?? process.env.WAITLIST_MIN_HOLD_RIBBIT,
+    250_000
+  ),
   waitlistGoal: nonneg(process.env.WAITLIST_GOAL, 1000),
   waitlistOpen: process.env.WAITLIST_OPEN !== "false",
   // Active-burner rule: prize eligibility additionally requires this many
-  // whole $RIBBIT burned INSIDE the board/bounty window. Splitting play
+  // whole $OWP burned INSIDE the board/bounty window. Splitting play
   // across N sybil wallets therefore costs N× fresh burns every window.
   rankedMinWindowBurnedRibbit: nonneg(
-    process.env.RANKED_MIN_WINDOW_BURNED_RIBBIT,
+    process.env.OWP_RANKED_MIN_WINDOW_BURNED ??
+      process.env.RANKED_MIN_WINDOW_BURNED_RIBBIT,
     100
   ),
   // Admin guidance only: the share of realized house take shown as a safe
@@ -80,7 +88,7 @@ export const CONFIG = {
   // Max arcade score submissions per wallet per game per UTC day.
   arcadeDailySubmissions: num(process.env.ARCADE_DAILY_SUBMISSIONS, 40),
 
-  // Buy-credits: paying $RIBBIT for credits splits into a burned portion
+  // Buy-credits: paying $OWP for credits splits into a burned portion
   // (deflation) and a house portion (real treasury revenue). This is the
   // fraction burned; the rest goes to the treasury. Buying is only offered
   // when TREASURY_WALLET is set (there must be somewhere to send the house
@@ -97,7 +105,7 @@ export const CONFIG = {
   inviteRequired: process.env.INVITE_REQUIRED === "true",
 
   // Auto-derived trigger: a credit-game bounty's required credit-spend is set
-  // so the house's real $RIBBIT revenue from selling those credits (the
+  // so the house's real $OWP revenue from selling those credits (the
   // buy-split share) covers the prize PLUS this margin. 0.5 = the house nets
   // ~1.5× the prize before paying. Higher = more margin / slower payouts. The
   // house EDGE is unrelated to this.
@@ -125,12 +133,12 @@ export function requireSessionSecret(): string {
   return "owp-dev-secret-do-not-use-in-prod";
 }
 
-/** Convert whole $RIBBIT to raw token units. */
+/** Convert whole $OWP to raw token units. */
 export function toRaw(ribbit: number): bigint {
   return BigInt(Math.round(ribbit * 10 ** CONFIG.ribbitDecimals));
 }
 
-/** Convert raw token units to whole $RIBBIT for display. */
+/** Convert raw token units to whole $OWP for display. */
 export function fromRaw(raw: bigint): number {
   return Number(raw) / 10 ** CONFIG.ribbitDecimals;
 }

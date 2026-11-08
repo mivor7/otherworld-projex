@@ -35,13 +35,13 @@ export function GameBountyStrip({ game }: { game: string }) {
         style={{ border: "1px solid var(--hairline)", background: "oklch(1 0 0 / 0.02)" }}
       >
         No live bounty on this table right now — you win and lose chips as
-        normal, but nothing feeds a $RIBBIT prize until the house posts the
+        normal, but nothing feeds a $OWP prize until the house posts the
         next round.
       </div>
     );
   }
 
-  const prize = b ? b.prizeText ?? `${fmt(b.prizeRibbit)} $RIBBIT` : "";
+  const prize = b ? b.prizeText ?? `${fmt(b.prizeRibbit)} $OWP` : "";
   const pct = b && b.progress?.mode === "credit" ? b.progress.pct : null;
   const you = live?.you;
   const myRank = live?.entries.find((e) => e.isYou)?.rank;
@@ -53,7 +53,7 @@ export function GameBountyStrip({ game }: { game: string }) {
     if (you.inRunning && you.projectedRibbit > 0) {
       statusNode = (
         <span className="text-neon">
-          you&apos;re #{myRank ?? "—"} · ~{fmt(you.projectedRibbit)} $RIBBIT
+          you&apos;re #{myRank ?? "—"} · ~{fmt(you.projectedRibbit)} $OWP
         </span>
       );
     } else if (!you.spendEligible || you.volumeEligible === false) {

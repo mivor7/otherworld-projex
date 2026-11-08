@@ -63,13 +63,13 @@ export default function TreasuryPage() {
             data.chain.ribbitBalance !== null
               ? data.chain.ribbitBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })
               : "—",
-          label: "$RIBBIT held",
+          label: "$OWP held",
         },
         { value: fmtRibbit(data.totals.ribbitBurnedRaw), label: "Burned forever" },
       ]
     : [
         { value: "…", label: "Vault balance" },
-        { value: "…", label: "$RIBBIT held" },
+        { value: "…", label: "$OWP held" },
         { value: "…", label: "Burned forever" },
       ];
 
@@ -116,13 +116,13 @@ export default function TreasuryPage() {
             <StatCard
               label="Prizes paid"
               value={fmtRibbit(data.totals.bountyPaidRaw)}
-              sub="$RIBBIT in bounty prizes sent to hunters"
+              sub="$OWP in bounty prizes sent to hunters"
               tone="neon"
             />
             <StatCard
               label="Wagered volume"
               value={data.totals.wageredCredits.toLocaleString()}
-              sub={`chips across all tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} chips (table currency, not $RIBBIT)`}
+              sub={`chips across all tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} chips (table currency, not $OWP)`}
             />
             <StatCard
               label="Rounds settled"
@@ -133,7 +133,7 @@ export default function TreasuryPage() {
             <StatCard
               label="Chip sales"
               value={String(data.totals.burnCount + data.totals.purchaseCount)}
-              sub={`${fmtRibbit(data.totals.ribbitBurnedRaw)} $RIBBIT burned forever`}
+              sub={`${fmtRibbit(data.totals.ribbitBurnedRaw)} $OWP burned forever`}
               tone="gold"
             />
           </div>
@@ -181,7 +181,7 @@ export default function TreasuryPage() {
               ))}
               <p className="text-xs mt-5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
                 Bounty prizes are fixed up front and paid from the treasury —{" "}
-                {fmtRibbit(data.totals.bountyPaidRaw)} $RIBBIT paid to hunters so
+                {fmtRibbit(data.totals.bountyPaidRaw)} $OWP paid to hunters so
                 far. Triggers are derived from each prize, so a pool that pays
                 out has already earned the house more than it costs.
               </p>
@@ -233,8 +233,16 @@ export default function TreasuryPage() {
                           <span className="badge">{e.kind}</span>
                         </td>
                         <td className="py-2.5 pr-3 stat-number">
-                          {e.asset.startsWith("RIBBIT") ? fmtRibbit(e.amount) : e.amount}{" "}
-                          <span className="text-fog text-xs font-normal">{e.asset}</span>
+                          {e.asset.startsWith("RIBBIT") || e.asset.startsWith("OWP")
+                            ? fmtRibbit(e.amount)
+                            : e.amount}{" "}
+                          <span className="text-fog text-xs font-normal">
+                            {e.asset.startsWith("RIBBIT") || e.asset.startsWith("OWP")
+                              ? e.asset.includes("BURN")
+                                ? "$OWP burned"
+                                : "$OWP"
+                              : e.asset}
+                          </span>
                         </td>
                         <td className="py-2.5 pr-3 text-fog">{e.note}</td>
                         <td

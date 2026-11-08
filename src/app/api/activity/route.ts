@@ -76,13 +76,13 @@ export const GET = handler(async () => {
       at: b.createdAt,
       kind: "bid",
       href: `/auctions/${b.auctionId}`,
-      text: `${short(b.user.wallet)} bid ${fmt(fromRaw(b.amountRaw))} $RIBBIT on “${b.auction.title}”`,
+      text: `${short(b.user.wallet)} bid ${fmt(fromRaw(b.amountRaw))} $OWP on “${b.auction.title}”`,
     })),
     ...burns.map((b) => ({
       at: b.createdAt,
       kind: "burn",
       href: "/games",
-      text: `${short(b.user.wallet)} burned ${fmt(fromRaw(b.amountRaw))} $RIBBIT for ${b.credits} credits`,
+      text: `${short(b.user.wallet)} burned ${fmt(fromRaw(b.amountRaw))} $OWP for ${b.credits} credits`,
     })),
     ...scores.map((s) => ({
       at: s.createdAt,
@@ -94,7 +94,7 @@ export const GET = handler(async () => {
       at: a.createdAt,
       kind: "award",
       href: "/bounties",
-      text: `${short(a.user.wallet)} was paid ${fmt(fromRaw(a.amountRaw))} $RIBBIT from “${a.bounty.title}”`,
+      text: `${short(a.user.wallet)} was paid ${fmt(fromRaw(a.amountRaw))} $OWP from “${a.bounty.title}”`,
     })),
   ]
     .sort((a, b) => b.at.getTime() - a.at.getTime())

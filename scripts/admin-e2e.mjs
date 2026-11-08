@@ -140,7 +140,7 @@ const preSettings = await prisma.houseSetting.findMany({
 // bounty awards create REAL pending withdrawals addressed to throwaway test
 // wallets. Pause payouts for the run (the worker checks this switch every
 // pass) and lift it LAST in cleanup, after every suite withdrawal row is
-// deleted. This exact race once paid 1,000 real $RIBBIT to a discarded
+// deleted. This exact race once paid 1,000 real $OWP to a discarded
 // test wallet. Kept out of TOUCHED_SETTINGS on purpose: that restore runs
 // BEFORE the withdrawal deletions.
 const prePayoutsPaused = await prisma.houseSetting.findUnique({
@@ -356,7 +356,7 @@ try {
   // Trigger is derived by the app from the prize × (1+margin) / ((1−burnShare)
   // × ribbitPerCredit) — read the same value from live config.
   const req5000 = await requiredCredits(5000n * RAW);
-  check("trigger auto-derived from prize (5000 $RIBBIT → derived credits)",
+  check("trigger auto-derived from prize (5000 $OWP → derived credits)",
     autoB.status === 200 && autoB.data.triggerCreditVolume === req5000,
     `got ${autoB.data?.triggerCreditVolume}, expected ${req5000}`);
   const autoRow = await prisma.bounty.findUnique({ where: { id: autoB.data.id } });
@@ -393,7 +393,7 @@ try {
     body: JSON.stringify({ action: "edit", title: "ADM edited", prizeRibbit: 10000, extendDays: 3 }),
   });
   const req10000 = await requiredCredits(10000n * RAW);
-  check("edit succeeds and re-derives trigger (10000 $RIBBIT)",
+  check("edit succeeds and re-derives trigger (10000 $OWP)",
     edit.status === 200 && edit.data.triggerCreditVolume === req10000,
     JSON.stringify(edit.data));
   const edited = await prisma.bounty.findUnique({ where: { id: eb.data.id } });

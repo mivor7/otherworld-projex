@@ -229,7 +229,7 @@ export default function BlackjackPage() {
     }
   };
 
-  // ——— practice table actions (no wallet, no server, no $RIBBIT) ———
+  // ——— practice table actions (no wallet, no server, no $OWP) ———
   const settlePractice = useCallback(
     (r: PracticeRound) => {
       const settleHand = (cards: number[], stake: number) => {
@@ -395,7 +395,7 @@ export default function BlackjackPage() {
 
       <FirstVisitHint id="how-games-work">
         New here? When a game shows a live bounty, playing enters you in a shared
-        $RIBBIT prize — the panel tracks your standing in real time.
+        $OWP prize — the panel tracks your standing in real time.
       </FirstVisitHint>
 
       {/* Mobile: the strip is the at-a-glance header (standings stack far
@@ -436,7 +436,7 @@ export default function BlackjackPage() {
         {sandbox && (
           <div className="mb-5">
             <Notice kind="info">
-              Sandbox — no wallet needed, no $RIBBIT involved. Same single-deck
+              Sandbox — no wallet needed, no $OWP involved. Same single-deck
               rules, bottomless practice bankroll, nothing real won or lost.
             </Notice>
           </div>

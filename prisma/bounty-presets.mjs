@@ -98,7 +98,7 @@ export const BOUNTY_PRESETS = [
     game: "frogris",
     prize: 1_000,
     description:
-      "Stack the falling frogs, clear the lines, don't top out. Free to play — the 1,000 $RIBBIT pool pays weekly, split pro-rata by best score among eligible hunters.",
+      "Stack the falling frogs, clear the lines, don't top out. Free to play — the 1,000 $OWP pool pays weekly, split pro-rata by best score among eligible hunters.",
   }),
   freeBounty({
     title: "EP 04 — Worm Frog",
@@ -106,7 +106,7 @@ export const BOUNTY_PRESETS = [
     game: "worm",
     prize: 1_000,
     description:
-      "Slither, grow, and don't bite your own tail. Free to play — the 1,000 $RIBBIT pool pays weekly, split pro-rata by best score among eligible hunters.",
+      "Slither, grow, and don't bite your own tail. Free to play — the 1,000 $OWP pool pays weekly, split pro-rata by best score among eligible hunters.",
   }),
   freeBounty({
     title: "EP 05 — Hopper",
@@ -114,6 +114,6 @@ export const BOUNTY_PRESETS = [
     game: "hopper",
     prize: 1_250,
     description:
-      "Hop the lanes, dodge the traffic, ride the logs home. Free to play — the 1,250 $RIBBIT pool pays weekly, split pro-rata by best score among eligible hunters.",
+      "Hop the lanes, dodge the traffic, ride the logs home. Free to play — the 1,250 $OWP pool pays weekly, split pro-rata by best score among eligible hunters.",
   }),
 ];

@@ -1,4 +1,4 @@
-// Payout worker — pays queued $RIBBIT withdrawals/prizes from a DEDICATED
+// Payout worker — pays queued $OWP withdrawals/prizes from a DEDICATED
 // hot wallet (a float the owners top up), NEVER the treasury key. Run it OFF
 // the web server (ops box, or a locked-down container) so no deployment ever
 // holds a private key:
@@ -26,17 +26,25 @@ import {
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 
-// $RIBBIT is an SPL Token-2022 mint — pass its program id to every ATA
+// $OWP is an SPL Token-2022 mint — pass its program id to every ATA
 // derivation and transfer or the payout targets the wrong account/program.
 const TP = TOKEN_2022_PROGRAM_ID;
 
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
-const MINT = new PublicKey(
-  process.env.RIBBIT_MINT ?? "EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump"
-);
-const DECIMALS = Number(process.env.RIBBIT_DECIMALS ?? 6);
+const MINT_ADDRESS = process.env.OWP_MINT ?? "";
+if (!MINT_ADDRESS) {
+  console.error(
+    "Set OWP_MINT to the $OWP mint before running the payout worker. The retired Ribbit mint is not a fallback."
+  );
+  process.exit(1);
+}
+const MINT = new PublicKey(MINT_ADDRESS);
+const DECIMALS = Number(process.env.OWP_DECIMALS ?? process.env.RIBBIT_DECIMALS ?? 6);
 const MAX_PAYOUT = BigInt(
-  Math.round(Number(process.env.MAX_PAYOUT_RIBBIT ?? 1_000_000) * 10 ** DECIMALS)
+  Math.round(
+    Number(process.env.MAX_PAYOUT_OWP ?? process.env.MAX_PAYOUT_RIBBIT ?? 1_000_000) *
+      10 ** DECIMALS
+  )
 );
 const INTERVAL_MS = Number(process.env.PAYOUT_INTERVAL_MS ?? 15_000);
 

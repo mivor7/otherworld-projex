@@ -145,7 +145,7 @@ export default function ApplyPage() {
                 </select>
               </div>
               <div>
-                <label className="kicker !text-[0.6rem]">Opening bid ($RIBBIT)</label>
+                <label className="kicker !text-[0.6rem]">Opening bid ($OWP)</label>
                 <input
                   type="number"
                   className="input mt-1.5"
@@ -205,7 +205,7 @@ export default function ApplyPage() {
                     <div className="card-price-label">Opening bid</div>
                     <div className="price text-neon">
                       {Number(form.askRibbit || 0).toLocaleString()}{" "}
-                      <span className="text-fog text-xs font-normal">RIBBIT</span>
+                      <span className="text-fog text-xs font-normal">$OWP</span>
                     </div>
                   </div>
                   <div className="card-price-label">0 bids</div>
@@ -227,7 +227,7 @@ export default function ApplyPage() {
               </li>
               <li>
                 <span className="text-frost font-medium">Settlement:</span> the
-                winner’s $RIBBIT is escrowed by the house; you coordinate
+                winner’s $OWP is escrowed by the house; you coordinate
                 delivery, the house releases proceeds.
               </li>
               <li>

@@ -3,7 +3,7 @@
 // The ONE place the "how much do I need to qualify" answer is phrased, so it
 // reads identically on every surface (game strip, standings aside, arcade
 // header). Covers all three gates: fresh spend for this bounty, lifetime
-// spend (both bought in $RIBBIT), and — on the tables — wagered volume this
+// spend (both bought in $OWP), and — on the tables — wagered volume this
 // window. Renders nothing once the player clears every gate — it's purely
 // the "what's still missing" helper.
 import Link from "next/link";
@@ -13,8 +13,8 @@ export type QualifyYou = {
   spendEligible: boolean;
   lifetimeEligible: boolean;
   windowEligible: boolean;
-  lifetimeSpent: number; // $RIBBIT
-  windowSpent: number; // $RIBBIT
+  lifetimeSpent: number; // $OWP
+  windowSpent: number; // $OWP
   // Tables only (absent/true on arcade and older payloads): credits wagered
   // on this table this window vs the house's volume-to-rank floor.
   volumeEligible?: boolean;
@@ -39,7 +39,7 @@ export function QualifyStatus({
 
   // The unmet gate(s), most immediate first: fresh spend for THIS bounty,
   // lifetime spend, then table volume. Spend is phrased in credits-to-BUY
-  // ($RIBBIT under the hood); volume is credits-to-WAGER at this table.
+  // ($OWP under the hood); volume is credits-to-WAGER at this table.
   const reqs: {
     key: string;
     label: string;
@@ -53,7 +53,7 @@ export function QualifyStatus({
       label: `Buy ${n(toCredits(Math.max(0, house.rankedMinWindowBurnedRibbit - you.windowSpent)))} more chips during this bounty`,
       have: you.windowSpent,
       need: house.rankedMinWindowBurnedRibbit,
-      unit: "$RIBBIT",
+      unit: "$OWP",
     });
   if (!you.lifetimeEligible)
     reqs.push({
@@ -61,7 +61,7 @@ export function QualifyStatus({
       label: `Buy ${n(toCredits(Math.max(0, house.rankedMinBurnedRibbit - you.lifetimeSpent)))} more chips in total`,
       have: you.lifetimeSpent,
       need: house.rankedMinBurnedRibbit,
-      unit: "$RIBBIT",
+      unit: "$OWP",
     });
   if (volumeShort)
     reqs.push({
@@ -126,7 +126,7 @@ export function QualifyStatus({
           );
         })}
       </div>
-      {reqs.some((r) => r.unit === "$RIBBIT") ? (
+      {reqs.some((r) => r.unit === "$OWP") ? (
         <Link href="/games" className="text-neon hover:underline inline-block mt-2.5">
           Buy chips →
         </Link>

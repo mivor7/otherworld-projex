@@ -61,14 +61,14 @@ export const GET = handler(async () => {
       id: "skin-in-the-game",
       icon: "🎖️",
       name: "Ranked Hunter",
-      desc: `Spend ${cfg.rankedMinBurnedRibbit.toLocaleString()}+ $RIBBIT on credits lifetime — unlocks prize boards`,
+      desc: `Spend ${cfg.rankedMinBurnedRibbit.toLocaleString()}+ $OWP on credits lifetime — unlocks prize boards`,
       earned: spentRaw >= toRaw(cfg.rankedMinBurnedRibbit),
     },
     {
       id: "torch-bearer",
       icon: "🔥",
       name: "Torch Bearer",
-      desc: "Spend 10,000+ $RIBBIT on chips",
+      desc: "Spend 10,000+ $OWP on chips",
       earned: spentRaw >= toRaw(10_000),
     },
     {

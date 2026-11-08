@@ -9,7 +9,7 @@
 //                                   over the standard nonce message — the
 //                                   waitlist is open to holders who don't
 //                                   have an app account (invite gate or not).
-//                                   Then the required $RIBBIT holding is
+//                                   Then the required $OWP holding is
 //                                   verified live on-chain and the next
 //                                   position is claimed. One place per wallet
 //                                   for new sign-ups (imported duplicates
@@ -151,12 +151,12 @@ export const POST = handler(async (req: Request) => {
   // wallet — never trusted from the client.
   const balances = await getWalletBalances(walletAddr);
   if (balances.ribbitBalance === null) {
-    return err("Couldn't read your $RIBBIT balance from the chain — try again in a moment.", 503);
+    return err("Couldn't read your $OWP balance from the chain — try again in a moment.", 503);
   }
   const held = balances.ribbitBalance;
   if (held < cfg.waitlistMinHoldRibbit) {
     return err(
-      `The waitlist needs ${cfg.waitlistMinHoldRibbit.toLocaleString()} $RIBBIT held in your wallet. ` +
+      `The waitlist needs ${cfg.waitlistMinHoldRibbit.toLocaleString()} $OWP held in your wallet. ` +
         `You're holding ${Math.floor(held).toLocaleString()}.`,
       403
     );

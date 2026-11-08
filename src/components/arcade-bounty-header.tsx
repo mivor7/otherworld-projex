@@ -22,7 +22,7 @@ export function ArcadeBountyHeader({ game }: { game: string }) {
   const justEnded = live?.justEnded ?? null;
   if (!b && !justEnded) return null;
 
-  const prize = b ? b.prizeText ?? `${fmt(b.prizeRibbit)} $RIBBIT` : "";
+  const prize = b ? b.prizeText ?? `${fmt(b.prizeRibbit)} $OWP` : "";
   const you = live?.you;
   const myRank = live?.entries.find((e) => e.isYou)?.rank;
 
@@ -32,7 +32,7 @@ export function ArcadeBountyHeader({ game }: { game: string }) {
   if (b && me.signedIn && you && you.spendEligible) {
     if (you.inRunning && you.projectedRibbit > 0)
       eligibleStatus = {
-        text: `You're in the running — #${myRank ?? "—"} · ~${fmt(you.projectedRibbit)} $RIBBIT`,
+        text: `You're in the running — #${myRank ?? "—"} · ~${fmt(you.projectedRibbit)} $OWP`,
         win: true,
       };
     else if (you.value <= 0)

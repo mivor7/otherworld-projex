@@ -1,4 +1,4 @@
-// Burn-to-play (pre-treasury fallback only): the user burns $RIBBIT and posts
+// Burn-to-play (pre-treasury fallback only): the user burns $OWP and posts
 // the tx signature; we verify it on-chain and grant credits. Once a treasury
 // exists, credits must come through /api/credits/buy instead — the split (part
 // burned, part to the house) is what funds the reward economy, and a pure burn
@@ -38,7 +38,7 @@ export const POST = handler(async (req: Request) => {
   const amountRaw = await verifyBurnTx(signature, session.wallet);
   if (amountRaw === null) {
     return err(
-      "Could not verify a $RIBBIT burn by your wallet in that transaction",
+      "Could not verify a $OWP burn by your wallet in that transaction",
       422
     );
   }
@@ -46,7 +46,7 @@ export const POST = handler(async (req: Request) => {
   const credits = Number(amountRaw / toRaw(cfg.ribbitPerCredit));
   if (credits < 1) {
     return err(
-      `Burn at least ${cfg.ribbitPerCredit} $RIBBIT for 1 credit`,
+      `Burn at least ${cfg.ribbitPerCredit} $OWP for 1 credit`,
       422
     );
   }

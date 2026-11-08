@@ -96,7 +96,7 @@ export function BountyEndedCard({ data }: { data: JustEnded }) {
       {won ? (
         <p className="text-sm text-neon">
           You placed #{data.you!.rank} —{" "}
-          <span className="stat-number text-gold">{fmt(data.you!.amountRibbit)} $RIBBIT</span>{" "}
+          <span className="stat-number text-gold">{fmt(data.you!.amountRibbit)} $OWP</span>{" "}
           is on its way to your wallet. 🎉
         </p>
       ) : (
@@ -106,7 +106,7 @@ export function BountyEndedCard({ data }: { data: JustEnded }) {
           ) : data.winners > 0 ? (
             <>
               {data.winners} hunter{data.winners === 1 ? "" : "s"} shared{" "}
-              {fmt(data.prizeRibbit)} $RIBBIT.{" "}
+              {fmt(data.prizeRibbit)} $OWP.{" "}
             </>
           ) : (
             <>No one qualified this round. </>

@@ -225,7 +225,7 @@ export default function AdminPage() {
   const [payingId, setPayingId] = useState<string | null>(null);
   const [showSig, setShowSig] = useState<Record<string, boolean>>({});
   // Rows that were PAID on-chain but whose auto-record failed — "Pay now" must
-  // stay locked on them (a second click would double-pay real $RIBBIT).
+  // stay locked on them (a second click would double-pay real $OWP).
   const [recordFailed, setRecordFailed] = useState<Record<string, boolean>>({});
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [inviteForm, setInviteForm] = useState({ count: 5, maxUses: 1, note: "" });
@@ -324,7 +324,7 @@ export default function AdminPage() {
       .catch(() => {});
   }, []);
 
-  // One-click payout: send $RIBBIT from the admin's connected wallet to the
+  // One-click payout: send $OWP from the admin's connected wallet to the
   // recipient, then mark the queue row sent with the resulting signature.
   const payNow = async (id: string, destination: string, amountRaw: string) => {
     setPayingId(id);
@@ -561,16 +561,16 @@ export default function AdminPage() {
         <StatCard
           label="Lifetime burned"
           value={s ? `${fmtRibbit(s.lifetimeBurnedRaw)}` : "…"}
-          sub="$RIBBIT"
+          sub="$OWP"
           tone="gold"
         />
         <StatCard
           label="Escrow locked"
           value={s ? `${fmtRibbit(s.lockedRaw)}` : "…"}
-          sub="$RIBBIT in bids"
+          sub="$OWP in bids"
         />
         <StatCard
-          label="Treasury $RIBBIT"
+          label="Treasury $OWP"
           value={
             treasury?.configured && treasury.ribbitBalance !== null
               ? treasury.ribbitBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })
@@ -589,7 +589,7 @@ export default function AdminPage() {
           }
         />
         <StatCard
-          label="Payout wallet $RIBBIT"
+          label="Payout wallet $OWP"
           value={
             payout?.configured && payout.ribbitBalance !== null
               ? payout.ribbitBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })
@@ -630,7 +630,7 @@ export default function AdminPage() {
             sub="credits"
           />
           <StatCard
-            label="$RIBBIT in · 24h"
+            label="$OWP in · 24h"
             value={pulse ? pulse.ribbitIn24.toLocaleString() : "…"}
             sub="burned + bought"
             tone="gold"
@@ -758,7 +758,7 @@ export default function AdminPage() {
                 </span>
                 <span className="text-xs" style={{ color: "var(--text-dim)" }}>
                   members · airdrop guaranteed at {waitlist.goal.toLocaleString()} (amount TBA) ·
-                  signup required holding 250k $RIBBIT · positions &amp; referrals are earned —
+                  signup required holding 250k $OWP · positions &amp; referrals are earned —
                   never recompute them
                 </span>
               </div>
@@ -941,7 +941,7 @@ export default function AdminPage() {
                   </div>
                   <p className="text-fog text-sm mb-2">{a.description}</p>
                   <p className="text-xs text-fog mb-3">
-                    seller {shortWallet(a.user.wallet)} · ask {fmtRibbit(a.askRaw)} RIBBIT
+                    seller {shortWallet(a.user.wallet)} · ask {fmtRibbit(a.askRaw)} $OWP
                     {a.contact && ` · ${a.contact}`}
                   </p>
                   <div className="flex gap-2 items-center flex-wrap">
@@ -996,7 +996,7 @@ export default function AdminPage() {
                 {fmtRibbit(
                   data.withdrawals.reduce((s, w) => s + BigInt(w.amountRaw), 0n).toString()
                 )}{" "}
-                RIBBIT owed
+                $OWP owed
               </span>
             )}
           </div>
@@ -1010,7 +1010,7 @@ export default function AdminPage() {
                 <div key={w.id} className="panel p-4">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="text-sm min-w-0">
-                      <span className="stat-number text-neon">{fmtRibbit(w.amountRaw)}</span> RIBBIT
+                      <span className="stat-number text-neon">{fmtRibbit(w.amountRaw)}</span> $OWP
                       <span
                         className="block mono text-[0.7rem] break-all mt-0.5"
                         style={{ color: "var(--text-dim)" }}
@@ -1091,7 +1091,7 @@ export default function AdminPage() {
             </div>
           )}
           <p className="text-xs text-fog mt-4 leading-relaxed">
-            <span className="text-frost">Pay now</span> sends the $RIBBIT from your
+            <span className="text-frost">Pay now</span> sends the $OWP from your
             connected wallet and records it — approve once in your wallet. Or run{" "}
             <code className="text-neon">node scripts/payout-worker.mjs</code> with the
             payout hot-wallet to clear the whole queue automatically.{" "}
@@ -1210,14 +1210,14 @@ export default function AdminPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-fog">Prize RIBBIT</label>
+                <label className="text-xs text-fog">Prize $OWP</label>
                 <input className="input" type="number" value={bountyForm.prizeRibbit || ""}
                   onChange={(e) => setBountyForm({ ...bountyForm, prizeRibbit: Number(e.target.value) })} />
               </div>
               {!bountyIsFree && bountyForm.autoPay && (
                 <div>
                   <label className="text-xs text-fog" title="House head start on the pot — your declared cost per fill. Play funds the rest.">
-                    Seed RIBBIT
+                    Seed $OWP
                   </label>
                   <input className="input" type="number" min={0} value={bountyForm.seedRibbit || ""}
                     placeholder="0"
@@ -1285,9 +1285,9 @@ export default function AdminPage() {
               return (
                 <div className="panel p-3 text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
                   <span className="text-frost font-medium">Auto-pay · credit pot.</span> The pot opens at{" "}
-                  <span className="stat-number text-gold">{bountyForm.seedRibbit.toLocaleString()} $RIBBIT</span>{" "}
+                  <span className="stat-number text-gold">{bountyForm.seedRibbit.toLocaleString()} $OWP</span>{" "}
                   (your seed{bountyForm.seedRibbit > 0 ? `, ${Math.round((bountyForm.seedRibbit / Math.max(1, bountyForm.prizeRibbit)) * 100)}% of the prize` : ""}) and
-                  grows <span className="stat-number text-neon">{potRate.toFixed(2)} $RIBBIT per credit wagered</span>{" "}
+                  grows <span className="stat-number text-neon">{potRate.toFixed(2)} $OWP per credit wagered</span>{" "}
                   — its share of the house edge. It fills at{" "}
                   <span className="stat-number text-neon">≈ {requiredCredits.toLocaleString()} credits</span> wagered on{" "}
                   {bountyForm.game}, then pays all eligible winners pro-rata
@@ -1296,7 +1296,7 @@ export default function AdminPage() {
                     : ". Re-open is OFF — this round is the last; the table waits until you post a new bounty."}
                   <div className="mt-1.5">
                     Your cost per fill is <span className="text-frost">the seed and only the seed</span> — the funded{" "}
-                    {fundedRibbit.toLocaleString()} $RIBBIT is covered by edge the house genuinely collected, so every
+                    {fundedRibbit.toLocaleString()} $OWP is covered by edge the house genuinely collected, so every
                     fill leaves the house ahead. Whether it fills is up to the players — a pot that never fills costs
                     nothing.
                   </div>
@@ -1358,7 +1358,7 @@ export default function AdminPage() {
                       {BigInt(a.currentRaw) > 0n
                         ? `current ${fmtRibbit(a.currentRaw)}`
                         : `opening ${fmtRibbit(a.startBidRaw)}`}{" "}
-                      RIBBIT · {a.sellerWallet ? `consigned ${shortWallet(a.sellerWallet)}` : "house lot"}
+                      $OWP · {a.sellerWallet ? `consigned ${shortWallet(a.sellerWallet)}` : "house lot"}
                     </p>
                     <div className="flex gap-2">
                       <button
@@ -1501,7 +1501,7 @@ export default function AdminPage() {
                     <div className="flex justify-between gap-2 mb-1">
                       <span className="font-medium">{a.title}</span>
                       <span className="badge badge-gold">
-                        {fmtRibbit(a.currentRaw)} RIBBIT
+                        {fmtRibbit(a.currentRaw)} $OWP
                       </span>
                     </div>
                     <p className="text-xs text-fog mb-3">
@@ -1555,7 +1555,7 @@ export default function AdminPage() {
                   <span className="font-medium tracking-tight">{b.title}</span>
                   {b.game && <span className="badge">{b.game}</span>}
                   <span className="badge badge-gold">
-                    {b.prizeRibbit.toLocaleString()} $RIBBIT
+                    {b.prizeRibbit.toLocaleString()} $OWP
                   </span>
                   <span
                     className={`badge ${
@@ -1676,12 +1676,12 @@ export default function AdminPage() {
                     </div>
                     <div className="grid grid-cols-3 gap-2 items-end">
                       <div>
-                        <label className="text-[0.65rem] text-fog">Prize $RIBBIT</label>
+                        <label className="text-[0.65rem] text-fog">Prize $OWP</label>
                         <input className="input !text-xs" type="number" value={editForm.prizeRibbit || ""}
                           onChange={(e) => setEditForm({ ...editForm, prizeRibbit: Number(e.target.value) })} />
                       </div>
                       <div>
-                        <label className="text-[0.65rem] text-fog">Seed $RIBBIT</label>
+                        <label className="text-[0.65rem] text-fog">Seed $OWP</label>
                         <input className="input !text-xs" type="number" min={0} value={editForm.seedRibbit || ""}
                           placeholder="0"
                           onChange={(e) => setEditForm({ ...editForm, seedRibbit: Math.max(0, Number(e.target.value) || 0) })} />
@@ -2018,7 +2018,7 @@ export default function AdminPage() {
                                   wallet {e.walletAgeDays}d
                                 </td>
                                 <td className="py-1.5 text-right stat-number text-gold text-xs">
-                                  {i < shares.length ? `${shares[i].toLocaleString()} $RIBBIT` : "—"}
+                                  {i < shares.length ? `${shares[i].toLocaleString()} $OWP` : "—"}
                                 </td>
                               </tr>
                             ))}
@@ -2044,7 +2044,7 @@ export default function AdminPage() {
                             act(
                               `/api/admin/bounties/${r.bounty.id}`,
                               { action: "award", splits: preset.splits },
-                              `Pay ${r.bounty.prize} to the top ${Math.min(preset.splits.length, r.entries.length)} — this queues real $RIBBIT payouts and cannot be undone. Proceed?`
+                              `Pay ${r.bounty.prize} to the top ${Math.min(preset.splits.length, r.entries.length)} — this queues real $OWP payouts and cannot be undone. Proceed?`
                             )
                           }
                         >
@@ -2098,7 +2098,7 @@ export default function AdminPage() {
                       <span key={a.rank}>
                         <span style={{ color: "var(--text-dim)" }}>#{a.rank}</span>{" "}
                         {shortWallet(a.wallet)}{" "}
-                        <span className="text-gold">{a.amountRibbit.toLocaleString()} $RIBBIT</span>
+                        <span className="text-gold">{a.amountRibbit.toLocaleString()} $OWP</span>
                       </span>
                     ))}
                   </div>

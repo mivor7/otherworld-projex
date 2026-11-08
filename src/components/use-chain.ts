@@ -15,7 +15,7 @@ import {
 } from "@solana/spl-token";
 import { CLIENT_CONFIG, toRawClient } from "@/lib/client-config";
 
-// $RIBBIT is an SPL Token-2022 mint. Every ATA derivation and token
+// $OWP is an SPL Token-2022 mint. Every ATA derivation and token
 // instruction MUST pass this program id — the spl-token defaults target the
 // classic Token program, which derives the wrong ATA and builds instructions
 // the mint's program can't execute (the transaction just fails).
@@ -154,11 +154,14 @@ export async function redeemSignature(url: string, signature: string): Promise<C
 // Pre-flight check so users get a clear reason BEFORE we build a doomed tx —
 // instead of a cryptic wallet/RPC error after signing. Returns an error
 // message string, or null if funds are sufficient.
+const MINT_NOT_LIVE = "$OWP is not live yet — the mint has not been set.";
+
 async function insufficientFundsReason(
   connection: Connection,
   owner: PublicKey,
   neededRibbitRaw: bigint
 ): Promise<string | null> {
+  if (!CLIENT_CONFIG.ribbitMint) return MINT_NOT_LIVE;
   const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
   const ata = getAssociatedTokenAddressSync(mint, owner, false, TP);
   let balance = 0n;
@@ -166,14 +169,14 @@ async function insufficientFundsReason(
     const b = await connection.getTokenAccountBalance(ata);
     balance = BigInt(b.value.amount);
   } catch {
-    balance = 0n; // no token account → no $RIBBIT held
+    balance = 0n; // no token account → no $OWP held
   }
   const fmt = (raw: bigint) =>
     (Number(raw) / 10 ** CLIENT_CONFIG.ribbitDecimals).toLocaleString(undefined, {
       maximumFractionDigits: 2,
     });
   if (balance < neededRibbitRaw) {
-    return `Not enough $RIBBIT — you have ${fmt(balance)}, this needs ${fmt(neededRibbitRaw)}.`;
+    return `Not enough $OWP — you have ${fmt(balance)}, this needs ${fmt(neededRibbitRaw)}.`;
   }
   // A tiny bit of SOL is needed for the network fee (and to open a token
   // account on first receipt). ~0.003 SOL covers it.
@@ -192,10 +195,11 @@ export function useChain() {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
 
-  /** Burn $RIBBIT from the user's wallet, then redeem play credits. */
+  /** Burn $OWP from the user's wallet, then redeem play credits. */
   const burnForCredits = useCallback(
     async (ribbitAmount: number): Promise<ChainResult> => {
       if (!publicKey) return { ok: false, error: "Connect your wallet first" };
+      if (!CLIENT_CONFIG.ribbitMint) return { ok: false, error: MINT_NOT_LIVE };
       try {
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
         const ata = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
@@ -229,7 +233,7 @@ export function useChain() {
   );
 
   /**
-   * Buy credits: one signed tx that burns part of the $RIBBIT and transfers
+   * Buy credits: one signed tx that burns part of the $OWP and transfers
    * the rest to the treasury (real house revenue). Both legs are verified
    * server-side. The burn/house split is a LIVE house setting, so it's
    * fetched just-in-time — building against a stale build-time ratio could
@@ -238,6 +242,7 @@ export function useChain() {
   const buyCredits = useCallback(
     async (ribbitAmount: number): Promise<ChainResult> => {
       if (!publicKey) return { ok: false, error: "Connect your wallet first" };
+      if (!CLIENT_CONFIG.ribbitMint) return { ok: false, error: MINT_NOT_LIVE };
       if (!CLIENT_CONFIG.treasuryWallet)
         return { ok: false, error: "Buying credits isn't available yet" };
       try {
@@ -304,10 +309,11 @@ export function useChain() {
     [publicKey, sendTransaction, connection]
   );
 
-  /** Transfer $RIBBIT to the treasury to fund the auction bidding balance. */
+  /** Transfer $OWP to the treasury to fund the auction bidding balance. */
   const depositForBidding = useCallback(
     async (ribbitAmount: number): Promise<ChainResult> => {
       if (!publicKey) return { ok: false, error: "Connect your wallet first" };
+      if (!CLIENT_CONFIG.ribbitMint) return { ok: false, error: MINT_NOT_LIVE };
       if (!CLIENT_CONFIG.treasuryWallet)
         return { ok: false, error: "Treasury not configured yet" };
       try {
@@ -353,7 +359,7 @@ export function useChain() {
   );
 
   /**
-   * Admin: pay a queued withdrawal/prize by sending $RIBBIT from the connected
+   * Admin: pay a queued withdrawal/prize by sending $OWP from the connected
    * wallet straight to the recipient, then returning the signature so the row
    * can be marked sent. Lets an operator clear the payout queue with a click +
    * a Phantom approval — no manual signature copying, no server-side key.
@@ -361,6 +367,7 @@ export function useChain() {
   const payRibbit = useCallback(
     async (destination: string, amountRaw: bigint): Promise<ChainResult> => {
       if (!publicKey) return { ok: false, error: "Connect your wallet first" };
+      if (!CLIENT_CONFIG.ribbitMint) return { ok: false, error: MINT_NOT_LIVE };
       try {
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
         const dest = new PublicKey(destination);

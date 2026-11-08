@@ -79,7 +79,7 @@ export const GET = handler(async () => {
         type: "payout_sent",
         time: when,
         title: w.kind === "bounty" ? "Prize paid" : "Withdrawal sent",
-        body: `${fmt(amt)} $RIBBIT landed in your wallet.`,
+        body: `${fmt(amt)} $OWP landed in your wallet.`,
         amountRibbit: amt,
         href: "/account",
         tone: "neon",
@@ -91,7 +91,7 @@ export const GET = handler(async () => {
         type: "payout_rejected",
         time: when,
         title: "Withdrawal declined",
-        body: `Your ${fmt(amt)} $RIBBIT withdrawal was declined and refunded to your balance.`,
+        body: `Your ${fmt(amt)} $OWP withdrawal was declined and refunded to your balance.`,
         href: "/account",
         tone: "danger",
       });

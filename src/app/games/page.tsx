@@ -10,7 +10,7 @@ import { MatteMedia } from "@/components/matte-media";
 import { Notice } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 
-// Casino tables — cost credits (bought with $RIBBIT).
+// Casino tables — cost credits (bought with $OWP).
 const CREDIT_GAMES = [
   {
     href: "/games/flip",
@@ -80,6 +80,7 @@ export default function GamesPage() {
   // burn is only the pre-treasury / dev fallback so credits are still
   // obtainable before the treasury is configured.
   const canBuy = !!CLIENT_CONFIG.treasuryWallet;
+  const mintLive = !!CLIENT_CONFIG.ribbitMint;
   const house = useHouseConfig(); // live, admin-tunable price/split/switches
   const [burnAmount, setBurnAmount] = useState(CLIENT_CONFIG.ribbitPerCredit * 10);
   const [busy, setBusy] = useState(false);
@@ -157,7 +158,7 @@ export default function GamesPage() {
             : "Payment verified — your chips are in your balance.",
       });
       await refresh();
-      window.dispatchEvent(new Event("owp:balance")); // update the top-panel $RIBBIT
+      window.dispatchEvent(new Event("owp:balance")); // update the top-panel $OWP
     } else {
       setMsg({ kind: "err", text: res.error });
     }
@@ -194,7 +195,7 @@ export default function GamesPage() {
             <span className="badge badge-gold absolute top-2 left-2">
               <span className="live-dot" /> bounty ·{" "}
               {live.prizeText ??
-                `${live.prizeRibbit.toLocaleString(undefined, { maximumFractionDigits: 0 })} $RIBBIT`}
+                `${live.prizeRibbit.toLocaleString(undefined, { maximumFractionDigits: 0 })} $OWP`}
             </span>
           )}
         </div>
@@ -226,7 +227,7 @@ export default function GamesPage() {
         badge="Tables open"
         title="Step into the"
         titleAccent="arcade"
-        subtitle="Casino tables run on chips bought with $RIBBIT — part burned forever, part funding the prize pools. Provably fair, published edge. The arcade episodes are free and pay weekly bounties."
+        subtitle="Casino tables run on chips bought with $OWP — part burned forever, part funding the prize pools. Provably fair, published edge. The arcade episodes are free and pay weekly bounties."
       />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
@@ -296,10 +297,14 @@ export default function GamesPage() {
               Connect your wallet and sign in (top right) to get chips and
               take a seat.
             </Notice>
+          ) : !mintLive ? (
+            <Notice kind="info">
+              $OWP is not live yet. Chip sales open once the mint is published.
+            </Notice>
           ) : (
             <>
               <label className="kicker !text-[0.6rem]">
-                {canBuy ? "Buy table chips with $RIBBIT" : "Burn $RIBBIT → chips"}
+                {canBuy ? "Buy table chips with $OWP" : "Burn $OWP → chips"}
               </label>
               {house.creditSalesPaused && (
                 <div className="mt-1.5">
@@ -314,7 +319,7 @@ export default function GamesPage() {
                   className="input"
                   min={house.ribbitPerCredit}
                   step={house.ribbitPerCredit}
-                  aria-label="Amount of $RIBBIT to spend on chips"
+                  aria-label="Amount of $OWP to spend on chips"
                   value={burnAmount || ""}
                   onChange={(e) => setBurnAmount(Number(e.target.value))}
                 />
@@ -325,7 +330,7 @@ export default function GamesPage() {
                   title={
                     burnValid
                       ? undefined
-                      : `Minimum ${house.ribbitPerCredit.toLocaleString()} $RIBBIT`
+                      : `Minimum ${house.ribbitPerCredit.toLocaleString()} $OWP`
                   }
                 >
                   {busy ? "…" : canBuy ? "Buy" : "Burn"}
@@ -343,7 +348,7 @@ export default function GamesPage() {
                 ))}
               </div>
               <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                {house.ribbitPerCredit.toLocaleString()} $RIBBIT = 1 credit —
+                {house.ribbitPerCredit.toLocaleString()} $OWP = 1 credit —
                 you’ll receive{" "}
                 <span className="text-neon">
                   {burnValid
@@ -353,7 +358,7 @@ export default function GamesPage() {
                 .{" "}
                 {burnRemainder > 0 && (
                   <span className="text-gold">
-                    {burnRemainder.toLocaleString()} $RIBBIT of that {canBuy ? "spends" : "burns"} without
+                    {burnRemainder.toLocaleString()} $OWP of that {canBuy ? "spends" : "burns"} without
                     granting a credit — use a multiple of{" "}
                     {house.ribbitPerCredit.toLocaleString()}.{" "}
                   </span>
@@ -419,7 +424,7 @@ export default function GamesPage() {
               {Math.ceil(
                 house.rankedMinBurnedRibbit / (house.ribbitPerCredit || 1)
               ).toLocaleString()}{" "}
-              credits ({house.rankedMinBurnedRibbit.toLocaleString()} $RIBBIT) bought
+              credits ({house.rankedMinBurnedRibbit.toLocaleString()} $OWP) bought
               lifetime, plus{" "}
               {Math.ceil(
                 house.rankedMinWindowBurnedRibbit / (house.ribbitPerCredit || 1)

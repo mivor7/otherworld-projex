@@ -1,7 +1,7 @@
 "use client";
 
 // The airdrop waitlist — public. Holders connect a wallet, the server verifies
-// on-chain that they hold the required $RIBBIT, and they take the next
+// on-chain that they hold the required $OWP, and they take the next
 // position. Anyone who already joined (including the 260 who signed up by
 // email on the old site) sees their own place here. No emails are ever shown.
 import Link from "next/link";
@@ -174,7 +174,7 @@ export default function WaitlistPage() {
         badge={data ? (data.open ? "Sign-ups open" : "Sign-ups closed") : "The airdrop"}
         title="Airdrop"
         titleAccent="waitlist"
-        subtitle="Hold $RIBBIT, take your place. The airdrop is guaranteed once the list is full — every member's position and referrals are locked in from the moment they join."
+        subtitle="Hold $OWP, take your place. The airdrop is guaranteed once the list is full — every member's position and referrals are locked in from the moment they join."
       />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
@@ -264,15 +264,17 @@ export default function WaitlistPage() {
               <>
                 <div className="kicker !text-[0.65rem] mb-2">Join the waitlist</div>
                 <p className="text-sm text-fog mb-4">
-                  {`You need ${n(data.minHoldRibbit)} $RIBBIT held in your wallet — verified on-chain, nothing is transferred and nothing is locked. No invite or account needed: connecting and signing one message is enough.`}
+                  {`You need ${n(data.minHoldRibbit)} $OWP held in your wallet — verified on-chain, nothing is transferred and nothing is locked. No invite or account needed: connecting and signing one message is enough.`}
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button className="btn btn-primary btn-lg px-8" onClick={join} disabled={!data.open}>
                     {data.open ? "Connect wallet to join" : "Sign-ups closed"}
                   </button>
-                  <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                    Get $RIBBIT on pump.fun ↗
-                  </a>
+                  {CLIENT_CONFIG.pumpFunUrl && (
+                    <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                      Get $OWP on pump.fun ↗
+                    </a>
+                  )}
                   {CLIENT_CONFIG.meteoraUrl && (
                     <a href={CLIENT_CONFIG.meteoraUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
                       Meteora pool ↗
@@ -284,7 +286,7 @@ export default function WaitlistPage() {
               <>
                 <div className="kicker !text-[0.65rem] mb-2">Join the waitlist</div>
                 <p className="text-sm text-fog mb-4">
-                  {`Your wallet needs ${n(data.minHoldRibbit)} $RIBBIT held on-chain. We check the chain when you press the button — your tokens stay exactly where they are.${!me.signedIn ? " You'll sign one message to prove the wallet is yours — no account, no invite needed." : ""}`}
+                  {`Your wallet needs ${n(data.minHoldRibbit)} $OWP held on-chain. We check the chain when you press the button — your tokens stay exactly where they are.${!me.signedIn ? " You'll sign one message to prove the wallet is yours — no account, no invite needed." : ""}`}
                 </p>
                 <button
                   className="btn btn-primary btn-lg px-8"
@@ -319,7 +321,7 @@ export default function WaitlistPage() {
             <ul className="text-sm text-fog space-y-3 leading-relaxed">
               <li>
                 <span className="text-frost font-medium">Hold to qualify.</span>{" "}
-                {`${data ? n(data.minHoldRibbit) : "250,000"} $RIBBIT in your wallet, checked on-chain at the moment you join. Nothing is sent, staked or locked — the waitlist never touches your tokens.`}
+                {`${data ? n(data.minHoldRibbit) : "250,000"} $OWP in your wallet, checked on-chain at the moment you join. Nothing is sent, staked or locked — the waitlist never touches your tokens.`}
               </li>
               <li>
                 <span className="text-frost font-medium">Your place is yours.</span> Position
@@ -391,7 +393,7 @@ export default function WaitlistPage() {
           </div>
           <div className="mt-4 pt-3 border-t" style={{ borderColor: "var(--hairline)" }}>
             <Link href="/about" className="text-xs text-neon hover:underline">
-              About $RIBBIT →
+              About $OWP →
             </Link>
           </div>
         </aside>

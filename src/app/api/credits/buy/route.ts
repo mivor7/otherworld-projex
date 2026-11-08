@@ -1,4 +1,4 @@
-// Buy-to-play: the user pays $RIBBIT in one signed tx that burns a portion
+// Buy-to-play: the user pays $OWP in one signed tx that burns a portion
 // (deflation) and transfers the rest to the treasury (real house revenue).
 // We verify BOTH legs on-chain, enforce that the house actually received its
 // configured share, then grant credits. Unique signature prevents replay.
@@ -37,7 +37,7 @@ export const POST = handler(async (req: Request) => {
   const legs = await verifyBuyTx(signature, session.wallet);
   if (!legs) {
     return err(
-      "Could not verify a $RIBBIT burn + treasury payment by your wallet in that transaction",
+      "Could not verify a $OWP burn + treasury payment by your wallet in that transaction",
       422
     );
   }
@@ -55,7 +55,7 @@ export const POST = handler(async (req: Request) => {
 
   const credits = Number(ribbitRaw / toRaw(cfg.ribbitPerCredit));
   if (credits < 1) {
-    return err(`Buy at least ${cfg.ribbitPerCredit} $RIBBIT for 1 credit`, 422);
+    return err(`Buy at least ${cfg.ribbitPerCredit} $OWP for 1 credit`, 422);
   }
 
   const balance = await prisma.$transaction(async (tx) => {

@@ -38,7 +38,7 @@ export function BountyStandings({ game }: { game: string }) {
             <div className="kicker !text-[0.6rem] mb-2">No live bounty</div>
             <p className="text-xs text-fog leading-relaxed">
               This table has no bounty running right now. You win and lose
-              chips as normal, but nothing feeds a $RIBBIT prize until the
+              chips as normal, but nothing feeds a $OWP prize until the
               house posts the next round.
             </p>
             <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--hairline)" }}>
@@ -52,7 +52,7 @@ export function BountyStandings({ game }: { game: string }) {
     );
   }
 
-  const prize = b.prizeText ?? `${fmt(b.prizeRibbit)} $RIBBIT`;
+  const prize = b.prizeText ?? `${fmt(b.prizeRibbit)} $OWP`;
 
   return (
     <aside className="panel panel-glow p-5 h-fit lg:sticky lg:top-24">
@@ -91,7 +91,7 @@ export function BountyStandings({ game }: { game: string }) {
             <span className="kicker !text-[0.6rem]">The pot grows as the game is played</span>
             <span className="mono text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
               {b.progress.potRibbit != null
-                ? `${b.progress.potRibbit.toLocaleString()} / ${b.progress.targetRibbit?.toLocaleString()} $RIBBIT · ${b.progress.pct}%`
+                ? `${b.progress.potRibbit.toLocaleString()} / ${b.progress.targetRibbit?.toLocaleString()} $OWP · ${b.progress.pct}%`
                 : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} chips · ${b.progress.pct}%`}
             </span>
           </div>
@@ -138,7 +138,7 @@ export function BountyStandings({ game }: { game: string }) {
               <>
                 <div className="kicker !text-[0.6rem] mb-0.5">You&apos;d earn right now</div>
                 <div className="stat-number text-neon text-xl leading-none">
-                  ~{fmt(you.projectedRibbit)} <span className="text-sm">$RIBBIT</span>
+                  ~{fmt(you.projectedRibbit)} <span className="text-sm">$OWP</span>
                 </div>
                 <div className="text-[0.7rem] mt-1" style={{ color: "var(--text-dim)" }}>
                   {standLine} · estimate shifts as others play, locks when it triggers

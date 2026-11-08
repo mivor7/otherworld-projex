@@ -148,8 +148,8 @@ export const GET = handler(async (req: Request) => {
         spendEligible: boolean;
         lifetimeEligible: boolean;
         windowEligible: boolean;
-        lifetimeSpent: number; // $RIBBIT spent on credits, lifetime
-        windowSpent: number; // $RIBBIT spent on credits during this bounty
+        lifetimeSpent: number; // $OWP spent on credits, lifetime
+        windowSpent: number; // $OWP spent on credits during this bounty
         volumeEligible: boolean; // tables: wagered enough in-window to rank
         windowWagered: number; // credits wagered on this table this window
       }

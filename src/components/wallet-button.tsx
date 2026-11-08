@@ -185,8 +185,8 @@ export function WalletButton() {
             screens — the dropdown always has the exact figures. A signed-in
             admin's full chip + 10 nav links used to overflow the centered
             container and spill asymmetrically to the right edge. */}
-        <span className="mono text-gold hidden sm:inline" title="$RIBBIT in your wallet">
-          {ribbit === null ? "…" : abbrev(ribbit)} $RIBBIT
+        <span className="mono text-gold hidden sm:inline" title="$OWP in your wallet">
+          {ribbit === null ? "…" : abbrev(ribbit)} $OWP
         </span>
         <span className="mono text-neon" title="Table chips">⛁ {me.credits ?? 0}</span>
         <span className="mono hidden min-[1700px]:inline">{shortWallet(me.wallet ?? "")}</span>
@@ -210,7 +210,7 @@ export function WalletButton() {
 
           <div className="space-y-2 text-sm mb-4">
             <div className="flex justify-between">
-              <span className="text-fog">$RIBBIT in wallet</span>
+              <span className="text-fog">$OWP in wallet</span>
               <span className="stat-number text-gold">
                 {ribbit === null
                   ? "…"
@@ -232,7 +232,7 @@ export function WalletButton() {
           </div>
 
           <p className="text-[0.65rem] leading-snug mb-4" style={{ color: "var(--text-dim)" }}>
-            Credits are your in-game chips. Bidding balance is $RIBBIT you&apos;ve
+            Credits are your in-game chips. Bidding balance is $OWP you&apos;ve
             deposited for auctions; locked is the part tied up in active bids.
           </p>
 

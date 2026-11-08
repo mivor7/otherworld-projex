@@ -1,18 +1,29 @@
 // Client-side config (NEXT_PUBLIC_*). Mirrors src/lib/config.ts defaults —
 // keep the two in sync when overriding via env.
+// `ribbitMint` is the historical field name; the value is the $OWP mint.
+const owpMint = process.env.NEXT_PUBLIC_OWP_MINT ?? "";
+
 export const CLIENT_CONFIG = {
-  ribbitMint:
-    process.env.NEXT_PUBLIC_RIBBIT_MINT ??
-    "EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump",
-  ribbitDecimals: Number(process.env.NEXT_PUBLIC_RIBBIT_DECIMALS ?? 6),
+  ribbitMint: owpMint,
+  ribbitDecimals: Number(
+    process.env.NEXT_PUBLIC_OWP_DECIMALS ?? process.env.NEXT_PUBLIC_RIBBIT_DECIMALS ?? 6
+  ),
   rpcUrl:
     process.env.NEXT_PUBLIC_SOLANA_RPC_URL ??
     "https://api.mainnet-beta.solana.com",
   treasuryWallet: process.env.NEXT_PUBLIC_TREASURY_WALLET ?? "",
-  ribbitPerCredit: Number(process.env.NEXT_PUBLIC_RIBBIT_PER_CREDIT ?? 100),
-  rankedMinBurnedRibbit: Number(process.env.NEXT_PUBLIC_RANKED_MIN_BURNED_RIBBIT ?? 1_000),
+  ribbitPerCredit: Number(
+    process.env.NEXT_PUBLIC_OWP_PER_CREDIT ?? process.env.NEXT_PUBLIC_RIBBIT_PER_CREDIT ?? 100
+  ),
+  rankedMinBurnedRibbit: Number(
+    process.env.NEXT_PUBLIC_OWP_RANKED_MIN_BURNED ??
+      process.env.NEXT_PUBLIC_RANKED_MIN_BURNED_RIBBIT ??
+      1_000
+  ),
   rankedMinWindowBurnedRibbit: Number(
-    process.env.NEXT_PUBLIC_RANKED_MIN_WINDOW_BURNED_RIBBIT ?? 100
+    process.env.NEXT_PUBLIC_OWP_RANKED_MIN_WINDOW_BURNED ??
+      process.env.NEXT_PUBLIC_RANKED_MIN_WINDOW_BURNED_RIBBIT ??
+      100
   ),
   buyBurnShare: Math.min(
     1,
@@ -21,14 +32,12 @@ export const CLIENT_CONFIG = {
   houseEdge: Number(process.env.NEXT_PUBLIC_HOUSE_EDGE ?? 0.04),
   bountyPotShare: Number(process.env.NEXT_PUBLIC_BOUNTY_POT_SHARE ?? 0.5),
   devFaucet: process.env.NEXT_PUBLIC_DEV_FAUCET === "true",
-  pumpFunUrl:
-    "https://pump.fun/coin/EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump",
-  // Meteora liquidity pool, shown alongside PumpSwap wherever trading links
+  // Hidden until the mint exists, so the site never links the retired token.
+  pumpFunUrl: owpMint ? `https://pump.fun/coin/${owpMint}` : "",
+  // Meteora liquidity pool, shown alongside pump.fun wherever trading links
   // appear. Set NEXT_PUBLIC_METEORA_POOL_URL to the pool's page URL; empty
   // hides the link entirely rather than shipping a dead one.
-  meteoraUrl:
-    process.env.NEXT_PUBLIC_METEORA_POOL_URL ??
-    "https://app.meteora.ag/dlmm/7AyDNiDaQbGAeKu6YDh21s6TJgHA3zSSuKh4186hXJsH",
+  meteoraUrl: process.env.NEXT_PUBLIC_METEORA_POOL_URL ?? "",
   xUrl: "https://x.com/OWProjex",
 } as const;
 
