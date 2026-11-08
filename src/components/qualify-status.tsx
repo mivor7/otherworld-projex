@@ -2,10 +2,9 @@
 
 // The ONE place the "how much do I need to qualify" answer is phrased, so it
 // reads identically on every surface (game strip, standings aside, arcade
-// header). Covers all three gates: fresh spend for this bounty, lifetime
-// spend (both bought in $OWP), and — on the tables — wagered volume this
-// window. Renders nothing once the player clears every gate — it's purely
-// the "what's still missing" helper.
+// header). Covers all three gates: $OWP deposited during this bounty, $OWP
+// deposited lifetime, and — on the tables — $OWP wagered this window.
+// Renders nothing once the player clears every gate.
 import Link from "next/link";
 import { useHouseConfig } from "./use-house-config";
 
@@ -34,12 +33,8 @@ export function QualifyStatus({
   const volumeShort = you.volumeEligible === false;
   if (you.spendEligible && !volumeShort) return null;
 
-  const price = house.ribbitPerCredit || 1;
-  const toCredits = (ribbit: number) => Math.max(1, Math.ceil(ribbit / price));
-
-  // The unmet gate(s), most immediate first: fresh spend for THIS bounty,
-  // lifetime spend, then table volume. Spend is phrased in credits-to-BUY
-  // ($OWP under the hood); volume is credits-to-WAGER at this table.
+  // The unmet gate(s), most immediate first: fresh deposits for THIS bounty,
+  // lifetime deposits, then table volume. All three are whole $OWP.
   const reqs: {
     key: string;
     label: string;
@@ -50,7 +45,7 @@ export function QualifyStatus({
   if (!you.windowEligible)
     reqs.push({
       key: "window",
-      label: `Buy ${n(toCredits(Math.max(0, house.rankedMinWindowBurnedRibbit - you.windowSpent)))} more chips during this bounty`,
+      label: `Deposit ${n(Math.max(0, house.rankedMinWindowBurnedRibbit - you.windowSpent))} more $OWP during this bounty`,
       have: you.windowSpent,
       need: house.rankedMinWindowBurnedRibbit,
       unit: "$OWP",
@@ -58,7 +53,7 @@ export function QualifyStatus({
   if (!you.lifetimeEligible)
     reqs.push({
       key: "lifetime",
-      label: `Buy ${n(toCredits(Math.max(0, house.rankedMinBurnedRibbit - you.lifetimeSpent)))} more chips in total`,
+      label: `Deposit ${n(Math.max(0, house.rankedMinBurnedRibbit - you.lifetimeSpent))} more $OWP in total`,
       have: you.lifetimeSpent,
       need: house.rankedMinBurnedRibbit,
       unit: "$OWP",
@@ -66,10 +61,10 @@ export function QualifyStatus({
   if (volumeShort)
     reqs.push({
       key: "volume",
-      label: `Wager ${n(Math.max(0, house.rankedMinTableVolume - (you.windowWagered ?? 0)))} more chips at this table during this bounty`,
+      label: `Wager ${n(Math.max(0, house.rankedMinTableVolume - (you.windowWagered ?? 0)))} more $OWP at this table during this bounty`,
       have: you.windowWagered ?? 0,
       need: house.rankedMinTableVolume,
-      unit: "chips",
+      unit: "$OWP",
     });
   if (reqs.length === 0) return null;
 
@@ -79,8 +74,8 @@ export function QualifyStatus({
     return (
       <span className="text-fog">
         {r.key === "volume"
-          ? `wager ${n(gap)} more chip${gap === 1 ? "" : "s"} to rank`
-          : `buy ${n(toCredits(gap))} more chip${toCredits(gap) === 1 ? "" : "s"} to enter`}
+          ? `wager ${n(gap)} more $OWP to rank`
+          : `deposit ${n(gap)} more $OWP to enter`}
       </span>
     );
   }
@@ -126,9 +121,9 @@ export function QualifyStatus({
           );
         })}
       </div>
-      {reqs.some((r) => r.unit === "$OWP") ? (
+      {reqs.some((r) => r.key !== "volume") ? (
         <Link href="/games" className="text-neon hover:underline inline-block mt-2.5">
-          Buy chips →
+          Deposit $OWP →
         </Link>
       ) : (
         <div className="mt-2.5" style={{ color: "var(--text-dim)" }}>

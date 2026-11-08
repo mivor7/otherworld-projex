@@ -101,7 +101,7 @@ export default function FrogrisPage() {
           setSubmitMsg(
             data.ranked
               ? `Score ${score} posted to the leaderboard — replay verified.`
-              : `Score ${score} verified & saved — unranked. Prize boards need ${house.rankedMinBurnedRibbit.toLocaleString()}+ $OWP spent on credits lifetime and ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside the board week.`
+              : `Score ${score} verified & saved — unranked. Prize boards need ${house.rankedMinBurnedRibbit.toLocaleString()}+ $OWP deposited lifetime and ${house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside the board week.`
           );
           loadBoard();
           // Same signal the table games fire — refreshes the live bounty header.
@@ -429,7 +429,7 @@ export default function FrogrisPage() {
                 </button>
                 {!me.signedIn && (
                   <p className="text-fog text-xs mt-3 px-8 text-center">
-                    Practice run — sign in and spend $OWP on credits to compete for prizes.
+                    Practice run — sign in and deposit $OWP to compete for prizes.
                   </p>
                 )}
               </div>

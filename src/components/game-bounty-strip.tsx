@@ -34,8 +34,8 @@ export function GameBountyStrip({ game }: { game: string }) {
         className="rounded-xl px-4 py-2.5 mb-3 text-xs text-fog"
         style={{ border: "1px solid var(--hairline)", background: "oklch(1 0 0 / 0.02)" }}
       >
-        No live bounty on this table right now — you win and lose chips as
-        normal, but nothing feeds a $OWP prize until the house posts the
+        No live bounty on this table right now — you win and lose $OWP as
+        normal, but nothing feeds a prize until the house posts the
         next round.
       </div>
     );

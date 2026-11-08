@@ -38,7 +38,7 @@ export function BountyStandings({ game }: { game: string }) {
             <div className="kicker !text-[0.6rem] mb-2">No live bounty</div>
             <p className="text-xs text-fog leading-relaxed">
               This table has no bounty running right now. You win and lose
-              chips as normal, but nothing feeds a $OWP prize until the
+              $OWP as normal, but nothing feeds a prize until the
               house posts the next round.
             </p>
             <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--hairline)" }}>
@@ -92,7 +92,7 @@ export function BountyStandings({ game }: { game: string }) {
             <span className="mono text-[0.65rem]" style={{ color: "var(--text-dim)" }}>
               {b.progress.potRibbit != null
                 ? `${b.progress.potRibbit.toLocaleString()} / ${b.progress.targetRibbit?.toLocaleString()} $OWP · ${b.progress.pct}%`
-                : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} chips · ${b.progress.pct}%`}
+                : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} $OWP · ${b.progress.pct}%`}
             </span>
           </div>
           <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.01 165)" }}>
@@ -128,7 +128,7 @@ export function BountyStandings({ game }: { game: string }) {
         const isScore = you.unit === "best score";
         const standLine = isScore
           ? `Your best this bounty: ${you.value.toLocaleString()}`
-          : `Your net this bounty: ${you.value > 0 ? "+" : ""}${you.value.toLocaleString()} chips`;
+          : `Your net this bounty: ${you.value > 0 ? "+" : ""}${you.value.toLocaleString()} $OWP`;
         return (
           <div
             className="rounded-lg p-3 mb-4"

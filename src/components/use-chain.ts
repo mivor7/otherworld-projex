@@ -309,16 +309,24 @@ export function useChain() {
     [publicKey, sendTransaction, connection]
   );
 
-  /** Transfer $OWP to the treasury to fund the auction bidding balance. */
+  /** Transfer $OWP to the treasury. It becomes withdrawable app balance. */
   const depositForBidding = useCallback(
     async (ribbitAmount: number): Promise<ChainResult> => {
       if (!publicKey) return { ok: false, error: "Connect your wallet first" };
       if (!CLIENT_CONFIG.ribbitMint) return { ok: false, error: MINT_NOT_LIVE };
-      if (!CLIENT_CONFIG.treasuryWallet)
-        return { ok: false, error: "Treasury not configured yet" };
+      let treasuryAddr = CLIENT_CONFIG.treasuryWallet;
+      if (!treasuryAddr) {
+        try {
+          const cfg = await fetch("/api/config").then((r) => r.json());
+          if (typeof cfg?.treasuryWallet === "string") treasuryAddr = cfg.treasuryWallet;
+        } catch {
+          treasuryAddr = "";
+        }
+      }
+      if (!treasuryAddr) return { ok: false, error: "Treasury not configured yet" };
       try {
         const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
-        const treasury = new PublicKey(CLIENT_CONFIG.treasuryWallet);
+        const treasury = new PublicKey(treasuryAddr);
         const from = getAssociatedTokenAddressSync(mint, publicKey, false, TP);
         const to = getAssociatedTokenAddressSync(mint, treasury, true, TP);
         const shortfall = await insufficientFundsReason(

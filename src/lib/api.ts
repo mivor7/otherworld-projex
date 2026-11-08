@@ -47,7 +47,7 @@ export function handler<A extends unknown[]>(
       return await fn(...args);
     } catch (e) {
       if (e instanceof ApiError) return err(e.message, e.status);
-      if (e instanceof InsufficientCredits) return err("Insufficient credits", 400);
+      if (e instanceof InsufficientCredits) return err("Insufficient $OWP balance", 400);
       if (e instanceof ZodError)
         return err(e.issues.map((i) => i.message).join("; "), 422);
       // Unique-constraint race (two truly-concurrent submits of the same tx

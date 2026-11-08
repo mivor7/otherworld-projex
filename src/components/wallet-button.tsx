@@ -188,7 +188,9 @@ export function WalletButton() {
         <span className="mono text-gold hidden sm:inline" title="$OWP in your wallet">
           {ribbit === null ? "…" : abbrev(ribbit)} $OWP
         </span>
-        <span className="mono text-neon" title="Table chips">⛁ {me.credits ?? 0}</span>
+        <span className="mono text-neon" title="App balance, whole $OWP">
+          {abbrev(me.credits ?? 0)} app
+        </span>
         <span className="mono hidden min-[1700px]:inline">{shortWallet(me.wallet ?? "")}</span>
         <span
           className="text-fog transition-transform"
@@ -218,12 +220,8 @@ export function WalletButton() {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-fog">Table chips ⛁</span>
-              <span className="stat-number text-neon">{me.credits ?? 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-fog">Bidding balance</span>
-              <span className="stat-number">{fmtRibbit(me.ribbitAvailable ?? 0)}</span>
+              <span className="text-fog">App balance</span>
+              <span className="stat-number text-neon">{fmtRibbit(me.ribbitAvailable ?? 0)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-fog">Locked in bids</span>
@@ -232,13 +230,15 @@ export function WalletButton() {
           </div>
 
           <p className="text-[0.65rem] leading-snug mb-4" style={{ color: "var(--text-dim)" }}>
-            Credits are your in-game chips. Bidding balance is $OWP you&apos;ve
-            deposited for auctions; locked is the part tied up in active bids.
+            App balance is $OWP you deposited to the house. Tables wager whole
+            tokens from it ({(me.credits ?? 0).toLocaleString()} playable); bids
+            lock part of it. Withdraw from your account — the house pays it
+            automatically.
           </p>
 
           <div className="grid gap-1.5 mb-4">
             <Link href="/games" className="btn btn-primary w-full !justify-start" onClick={() => setOpen(false)}>
-              Buy chips
+              Deposit $OWP
             </Link>
             <Link href="/account" className="btn btn-ghost w-full !justify-start" onClick={() => setOpen(false)}>
               My account

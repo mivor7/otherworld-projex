@@ -28,10 +28,10 @@ export const GET = handler(async () => {
     newUsers24,
     newUsers7d,
     roundStats1,
-    burn1,
-    buy1,
+    deposit1,
     top,
     holders,
+    balanceAgg,
     waitlistCount,
   ] = await Promise.all([
     prisma.gameRound.groupBy({ by: ["userId"], where: { createdAt: { gte: d1 } } }),
@@ -45,8 +45,7 @@ export const GET = handler(async () => {
       _count: true,
       _sum: { wager: true },
     }),
-    prisma.burnEvent.aggregate({ where: { createdAt: { gte: d1 } }, _sum: { amountRaw: true } }),
-    prisma.creditPurchase.aggregate({ where: { createdAt: { gte: d1 } }, _sum: { ribbitRaw: true } }),
+    prisma.deposit.aggregate({ where: { createdAt: { gte: d1 } }, _sum: { amountRaw: true } }),
     // Treasury watch — biggest table players over 7d, net computed below.
     prisma.gameRound.groupBy({
       by: ["userId"],
@@ -56,14 +55,14 @@ export const GET = handler(async () => {
       orderBy: { _sum: { wager: "desc" } },
       take: 15,
     }),
-    // Everyone holding chips right now — outstanding credits are future play
-    // (and future pot fuel), and the owner asked to see exactly who holds what.
+    // Everyone with an app balance — outstanding $OWP is withdrawable.
     prisma.user.findMany({
-      where: { credits: { gt: 0 } },
-      select: { wallet: true, credits: true, createdAt: true },
-      orderBy: { credits: "desc" },
+      where: { ribbitBalance: { gt: 0n } },
+      select: { wallet: true, ribbitBalance: true, createdAt: true },
+      orderBy: { ribbitBalance: "desc" },
       take: 200,
     }),
+    prisma.user.aggregate({ _sum: { ribbitBalance: true } }),
     // Airdrop waitlist: guaranteed airdrop at 1,000 members (imported
     // snapshot — see scripts/import-waitlist.mjs).
     prisma.waitlistEntry.count(),
@@ -95,14 +94,14 @@ export const GET = handler(async () => {
     newUsers7d,
     rounds24: roundStats1._count,
     wagered24: roundStats1._sum.wager ?? 0,
-    ribbitIn24: Math.round(fromRaw((burn1._sum.amountRaw ?? 0n) + (buy1._sum.ribbitRaw ?? 0n))),
+    ribbitIn24: Math.round(fromRaw(deposit1._sum.amountRaw ?? 0n)),
     topPlayers,
     creditHolders: holders.map((h) => ({
       wallet: h.wallet,
-      credits: h.credits,
+      credits: Math.floor(fromRaw(h.ribbitBalance)),
       since: h.createdAt,
     })),
-    creditsOutstanding: holders.reduce((s, h) => s + h.credits, 0),
+    creditsOutstanding: Math.floor(fromRaw(balanceAgg._sum.ribbitBalance ?? 0n)),
     waitlistCount,
   });
 });

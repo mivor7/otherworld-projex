@@ -12,6 +12,15 @@ const nonneg = (v: string | undefined, fallback: number) => {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 };
 
+// One wallet runs the house: the admin wallet is also the treasury that
+// receives deposits and the payout signer that sends withdrawals. An explicit
+// TREASURY_WALLET / PAYOUT_WALLET still wins if it is set.
+const adminWallet = (process.env.ADMIN_WALLETS ?? "")
+  .split(",")
+  .map((w) => w.trim())
+  .filter(Boolean)[0] ?? "";
+const treasuryWallet = process.env.TREASURY_WALLET || adminWallet;
+
 export const CONFIG = {
   appName: "Other World Projex",
   ticker: "$OWP",
@@ -25,15 +34,13 @@ export const CONFIG = {
   rpcUrl:
     process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com",
 
-  // Public key of the treasury (ideally the Anchor vault PDA or a Squads
-  // multisig — see program/README.md). Auction deposits and the dashboard
-  // read against this address.
-  treasuryWallet: process.env.TREASURY_WALLET ?? "",
+  // Public key of the house wallet. Deposits land here and withdrawals
+  // leave from here. Falls back to the first ADMIN_WALLETS entry.
+  treasuryWallet,
 
-  // Public address of the payout hot wallet (the worker's signer). PUBLIC key
-  // ONLY — the private key never leaves the worker box. Set so the admin panel
-  // can display the float that actually pays withdrawals/prizes.
-  payoutWallet: process.env.PAYOUT_WALLET ?? "",
+  // Same wallet, unless PAYOUT_WALLET is set to something else. Public key
+  // only on the web server — the private key lives on the payout box.
+  payoutWallet: process.env.PAYOUT_WALLET || treasuryWallet,
 
   // Streamflow staking pool for $OWP (public account address, READ-ONLY).
   // Empty until a pool exists — staking then shows "not live" instead of
@@ -48,13 +55,13 @@ export const CONFIG = {
   // House edge applied to game payouts (0.04 = 4%).
   houseEdge: Math.min(0.15, Math.max(0.005, num(process.env.HOUSE_EDGE, 0.04))),
 
-  // Wager limits, in credits.
+  // Wager limits, in whole $OWP.
   minWager: num(process.env.MIN_WAGER, 1),
   maxWager: num(process.env.MAX_WAGER, 1_000),
 
   // Sybil economics: prize leaderboards only rank wallets with skin in the
-  // game. Eligibility = lifetime verified burns ≥ this many whole $OWP;
-  // table boards additionally require this many credits wagered in-window.
+  // game. Eligibility = lifetime deposits ≥ this many whole $OWP;
+  // table boards additionally require this many whole $OWP wagered in-window.
   rankedMinBurnedRibbit: nonneg(
     process.env.OWP_RANKED_MIN_BURNED ?? process.env.RANKED_MIN_BURNED_RIBBIT,
     1_000
@@ -70,9 +77,9 @@ export const CONFIG = {
   ),
   waitlistGoal: nonneg(process.env.WAITLIST_GOAL, 1000),
   waitlistOpen: process.env.WAITLIST_OPEN !== "false",
-  // Active-burner rule: prize eligibility additionally requires this many
-  // whole $OWP burned INSIDE the board/bounty window. Splitting play
-  // across N sybil wallets therefore costs N× fresh burns every window.
+  // Fresh-deposit rule: prize eligibility additionally requires this many
+  // whole $OWP deposited INSIDE the board/bounty window. Splitting play
+  // across N sybil wallets therefore costs N× fresh deposits every window.
   rankedMinWindowBurnedRibbit: nonneg(
     process.env.OWP_RANKED_MIN_WINDOW_BURNED ??
       process.env.RANKED_MIN_WINDOW_BURNED_RIBBIT,
@@ -88,11 +95,8 @@ export const CONFIG = {
   // Max arcade score submissions per wallet per game per UTC day.
   arcadeDailySubmissions: num(process.env.ARCADE_DAILY_SUBMISSIONS, 40),
 
-  // Buy-credits: paying $OWP for credits splits into a burned portion
-  // (deflation) and a house portion (real treasury revenue). This is the
-  // fraction burned; the rest goes to the treasury. Buying is only offered
-  // when TREASURY_WALLET is set (there must be somewhere to send the house
-  // cut). Pure burn-for-credits stays available regardless.
+  // Retired with chip sales. Deposits credit the full amount. Kept so an
+  // old HouseSetting row still has a default.
   buyBurnShare: Math.min(1, Math.max(0, nonneg(process.env.BUY_BURN_SHARE, 0.5))),
 
   // Auto-bounties: when enabled, credit-game bounties pay out on their own

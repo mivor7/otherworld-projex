@@ -1,7 +1,7 @@
-// Withdraw unlocked auction balance back to the user's wallet. The balance is
-// debited immediately and a pending payout is queued for the off-server payout
-// worker (scripts/payout-worker.mjs), which signs from a dedicated hot wallet —
-// the web server never holds any private key.
+// Withdraw unlocked app balance back to the user's wallet. The balance is
+// debited immediately and a pending payout is queued for the payout worker
+// (scripts/payout-worker.mjs). The worker signs with the house wallet — the
+// same wallet that receives deposits. The web server never holds the key.
 import { z } from "zod";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";

@@ -98,9 +98,8 @@ const fromAta = getAssociatedTokenAddressSync(MINT, signer.publicKey, true, TP);
 const payoutWallet = signer.publicKey.toBase58();
 console.log(`Payout worker up. Hot wallet: ${payoutWallet}`);
 if (process.env.TREASURY_WALLET && process.env.TREASURY_WALLET === payoutWallet) {
-  console.warn(
-    "⚠ Payout hot wallet == TREASURY_WALLET. For security, use a SEPARATE hot " +
-      "wallet and fund it from the treasury, so the treasury key never touches this box."
+  console.log(
+    "Single-wallet mode: this signer is the treasury. Deposits land here and withdrawals leave from here."
   );
 }
 

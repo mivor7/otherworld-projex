@@ -1,10 +1,10 @@
 // Game resolvers. Each game maps a provably-fair roll in [0,1) plus player
-// params to an outcome and a payout in credits. The house edge is applied to
+// params to an outcome and a payout in whole $OWP. The house edge is applied to
 // the payout multiplier, never to the roll itself — odds are exactly what the
 // fairness page says they are.
 import { z } from "zod";
 import { getActiveSeed, roll } from "./fairness";
-import { adjustCredits, InsufficientCredits } from "./credits";
+import { adjustOwp, InsufficientCredits, playableWhole } from "./credits";
 import { prisma } from "./db";
 import { houseConfig, type HouseConfig } from "./settings";
 import { ApiError } from "./api";
@@ -31,7 +31,7 @@ export function assertWagerAllowed(cfg: HouseConfig, wager: number): void {
   }
   if (wager < cfg.minWager || wager > cfg.maxWager) {
     throw new ApiError(
-      `Wager must be between ${cfg.minWager} and ${cfg.maxWager} credits`,
+      `Wager must be between ${cfg.minWager} and ${cfg.maxWager} $OWP`,
       422
     );
   }
@@ -46,7 +46,7 @@ export type RoundResult = {
   wager: number;
   payout: number;
   win: boolean;
-  credits: number; // balance after the round
+  credits: number; // unlocked whole $OWP after the round
 };
 
 function flipResolve(r: number, side: "frog" | "fly", wager: number, edge: number) {
@@ -90,7 +90,7 @@ export async function playRound(
     if (claimed.count === 0) throw new Error("Concurrent round in flight — retry");
     const nonce = seed.nonce;
 
-    await adjustCredits(tx, userId, -params.wager, "wager");
+    await adjustOwp(tx, userId, -params.wager, "wager");
 
     const r = roll(seed.seed, params.clientSeed, nonce);
     const resolved =
@@ -117,10 +117,10 @@ export async function playRound(
 
     let credits: number;
     if (resolved.payout > 0) {
-      credits = await adjustCredits(tx, userId, resolved.payout, "payout", round.id);
+      credits = await adjustOwp(tx, userId, resolved.payout, "payout", round.id);
     } else {
       const u = await tx.user.findUniqueOrThrow({ where: { id: userId } });
-      credits = u.credits;
+      credits = playableWhole(u.ribbitBalance, u.ribbitLocked);
     }
 
     return {

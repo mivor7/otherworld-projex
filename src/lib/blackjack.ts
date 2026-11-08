@@ -12,7 +12,7 @@
 import { createHmac } from "crypto";
 import { z } from "zod";
 import { prisma } from "./db";
-import { adjustCredits } from "./credits";
+import { adjustOwp, playableWhole } from "./credits";
 import { getActiveSeed } from "./fairness";
 import { ApiError } from "./api";
 import { houseConfig } from "./settings";
@@ -276,7 +276,7 @@ export async function deal(userId: string, wager: number, clientSeed: string) {
     if (claimed.count === 0) throw new ApiError("Concurrent round in flight — retry", 409);
     const nonce = seed.nonce;
 
-    await adjustCredits(tx, userId, -wager, "wager");
+    await adjustOwp(tx, userId, -wager, "wager");
 
     const deck = deriveDeck(seed.seed, clientSeed, nonce);
     const s: BJState = {
@@ -325,12 +325,13 @@ export async function deal(userId: string, wager: number, clientSeed: string) {
 
     let credits: number | undefined;
     if (payout > 0) {
-      credits = await adjustCredits(tx, userId, payout, "payout", round.id);
+      credits = await adjustOwp(tx, userId, payout, "payout", round.id);
     } else {
-      // Always report the balance — the client paints it instantly instead
-      // of refetching, so the chips counter never lags fast play.
-      const u = await tx.user.findUnique({ where: { id: userId }, select: { credits: true } });
-      credits = u?.credits;
+      const u = await tx.user.findUnique({
+        where: { id: userId },
+        select: { ribbitBalance: true, ribbitLocked: true },
+      });
+      credits = u ? playableWhole(u.ribbitBalance, u.ribbitLocked) : 0;
     }
     return { ...publicView(round), credits };
   });
@@ -364,7 +365,7 @@ export async function act(
       ) {
         throw new ApiError("Cannot split now");
       }
-      await adjustCredits(tx, userId, -base, "wager", round.id);
+      await adjustOwp(tx, userId, -base, "wager", round.id);
       const aces = cardRank(s.player[0]) === 12;
       s.split = { cards: [s.player[1]], doubled: false };
       s.player = [s.player[0], draw(s, deck)];
@@ -378,7 +379,7 @@ export async function act(
     } else if (action === "double") {
       const handDoubled = s.phase === "player" ? s.doubled : s.split!.doubled;
       if (active.length !== 2 || handDoubled) throw new ApiError("Cannot double now");
-      await adjustCredits(tx, userId, -base, "wager", round.id);
+      await adjustOwp(tx, userId, -base, "wager", round.id);
       if (s.phase === "player") s.doubled = true;
       else s.split!.doubled = true;
       active.push(draw(s, deck));
@@ -416,11 +417,13 @@ export async function act(
 
     let credits: number | undefined;
     if (payout > 0) {
-      credits = await adjustCredits(tx, userId, payout, "payout", round.id);
+      credits = await adjustOwp(tx, userId, payout, "payout", round.id);
     } else {
-      // Always report the balance — instant client-side counter, no refetch.
-      const u = await tx.user.findUnique({ where: { id: userId }, select: { credits: true } });
-      credits = u?.credits;
+      const u = await tx.user.findUnique({
+        where: { id: userId },
+        select: { ribbitBalance: true, ribbitLocked: true },
+      });
+      credits = u ? playableWhole(u.ribbitBalance, u.ribbitLocked) : 0;
     }
     return {
       ...publicView({ ...round, wager: totalWager, outcome: JSON.stringify(s), payout }),

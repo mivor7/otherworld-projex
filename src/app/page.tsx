@@ -18,7 +18,7 @@ const WINGS = [
     image: "/art/owp_hero.jpg",
     kicker: "Wing I",
     title: "The Arcade",
-    desc: "Provably-fair games at a published house edge. Chips bought with $OWP — part burned forever, part funding the prizes. Verify every roll.",
+    desc: "Provably-fair games at a published house edge. Deposit $OWP, wager it from your balance, withdraw anytime. Verify every roll.",
     cta: "Enter",
   },
   {
@@ -46,7 +46,7 @@ const GAME_SLATE: {
   title: string;
   href?: string;
   game?: string;
-  free?: boolean; // arcade games are free; tables cost credits
+  free?: boolean; // arcade games are free; tables wager $OWP
 }[] = [
   { image: "/art/owp_frogris.png", title: "Frogris", href: "/games/frogris", game: "frogris", free: true },
   { image: "/art/owp_bj.png", title: "Blackjack", href: "/games/blackjack", game: "blackjack", free: false },
@@ -69,11 +69,10 @@ function ago(d: Date): string {
 const shortWallet = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 
 export default async function Home() {
-  const [chain, burnAgg, buyBurnAgg, roundCount, openBounties, awards, paidAgg, gameBounties, openPrizeAgg] =
+  const [chain, depositAgg, roundCount, openBounties, awards, paidAgg, gameBounties, openPrizeAgg] =
     await Promise.all([
       getTreasuryStats(),
-      prisma.burnEvent.aggregate({ _sum: { amountRaw: true } }),
-      prisma.creditPurchase.aggregate({ _sum: { burnedRaw: true } }),
+      prisma.deposit.aggregate({ _sum: { amountRaw: true } }),
       prisma.gameRound.count(),
       prisma.bounty.count({ where: { status: "open" } }),
       prisma.bountyAward.findMany({
@@ -98,10 +97,7 @@ export default async function Home() {
   for (const b of gameBounties) {
     if (b.game && !poolByGame.has(b.game)) poolByGame.set(b.game, b.prizeRibbit);
   }
-  // Pure burns + the burn leg of every credit purchase — the real number.
-  const burned = fromRaw(
-    (burnAgg._sum.amountRaw ?? 0n) + (buyBurnAgg._sum.burnedRaw ?? 0n)
-  );
+  const deposited = fromRaw(depositAgg._sum.amountRaw ?? 0n);
   const paidOut = fromRaw(paidAgg._sum.amountRaw ?? 0n);
   const openPrize = fromRaw(openPrizeAgg._sum.prizeRibbit ?? 0n);
 
@@ -117,10 +113,9 @@ export default async function Home() {
         titleAccent="bounty hunters."
         subtitle={
           <>
-            Turn $OWP into credits — part burned forever, part funding the
-            prize pool. Play provably-fair games, bid on lots, and hunt
-            bounties that pay out automatically. Everything settles against
-            one transparent treasury.
+            Deposit $OWP to the house and it becomes your balance. Play
+            provably-fair games, bid on lots, and hunt bounties. Withdraw
+            anytime — the same wallet pays you automatically.
           </>
         }
         actions={
@@ -139,8 +134,8 @@ export default async function Home() {
             label: "Treasury",
           },
           {
-            value: burned.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-            label: "$OWP burned",
+            value: deposited.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+            label: "$OWP deposited",
           },
           { value: roundCount.toLocaleString(), label: "Rounds settled" },
           { value: openBounties.toLocaleString(), label: "Open bounties" },
@@ -195,8 +190,8 @@ export default async function Home() {
         <div className="mesh-band p-4 sm:p-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             ["01", "Connect & sign", "A free message signature proves wallet ownership. No custody, no email, no password."],
-            ["02", "Buy credits", `${houseCfg.ribbitPerCredit} $OWP per credit, verified on-chain — ${Math.round(houseCfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes.`],
-            ["03", "Play, bid, hunt", "Wager chips at the tables, bid escrowed $OWP on lots, climb the bounty boards."],
+            ["02", "Deposit $OWP", "Send $OWP to the house wallet. The transfer is verified on-chain and credited to your in-app balance."],
+            ["03", "Play, bid, hunt", "Wager $OWP at the tables, bid from the same balance, and climb the bounty boards."],
             ["04", "Pools unlock with play", "Every bounty posts a fixed $OWP pool and a spend meter sized to it. The meter fills — every eligible winner is paid pro-rata, automatically."],
           ].map(([n, title, desc], i) => (
             <Reveal key={n} delay={i * 60}>
@@ -362,9 +357,8 @@ export default async function Home() {
               <div className="kicker mb-2">Settlement currency</div>
               <h2 className="text-[1.5rem] mb-3">$OWP</h2>
               <p className="text-fog text-[0.9375rem] leading-relaxed max-w-lg mb-5">
-                One token fuels the house: it buys your credits (part of every
-                purchase is burned at the mint), backs your bids, and pays out
-                of every bounty pool.
+                $OWP is the balance. Deposit it, play and bid with it, and
+                withdraw it. Bounty pools pay in the same token, automatically.
                 {CLIENT_CONFIG.ribbitMint
                   ? " The live mint is below."
                   : " The contract is published here the moment $OWP launches."}

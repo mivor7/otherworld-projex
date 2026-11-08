@@ -21,7 +21,7 @@ export const POST = handler(async (req: Request) => {
   // burned — enforced here so the UI path can't be bypassed by calling the
   // endpoint directly.
   if (CONFIG.treasuryWallet) {
-    return err("Buy chips instead — burning-only is disabled", 400);
+    return err("Deposits credit your balance — burning-only is disabled", 400);
   }
   const cfg = await houseConfig();
   if (cfg.creditSalesPaused) {

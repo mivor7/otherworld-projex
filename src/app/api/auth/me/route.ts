@@ -1,6 +1,6 @@
 import { handler, ok } from "@/lib/api";
 import { getSession, isAdminWallet } from "@/lib/session";
-import { getBalances } from "@/lib/credits";
+import { getBalances, playableWhole } from "@/lib/credits";
 import { getActiveSeed } from "@/lib/fairness";
 import { toRaw } from "@/lib/config";
 import { burnTotals } from "@/lib/ranked";
@@ -25,5 +25,7 @@ export const GET = handler(async () => {
     burnedRaw: spentRaw,
     ranked: spentRaw >= toRaw(cfg.rankedMinBurnedRibbit),
     ...balances,
+    // Tables read `credits` as the playable whole-$OWP balance.
+    credits: playableWhole(balances.ribbitBalance, balances.ribbitLocked),
   });
 });

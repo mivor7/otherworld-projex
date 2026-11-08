@@ -25,7 +25,7 @@ export type BountyLiveProgress =
 export type BountyLiveYou = {
   inRunning: boolean;
   value: number;
-  unit: "net chips" | "best score";
+  unit: "net $OWP" | "best score";
   projectedRibbit: number;
   spendEligible: boolean;
   lifetimeEligible: boolean;

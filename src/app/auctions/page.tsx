@@ -128,7 +128,7 @@ export default function AuctionsPage() {
     const res = await depositForBidding(amount);
     setMsg(
       res.ok
-        ? { kind: "ok", text: "Deposit verified — bidding balance updated." }
+        ? { kind: "ok", text: "Deposit verified — it's in your app balance." }
         : { kind: "err", text: res.error }
     );
     await refresh();
@@ -242,7 +242,7 @@ export default function AuctionsPage() {
         </div>
 
         <aside className="panel panel-glow panel-etched p-5 h-fit lg:sticky lg:top-24">
-          <div className="kicker mb-3">Bidding account</div>
+          <div className="kicker mb-3">App balance</div>
           {!me.signedIn ? (
             <Notice kind="info">
               Connect &amp; sign in to deposit $OWP and bid on lots.
@@ -299,8 +299,8 @@ export default function AuctionsPage() {
                 Withdraw available balance
               </button>
               <p className="text-xs mt-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                Deposits are held in treasury escrow and verified on-chain.
-                Outbid amounts release instantly.
+                Deposits go to the house wallet and credit this balance.
+                Outbid amounts unlock instantly. Withdrawals pay automatically.
               </p>
             </>
           )}

@@ -429,7 +429,7 @@ export default function BlackjackPage() {
             </button>
           </div>
           <div className="text-right">
-            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice chips" : "Chips ⛁"}</div>
+            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice" : "Balance"}</div>
             <div className="stat-number text-neon">{canPlay ? balance : "—"}</div>
           </div>
         </div>
@@ -510,7 +510,7 @@ export default function BlackjackPage() {
             {!view && (
               <p className="text-fog text-sm py-4 text-center">
                 {sandbox
-                  ? "Set your wager and deal in — practice chips only."
+                  ? "Set your wager and deal in — practice balance only."
                   : "Set your wager and deal in."}
               </p>
             )}
@@ -527,7 +527,7 @@ export default function BlackjackPage() {
               ? splitResultCopy(view.result, view.split.result)
               : RESULT_COPY[view.result]}
             {view.payout !== null && view.payout > 0 &&
-              ` +${view.payout} ${sandbox ? "practice chips" : "chips"}`}
+              ` +${view.payout} ${sandbox ? "practice" : "$OWP"}`}
           </div>
         )}
 
@@ -569,7 +569,7 @@ export default function BlackjackPage() {
               className="input max-w-28 text-center"
               min={house.minWager}
               max={house.maxWager}
-              aria-label="Wager in chips"
+              aria-label="Wager in $OWP"
               value={wager || ""}
               onChange={(e) => {
                 const n = Math.floor(Number(e.target.value));
@@ -590,15 +590,15 @@ export default function BlackjackPage() {
           <p className="text-fog text-sm mt-5 text-center">
             Sign in with your wallet to take a seat — or try the sandbox above.{" "}
             <Link href="/games" className="text-neon hover:underline">
-              Get chips →
+              Deposit $OWP →
             </Link>
           </p>
         )}
         {!sandbox && me.signedIn && !inHand && (me.credits ?? 0) < wager && (
           <p className="text-fog text-sm mt-5 text-center">
-            Not enough chips.{" "}
+            Not enough $OWP.{" "}
             <Link href="/games" className="text-neon hover:underline">
-              Get more credits →
+              Deposit $OWP →
             </Link>
           </p>
         )}

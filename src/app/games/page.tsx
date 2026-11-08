@@ -10,7 +10,7 @@ import { MatteMedia } from "@/components/matte-media";
 import { Notice } from "@/components/ui";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 
-// Casino tables — cost credits (bought with $OWP).
+// Casino tables — wager whole $OWP from the in-app balance.
 const CREDIT_GAMES = [
   {
     href: "/games/flip",
@@ -34,8 +34,8 @@ const CREDIT_GAMES = [
     badge: "3:2 tables",
   },
 ];
-// Free arcade — skill games, no credits to play. A live bounty (if any) shows
-// as a gold overlay; you must have credit spend behind your wallet to win it.
+// Free arcade — skill games, no wager. A live bounty (if any) shows as a
+// gold overlay; prize boards still require a deposited $OWP balance.
 const FREE_GAMES = [
   {
     href: "/games/hopper",
@@ -74,15 +74,10 @@ type HistoryRow = {
 
 export default function GamesPage() {
   const { me, refresh } = useSession();
-  const { burnForCredits, buyCredits } = useChain();
-  // Credits always route through the split-buy (part burned, part to the house)
-  // when a treasury exists — so every credit funds the reward economy. Pure
-  // burn is only the pre-treasury / dev fallback so credits are still
-  // obtainable before the treasury is configured.
-  const canBuy = !!CLIENT_CONFIG.treasuryWallet;
+  const { depositForBidding } = useChain();
   const mintLive = !!CLIENT_CONFIG.ribbitMint;
-  const house = useHouseConfig(); // live, admin-tunable price/split/switches
-  const [burnAmount, setBurnAmount] = useState(CLIENT_CONFIG.ribbitPerCredit * 10);
+  const house = useHouseConfig();
+  const [depositAmount, setDepositAmount] = useState(100);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
@@ -103,7 +98,7 @@ export default function GamesPage() {
       .then(async (results) => {
         const won = results.filter((r) => r.ok);
         if (won.length > 0) {
-          setMsg({ kind: "ok", text: "Recovered a pending payment — chips added." });
+          setMsg({ kind: "ok", text: "Recovered a pending deposit — balance updated." });
           await refresh();
         }
       })
@@ -115,10 +110,10 @@ export default function GamesPage() {
     if (rescueSig.trim().length < 64) return;
     setBusy(true);
     setMsg(null);
-    const res = await redeemSignature(canBuy ? "/api/credits/buy" : "/api/burn/verify", rescueSig);
+    const res = await redeemSignature("/api/deposits/verify", rescueSig);
     setMsg(
       res.ok
-        ? { kind: "ok", text: "Payment verified on-chain — chips added." }
+        ? { kind: "ok", text: "Deposit verified on-chain — balance updated." }
         : { kind: "err", text: res.error }
     );
     if (res.ok) {
@@ -135,30 +130,20 @@ export default function GamesPage() {
       .catch(() => {});
   }, []);
 
-  const burnValid =
-    Number.isFinite(burnAmount) && burnAmount >= house.ribbitPerCredit;
-  const burnRemainder = burnValid ? burnAmount % house.ribbitPerCredit : 0;
+  const depositValid = Number.isInteger(depositAmount) && depositAmount >= 1;
 
-  const doBurn = async () => {
-    // Guard hard: a burn/buy below the credit price would spend tokens for
-    // zero credits — the chain can't undo it.
-    if (!burnValid) return;
+  const doDeposit = async () => {
+    if (!depositValid) return;
     setBusy(true);
     setMsg(null);
-    const res = canBuy ? await buyCredits(burnAmount) : await burnForCredits(burnAmount);
+    const res = await depositForBidding(depositAmount);
     if (res.ok) {
-      // The retry/recovery path returns {alreadyRedeemed:true} with no count
-      // (e.g. a dropped first response, then a 409) — don't print "undefined".
-      const granted = res.data.creditsGranted;
       setMsg({
         kind: "ok",
-        text:
-          typeof granted === "number"
-            ? `${canBuy ? "Purchase" : "Burn"} verified — ${granted} chips added.`
-            : "Payment verified — your chips are in your balance.",
+        text: `Deposited ${depositAmount.toLocaleString()} $OWP. It's in your app balance.`,
       });
       await refresh();
-      window.dispatchEvent(new Event("owp:balance")); // update the top-panel $OWP
+      window.dispatchEvent(new Event("owp:balance"));
     } else {
       setMsg({ kind: "err", text: res.error });
     }
@@ -170,7 +155,7 @@ export default function GamesPage() {
     const res = await fetch("/api/dev/faucet", { method: "POST" });
     setMsg(
       res.ok
-        ? { kind: "ok", text: "100 demo chips added (dev faucet)." }
+        ? { kind: "ok", text: "100 demo $OWP added to your balance (dev faucet)." }
         : { kind: "err", text: "Faucet unavailable" }
     );
     await refresh();
@@ -227,7 +212,7 @@ export default function GamesPage() {
         badge="Tables open"
         title="Step into the"
         titleAccent="arcade"
-        subtitle="Casino tables run on chips bought with $OWP — part burned forever, part funding the prize pools. Provably fair, published edge. The arcade episodes are free and pay weekly bounties."
+        subtitle="Deposit $OWP and wager it at the tables. Provably fair, published edge. Withdraw anytime — the house pays automatically. The arcade episodes are free and pay weekly bounties."
       />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 mt-8">
@@ -235,7 +220,7 @@ export default function GamesPage() {
           <div className="sm:col-span-2">
             <div className="kicker">Casino tables</div>
             <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
-              Played with chips ⛁ · provably fair, published edge
+              Wagered in $OWP · provably fair, published edge
             </p>
           </div>
           {CREDIT_GAMES.map(renderCard)}
@@ -243,7 +228,7 @@ export default function GamesPage() {
           <div className="sm:col-span-2 pt-2">
             <div className="kicker">Free arcade</div>
             <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
-              Skill games · free to play; a live bounty pays weekly to eligible spenders
+              Skill games · free to play; a live bounty pays weekly to eligible depositors
             </p>
           </div>
           {FREE_GAMES.map(renderCard)}
@@ -285,31 +270,32 @@ export default function GamesPage() {
           )}
         </div>
 
-        {/* Credits rail */}
+        {/* Balance rail */}
         <aside className="panel panel-glow panel-etched p-5 h-fit lg:sticky lg:top-24 order-1 lg:order-2">
-          <div className="kicker mb-2">Play credits</div>
-          <div className="stat-number text-[2.2rem] text-neon leading-none mb-5">
-            {me.signedIn ? (me.credits ?? 0) : "—"}
+          <div className="kicker mb-2">App balance</div>
+          <div className="stat-number text-[2.2rem] text-neon leading-none mb-1">
+            {me.signedIn ? (me.credits ?? 0).toLocaleString() : "—"}
           </div>
+          <p className="text-xs mb-5" style={{ color: "var(--text-dim)" }}>
+            whole $OWP you can wager or withdraw
+          </p>
 
           {!me.signedIn ? (
             <Notice kind="info">
-              Connect your wallet and sign in (top right) to get chips and
+              Connect your wallet and sign in (top right) to deposit $OWP and
               take a seat.
             </Notice>
           ) : !mintLive ? (
             <Notice kind="info">
-              $OWP is not live yet. Chip sales open once the mint is published.
+              $OWP is not live yet. Deposits open once the mint is published.
             </Notice>
           ) : (
             <>
-              <label className="kicker !text-[0.6rem]">
-                {canBuy ? "Buy table chips with $OWP" : "Burn $OWP → chips"}
-              </label>
+              <label className="kicker !text-[0.6rem]">Deposit $OWP</label>
               {house.creditSalesPaused && (
                 <div className="mt-1.5">
                   <Notice kind="info">
-                    Chip sales are paused by the house — back shortly.
+                    Deposits are paused by the house — back shortly.
                   </Notice>
                 </div>
               )}
@@ -317,65 +303,40 @@ export default function GamesPage() {
                 <input
                   type="number"
                   className="input"
-                  min={house.ribbitPerCredit}
-                  step={house.ribbitPerCredit}
-                  aria-label="Amount of $OWP to spend on chips"
-                  value={burnAmount || ""}
-                  onChange={(e) => setBurnAmount(Number(e.target.value))}
+                  min={1}
+                  step={1}
+                  aria-label="Amount of $OWP to deposit"
+                  value={depositAmount || ""}
+                  onChange={(e) => setDepositAmount(Number(e.target.value))}
                 />
                 <button
                   className="btn btn-primary"
-                  onClick={doBurn}
-                  disabled={busy || !burnValid || house.creditSalesPaused}
-                  title={
-                    burnValid
-                      ? undefined
-                      : `Minimum ${house.ribbitPerCredit.toLocaleString()} $OWP`
-                  }
+                  onClick={doDeposit}
+                  disabled={busy || !depositValid || house.creditSalesPaused}
                 >
-                  {busy ? "…" : canBuy ? "Buy" : "Burn"}
+                  {busy ? "…" : "Deposit"}
                 </button>
               </div>
               <div className="flex gap-1.5 mb-2.5">
-                {[1_000, 5_000, 10_000].map((amt) => (
+                {[100, 500, 1_000].map((amt) => (
                   <button
                     key={amt}
                     className="btn btn-ghost !text-xs !min-h-[1.8rem] !px-2.5"
-                    onClick={() => setBurnAmount(amt)}
+                    onClick={() => setDepositAmount(amt)}
                   >
                     {amt.toLocaleString()}
                   </button>
                 ))}
               </div>
               <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                {house.ribbitPerCredit.toLocaleString()} $OWP = 1 credit —
-                you’ll receive{" "}
-                <span className="text-neon">
-                  {burnValid
-                    ? Math.floor(burnAmount / house.ribbitPerCredit)
-                    : 0}
-                </span>
-                .{" "}
-                {burnRemainder > 0 && (
-                  <span className="text-gold">
-                    {burnRemainder.toLocaleString()} $OWP of that {canBuy ? "spends" : "burns"} without
-                    granting a credit — use a multiple of{" "}
-                    {house.ribbitPerCredit.toLocaleString()}.{" "}
-                  </span>
-                )}
-                {canBuy ? (
-                  <>
-                    {Math.round(house.buyBurnShare * 100)}% is burned,{" "}
-                    {Math.round((1 - house.buyBurnShare) * 100)}% funds the
-                    house — which pays the bounty rewards. Verified on-chain.
-                  </>
-                ) : (
-                  <>Burns are permanent, 100% destroyed, and verified on-chain.</>
-                )}
+                The transfer goes to the treasury wallet and shows up here as
+                your balance. Wagers, bids, and bounty entries spend that
+                balance. Withdrawals are requested from your account and paid
+                automatically.
               </p>
               <details className="mb-3">
                 <summary className="text-xs cursor-pointer" style={{ color: "var(--text-dim)" }}>
-                  Paid but credits didn&apos;t arrive?
+                  Sent $OWP but the balance didn&apos;t move?
                 </summary>
                 <div className="flex gap-2 mt-2">
                   <input
@@ -393,13 +354,15 @@ export default function GamesPage() {
                   </button>
                 </div>
                 <p className="text-[0.65rem] mt-1.5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                  We verify the payment on-chain and credit it — each transaction
-                  can only ever be redeemed once, so this is always safe to try.
+                  We verify the transfer on-chain and credit it once. Safe to retry.
                 </p>
               </details>
+              <Link href="/account" className="btn btn-ghost w-full mb-3">
+                Withdraw
+              </Link>
               {CLIENT_CONFIG.devFaucet && (
                 <button className="btn btn-ghost w-full mb-3" onClick={doFaucet} disabled={busy}>
-                  Dev faucet · +100 credits
+                  Dev faucet · +100 $OWP
                 </button>
               )}
             </>
@@ -420,18 +383,11 @@ export default function GamesPage() {
               }}
             >
               <span className="text-gold">🏆 Two steps to win prizes.</span>{" "}
-              <b>1) Buy chips to become eligible</b> — you need{" "}
-              {Math.ceil(
-                house.rankedMinBurnedRibbit / (house.ribbitPerCredit || 1)
-              ).toLocaleString()}{" "}
-              credits ({house.rankedMinBurnedRibbit.toLocaleString()} $OWP) bought
-              lifetime, plus{" "}
-              {Math.ceil(
-                house.rankedMinWindowBurnedRibbit / (house.ribbitPerCredit || 1)
-              ).toLocaleString()}{" "}
-              during each bounty you enter. <b>2) Play the game</b> — that&apos;s what
-              fills the shared pool everyone splits. (Table games also need enough
-              wagering inside the bounty window.)
+              <b>1) Deposit $OWP to become eligible</b> —{" "}
+              {house.rankedMinBurnedRibbit.toLocaleString()} $OWP deposited
+              lifetime, plus {house.rankedMinWindowBurnedRibbit.toLocaleString()}{" "}
+              $OWP deposited during each bounty you enter. <b>2) Play the game</b>{" "}
+              — wagers fill the shared pool everyone splits.
             </div>
           )}
 
@@ -440,8 +396,7 @@ export default function GamesPage() {
             style={{ borderTop: "1px solid var(--hairline)", color: "var(--text-dim)" }}
           >
             House edge is a flat {Math.round(house.houseEdge * 100)}% on table
-            payouts. Bounty prizes are funded separately — by the house&apos;s
-            share of every credit purchase.{" "}
+            payouts, taken in $OWP. Bounty pots are filled from that edge.{" "}
             <Link href="/fairness" className="text-neon hover:underline">
               Verify fairness →
             </Link>

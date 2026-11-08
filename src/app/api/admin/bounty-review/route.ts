@@ -35,7 +35,7 @@ export const GET = handler(async () => {
           prizeRibbit: fromRaw(b.prizeRibbit),
           endsAt: b.endsAt,
         },
-        unit: ARCADE_GAMES.has(b.game!) ? "best score" : "net chips",
+        unit: ARCADE_GAMES.has(b.game!) ? "best score" : "net $OWP",
         verified: ARCADE_GAMES.has(b.game!),
         entries,
       };

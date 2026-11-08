@@ -1,16 +1,19 @@
-// Auction bidding balance: users transfer $OWP to the treasury's token
-// account from their own wallet, then submit the tx signature. Verified
-// deposits credit the in-app bidding balance 1:1.
+// App balance: the user transfers $OWP to the treasury wallet, then submits
+// the tx signature. Verified deposits credit the in-app balance 1:1. That
+// balance is what they wager, bid, and withdraw.
 import { z } from "zod";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { verifyDepositTx } from "@/lib/solana";
 import { rateLimit } from "@/lib/ratelimit";
+import { houseConfig } from "@/lib/settings";
 
 const body = z.object({ signature: z.string().min(64).max(120) });
 
 export const POST = handler(async (req: Request) => {
   const session = await requireSession();
+  const cfg = await houseConfig();
+  if (cfg.creditSalesPaused) return err("Deposits are paused — back shortly", 423);
   const { signature } = body.parse(await req.json());
 
   // RPC-lookup guard — same budget as the other chain-verify endpoints.

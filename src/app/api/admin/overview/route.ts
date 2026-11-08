@@ -1,7 +1,7 @@
 import { handler, ok, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { getTreasuryStats, getWalletBalances } from "@/lib/solana";
-import { CONFIG } from "@/lib/config";
+import { CONFIG, fromRaw } from "@/lib/config";
 
 export const GET = handler(async () => {
   await requireAdmin();
@@ -34,7 +34,7 @@ export const GET = handler(async () => {
     prisma.auction.count({ where: { status: "live" } }),
     prisma.bounty.count({ where: { status: "open" } }),
     prisma.user.count(),
-    prisma.user.aggregate({ _sum: { credits: true } }),
+    prisma.user.aggregate({ _sum: { ribbitBalance: true } }),
     prisma.burnEvent.aggregate({ _sum: { amountRaw: true } }),
     prisma.creditPurchase.aggregate({ _sum: { burnedRaw: true } }),
     prisma.user.aggregate({ _sum: { ribbitLocked: true } }),
@@ -84,14 +84,14 @@ export const GET = handler(async () => {
     })),
     stats: {
       users: userCount,
-      creditsOutstanding: creditAgg._sum.credits ?? 0,
+      creditsOutstanding: Math.floor(fromRaw(creditAgg._sum.ribbitBalance ?? 0n)),
       // Pure burns + the burn leg of every credit purchase.
       lifetimeBurnedRaw: (
         (burnAgg._sum.amountRaw ?? 0n) + (buyBurnAgg._sum.burnedRaw ?? 0n)
       ).toString(),
       lockedRaw: (lockedAgg._sum.ribbitLocked ?? 0n).toString(),
       treasury,
-      payout, // the hot wallet that actually pays withdrawals/prizes
+      payout, // same house wallet that receives deposits and pays withdrawals
     },
   });
 });

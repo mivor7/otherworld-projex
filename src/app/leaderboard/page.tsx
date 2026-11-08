@@ -14,9 +14,9 @@ const GAMES: { id: string; label: string; unit: string; kind: "arcade" | "table"
   { id: "hopper", label: "Hopper", unit: "best score", kind: "arcade" },
   { id: "frogris", label: "Frogris", unit: "best score", kind: "arcade" },
   { id: "worm", label: "Worm Frog", unit: "best score", kind: "arcade" },
-  { id: "flip", label: "Frog Flip", unit: "net chips", kind: "table" },
-  { id: "dice", label: "Pond Dice", unit: "net chips", kind: "table" },
-  { id: "blackjack", label: "Blackjack", unit: "net chips", kind: "table" },
+  { id: "flip", label: "Frog Flip", unit: "net $OWP", kind: "table" },
+  { id: "dice", label: "Pond Dice", unit: "net $OWP", kind: "table" },
+  { id: "blackjack", label: "Blackjack", unit: "net $OWP", kind: "table" },
 ];
 
 export default function LeaderboardPage() {
@@ -58,7 +58,7 @@ export default function LeaderboardPage() {
         badge="Updated live"
         title="Top"
         titleAccent="Exterminators"
-        subtitle="Every cabinet and every table, ranked. Arcade boards track best score; the tables rank net credits won. Weekly boards feed the bounty pools."
+        subtitle="Every cabinet and every table, ranked. Arcade boards track best score; the tables rank net $OWP won. Weekly boards feed the bounty pools."
       />
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
@@ -154,10 +154,10 @@ export default function LeaderboardPage() {
       <p className="text-xs mt-4 leading-relaxed max-w-lg" style={{ color: "var(--text-dim)" }}>
         <span className="text-neon">Skin in the game:</span> prize boards rank
         wallets with {""}
-        {house.rankedMinBurnedRibbit.toLocaleString()}+ $OWP spent on
-        credits lifetime and {house.rankedMinWindowBurnedRibbit.toLocaleString()}+
-        spent inside the board week (table boards also need in-window wagering
-        volume). Anyone can play; buying credits mid-week ranks your best score
+        {house.rankedMinBurnedRibbit.toLocaleString()}+ $OWP deposited
+        lifetime and {house.rankedMinWindowBurnedRibbit.toLocaleString()}+
+        deposited inside the board week (table boards also need in-window wagering
+        volume). Anyone can play; depositing mid-week ranks your best score
         retroactively. Every arcade run is replayed move-by-move and verified
         on the server before it can rank — pools pay the moment they trigger,
         listed on the{" "}

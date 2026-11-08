@@ -21,6 +21,8 @@ type TreasuryData = {
     burnCount: number;
     creditsSoldRaw: string;
     purchaseCount: number;
+    depositedRaw: string;
+    depositCount: number;
     bountyPaidRaw: string;
     houseTakeCredits: number;
     wageredCredits: number;
@@ -65,12 +67,12 @@ export default function TreasuryPage() {
               : "—",
           label: "$OWP held",
         },
-        { value: fmtRibbit(data.totals.ribbitBurnedRaw), label: "Burned forever" },
+        { value: fmtRibbit(data.totals.depositedRaw), label: "$OWP deposited" },
       ]
     : [
         { value: "…", label: "Vault balance" },
         { value: "…", label: "$OWP held" },
-        { value: "…", label: "Burned forever" },
+        { value: "…", label: "$OWP deposited" },
       ];
 
   return (
@@ -83,7 +85,7 @@ export default function TreasuryPage() {
         badge="Live on-chain"
         title="The"
         titleAccent="Treasury"
-        subtitle="One vault backs the whole house — funded by the owners, replenished by the house share of every chip purchase and by token trade fees. Balances read live from Solana; every payout is published below."
+        subtitle="One wallet backs the house. Deposits land here and become app balances. Withdrawals and bounty prizes leave from the same wallet, automatically. Balances read live from Solana."
         stats={stats}
       />
 
@@ -122,7 +124,7 @@ export default function TreasuryPage() {
             <StatCard
               label="Wagered volume"
               value={data.totals.wageredCredits.toLocaleString()}
-              sub={`chips across all tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} chips (table currency, not $OWP)`}
+              sub={`$OWP across the tables · edge kept ${data.totals.houseTakeCredits.toLocaleString()} $OWP`}
             />
             <StatCard
               label="Rounds settled"
@@ -131,9 +133,9 @@ export default function TreasuryPage() {
               tone="portal"
             />
             <StatCard
-              label="Chip sales"
-              value={String(data.totals.burnCount + data.totals.purchaseCount)}
-              sub={`${fmtRibbit(data.totals.ribbitBurnedRaw)} $OWP burned forever`}
+              label="Deposits"
+              value={data.totals.depositCount.toLocaleString()}
+              sub={`${fmtRibbit(data.totals.depositedRaw)} $OWP sent to the house wallet`}
               tone="gold"
             />
           </div>
@@ -144,14 +146,14 @@ export default function TreasuryPage() {
               {(
                 [
                   [
-                    "Bounty prizes ← chip purchases",
-                    `funded by the treasury's ${Math.round((1 - data.economy.buyBurnShare) * 100)}% share of every chip bought (the other ${Math.round(data.economy.buyBurnShare * 100)}% is burned)`,
+                    "Deposits",
+                    "players send $OWP to the house wallet; that balance is what they wager, bid, and withdraw",
                     "var(--color-neon)",
-                    1 - data.economy.buyBurnShare,
+                    1,
                   ],
                   [
-                    "Table house edge (separate)",
-                    `flat ${Math.round(data.houseEdge * 100)}% on table payouts — game fairness, not bounty funding`,
+                    "Table house edge",
+                    `flat ${Math.round(data.houseEdge * 100)}% kept on table payouts — the only cost of play`,
                     "var(--color-portal)",
                     data.houseEdge * 5,
                   ],
@@ -196,14 +198,9 @@ export default function TreasuryPage() {
                   respect an on-chain daily cap.
                 </li>
                 <li>
-                  <span className="text-frost font-medium">Escrow.</span> Auction
-                  deposits go to the treasury token account and are verified
-                  on-chain before any bidding balance is credited.
-                </li>
-                <li>
-                  <span className="text-frost font-medium">Burns.</span> The burn
-                  leg of every chip purchase is destroyed at the mint — it never
-                  touches the treasury. Only the house leg lands here.
+                  <span className="text-frost font-medium">$OWP.</span> Deposits are
+                  verified on-chain, then credited as app balance. The same
+                  wallet pays withdrawals and bounty prizes automatically.
                 </li>
               </ul>
               {data.chain.wallet && (

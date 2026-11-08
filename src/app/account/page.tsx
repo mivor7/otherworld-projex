@@ -53,7 +53,7 @@ type LivePosition = {
   value: number;
   rank: number;
   players: number;
-  unit: "net chips" | "best score";
+  unit: "net $OWP" | "best score";
   inRunning: boolean;
   projectedRibbit: number;
   spendEligible: boolean;
@@ -208,12 +208,12 @@ export default function AccountPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Table chips ⛁" value={String(me.credits ?? 0)} tone="neon" />
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <StatCard
-          label="$OWP available"
+          label="App balance"
           value={fmtRibbit(me.ribbitAvailable ?? 0)}
-          sub="in the bidding account"
+          sub={`${(me.credits ?? 0).toLocaleString()} whole $OWP the tables accept`}
+          tone="neon"
         />
         <StatCard
           label="Locked in bids"
@@ -225,7 +225,7 @@ export default function AccountPage() {
           <div className="kicker">Move funds</div>
           <div className="grid gap-1.5">
             <Link href="/games" className="btn btn-ghost !text-xs w-full">
-              Buy chips
+              Deposit $OWP
             </Link>
             <button
               className="btn btn-ghost !text-xs w-full"
@@ -351,8 +351,8 @@ export default function AccountPage() {
                       <span className="text-fog">
                         not eligible —{" "}
                         {!p.lifetimeEligible
-                          ? "spend more $OWP on chips"
-                          : "buy chips during this bounty"}
+                          ? "deposit more $OWP"
+                          : "deposit $OWP during this bounty"}
                       </span>
                     ) : p.value > 0 ? (
                       <span className="text-fog">in the running as the pool fills</span>

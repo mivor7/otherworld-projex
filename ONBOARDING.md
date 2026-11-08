@@ -5,10 +5,11 @@ non-obvious knowledge, mental models, and runbook. For the product/architecture
 overview read `README.md`; for the raw deploy checklist read `DEPLOY.md`; every
 env var is documented in `.env.example`. This file is what those don't tell you.
 
-**What it is:** a production Solana gaming app. Users buy play-credits with the
-$OWP token (part burned, part to the house treasury), play provably-fair
-games (Frog Flip, Pond Dice, Blackjack, plus free arcade games Hopper / Frogris
-/ Worm), bid in auctions, and hunt fixed-prize bounties paid in real $OWP.
+**What it is:** a production Solana gaming app. Players deposit $OWP to the
+house wallet and get an in-app balance. They play provably-fair games (Frog
+Flip, Pond Dice, Blackjack, plus free arcade games Hopper / Frogris / Worm),
+bid in auctions, and hunt bounties paid in $OWP. Withdrawals are requested in
+the app and paid automatically from that same wallet.
 It is **live in production** on Vercel + Neon + Solana mainnet.
 
 **Stack:** Next.js 16 (App Router) · TypeScript · Tailwind 4 · Prisma 6 +
@@ -28,8 +29,8 @@ This is the single biggest gotcha. $OWP is not launched yet, so the repo has
 **no mint address baked in**. Set `OWP_MINT` (server, payout worker) and
 `NEXT_PUBLIC_OWP_MINT` (browser, baked at build time) when the token exists.
 Do not point either at the retired Ribbit mint
-`EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump`. Until those vars are set, chip
-sales, deposits, waitlist balance checks, and the payout worker stay closed.
+`EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump`. Until those vars are set,
+deposits, waitlist balance checks, and the payout worker stay closed.
 
 The new mint will be owned by the Token-2022 program
 (`TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`), **not** the classic Token
@@ -95,19 +96,16 @@ data. Prefer a separate Neon branch for development.
 ## 3. The mental models
 
 ### 3.1 The economy (money in)
-- Users **buy credits** with $OWP in one on-chain transaction. The purchase
-  is split: `BUY_BURN_SHARE` (default 50%) is **burned** (deflation), the rest
-  is transferred to the **treasury** as real house revenue. Price is
-  `RIBBIT_PER_CREDIT` (default 100 $OWP / credit).
-- Pure **burn-for-credits** (100% burn, no treasury) remains as a fallback and
-  works even before a treasury is configured.
-- Every burn/deposit is **verified on-chain** server-side (the client POSTs a tx
-  signature; the server confirms it and enforces a unique-signature constraint
-  so a signature can't be replayed).
-- Games have a configurable **house edge** (`HOUSE_EDGE`, default 4%). The
-  credits ledger (`src/lib/credits.ts`) is append-only and every balance change
-  is a guarded atomic DB decrement/increment inside a transaction — this is what
-  prevents double-spend races. **Respect that pattern** when you touch balances.
+- Users **deposit $OWP**. The transfer goes to the house wallet and is
+  verified on-chain (`POST /api/deposits/verify`). The full amount credits
+  `User.ribbitBalance`. There are no chips and no burn-to-play.
+- Games and bids spend that balance. `adjustOwp` moves whole tokens and
+  refuses a debit that would eat $OWP locked in bids. The ledger
+  (`src/lib/credits.ts`) is append-only. **Respect that pattern.**
+- A withdrawal request debits the unlocked balance and queues a `Withdrawal`.
+  The payout worker sends it. The house edge stays in the wallet because only
+  the payout, not the full wager, is credited back.
+- Games have a configurable **house edge** (`HOUSE_EDGE`, default 4%).
 
 ### 3.2 The bounty engine — read `src/lib/bounty.ts`
 This is the most-iterated, most-subtle subsystem. The final design:
@@ -116,10 +114,8 @@ This is the most-iterated, most-subtle subsystem. The final design:
   2026-07-27 — it replaced a gross-wager trigger whose margin knob could never
   track real revenue). A pot has a **prize** (the target) and an optional
   **seed** (`Bounty.seedRibbit`, the house's declared head start = its only
-  cost per fill). The pot earns
-  `bountyPotShare × houseEdge × (1 − buyBurnShare) × ribbitPerCredit`
-  $OWP per credit wagered — its share of the edge the house actually
-  collects — and pays the moment it reaches the prize. If the bounty's
+  cost per fill). The pot earns `bountyPotShare × houseEdge` $OWP per 1 $OWP
+  wagered (defaults 0.5 × 0.04 = 0.02) and pays the moment it reaches the prize. If the bounty's
   **`autoRenew`** switch is on (the default; editable live in the admin
   create/edit forms) a fresh round opens automatically with the same
   prize/seed and **`round` + 1** (rounds are auto-numbered and shown to
@@ -134,17 +130,16 @@ This is the most-iterated, most-subtle subsystem. The final design:
   ahead** (minus only the seed it chose). A pot that never fills costs
   nothing.
 - The meter still counts **gross wager** (monotonic — the bar only rises,
-  the owner's hard requirement), but each wagered credit now advances the pot
-  by its true expected revenue contribution instead of pretending volume was
-  fresh money.
+  the owner's hard requirement). Each wagered $OWP advances the pot by
+  `bountyPotShare × houseEdge`.
 - **Eligibility (anti-sybil), in `src/lib/ranked.ts`.** To share a prize a wallet
-  must (1) have spent ≥ `RANKED_MIN_BURNED_RIBBIT` on credits *lifetime*, and
-  (2) spent ≥ `RANKED_MIN_WINDOW_BURNED_RIBBIT` *inside the bounty window*. "Spend"
-  counts both burns and buys. Rule 2 is the sybil multiplier: splitting play over
-  N wallets costs N× fresh spend every window. Set either to 0 to disable it.
-  Table bounties also require `RANKED_MIN_TABLE_VOLUME` credits wagered and a
+  must (1) have deposited ≥ `RANKED_MIN_BURNED_RIBBIT` $OWP *lifetime*, and
+  (2) deposited ≥ `RANKED_MIN_WINDOW_BURNED_RIBBIT` *inside the bounty window*.
+  Rule 2 is the sybil multiplier: splitting play over N wallets costs N× fresh
+  deposits every window. Set either to 0 to disable it.
+  Table bounties also require `RANKED_MIN_TABLE_VOLUME` whole $OWP wagered and a
   **net-positive** result to win.
-- Winners are paid **pro-rata** by performance (net credits / score), summing to
+- Winners are paid **pro-rata** by performance (net $OWP / score), summing to
   exactly the prize. Payout is queued as a `Withdrawal` (kind `bounty`) — same
   hardened, human-gated payout path as balance withdrawals. Nothing is ever paid
   from the web server.
@@ -166,7 +161,7 @@ sanity checks to deter spoofing.
 ### 3.4 What players see (recently added)
 - The game-page bounty panel (`src/components/bounty-standings.tsx`) shows a
   signed-in player, **up front**, whether they're eligible and if not exactly
-  which rule is unmet (with a Buy-credits CTA) — so nobody grinds a bounty they
+  which rule is unmet (with a Deposit CTA) — so nobody grinds a bounty they
   can't win.
 - The **account page** shows a live **"Bounty winnings"** ledger (settled prizes
   + payout status via `/api/me/bounties`) and a real-time **"Your live bounty
@@ -216,33 +211,31 @@ program/            Anchor treasury vault (SOL custody, daily cap, multisig)
 
 ---
 
-## 5. Money architecture & the golden rules
+## 5. Money architecture
 
-The app is **semi-custodial** but designed so a stolen web server can't drain
-funds. Internalize these — they are non-negotiable:
+The app is **semi-custodial**. The owner's decision: **one wallet** is the
+admin wallet, the treasury, and the payout signer. Do not split them back apart.
 
-1. **The web app holds NO private keys.** It only ever *verifies* incoming
-   on-chain transactions and *queues* outgoing ones as `Withdrawal` rows.
-2. **Treasury = the public reserve.** Holds founders' holdings + all app revenue
-   (auction deposits + the house share of credit buys). Ideally a Squads
-   multisig / cold wallet. Its key **never** touches any server. Its balance is
-   shown publicly at `/treasury`.
-3. **Payout hot wallet = a SEPARATE wallet** with only a working float, topped up
-   from the treasury as it drains. The off-server payout worker
-   (`scripts/payout-worker.mjs`) signs from THIS wallet. Give it the key via
-   **one** of (preferred first): `PAYOUT_WALLET_KEY` (the keypair JSON array
-   itself, from an env var / secrets manager), a systemd credential named
-   `payout-wallet` (`LoadCredential=` — encrypted at rest, decrypted only for
-   the service), or `PAYOUT_KEYPAIR_PATH` (legacy key file — `chmod 600`, never
-   in a repo or backup). The worst this process can ever move is the hot-wallet
-   balance.
-   **Never put the treasury key on the ops box. Never put any private key in
-   Vercel** — only the *public* address (`PAYOUT_WALLET`) so `/admin` can show
-   the float.
+1. **The web app holds NO private keys.** It verifies incoming deposits and
+   queues outgoing withdrawals as `Withdrawal` rows.
+2. **One house wallet.** Deposits of $OWP land in this wallet and credit the
+   in-app balance. Withdrawals leave from it. Set `ADMIN_WALLETS` to that
+   pubkey. `TREASURY_WALLET` and `PAYOUT_WALLET` fall back to the first admin
+   wallet when they are unset — set all three public addresses to the same
+   pubkey so the site, the worker, and Phantom agree. The browser learns the
+   address from `/api/config` when `NEXT_PUBLIC_TREASURY_WALLET` is empty.
+   `/treasury` shows the on-chain balance.
+3. **The payout box holds that wallet's key.** `PAYOUT_WALLET_KEY` (preferred),
+   a systemd credential named `payout-wallet`, or `PAYOUT_KEYPAIR_PATH`
+   (`chmod 600`, never in a repo). This is deliberate: the Phantom wallet is
+   the treasury and the signer. A stolen payout box can move the whole
+   treasury. **Never put the private key in Vercel.**
 4. **Big payouts wait for a human.** Withdrawals above `MAX_PAYOUT_RIBBIT` are
-   not auto-sent; an admin processes them in `/admin`.
-5. SOL custody is handled by the Anchor program in `program/` (multisig admin +
-   on-chain daily cap). **It ships with tests but has NOT been audited.**
+   not auto-sent; an admin processes them in `/admin`. "Pay now" signs from
+   the connected admin wallet, which is this same wallet.
+5. SOL custody is a separate Anchor program in `program/` (multisig admin +
+   on-chain daily cap). **It ships with tests but has NOT been audited.** It
+   is not the $OWP wallet.
 
 ---
 
@@ -252,15 +245,16 @@ Two layers:
 - **Env vars** (`.env.example` documents all) set the **defaults** and the things
   that can't change at runtime (RPC, mint, secrets, treasury address, admin list).
 - **House controls** in `/admin` write to the `HouseSetting` table and override
-  the numeric economy knobs **live** (house edge, wager limits, credit price,
-  buy/burn share, bounty margin, eligibility thresholds, auto-pay switch, and a
+  the numeric economy knobs **live** (house edge, wager limits, bounty share,
+  eligibility thresholds, auto-pay switch, and a
   remote "pause payout worker" switch). `houseConfig()` reads them with a ~10s
   cache and re-clamps to safe bounds. So most economy tuning happens in the admin
   UI, not by redeploying.
 
-Before a real launch: make sure `TREASURY_WALLET == NEXT_PUBLIC_TREASURY_WALLET`,
-reset any test-override House settings, and raise `RANKED_MIN_WINDOW_BURNED_RIBBIT`
-from any low test value to a meaningful bar.
+Before a real launch: `ADMIN_WALLETS`, `TREASURY_WALLET`, `PAYOUT_WALLET`, and
+`NEXT_PUBLIC_TREASURY_WALLET` should all be the same pubkey. Set `OWP_MINT` and
+`NEXT_PUBLIC_OWP_MINT`. Reset any test-override House settings, and raise
+`RANKED_MIN_WINDOW_BURNED_RIBBIT` from any low test value to a meaningful bar.
 
 ---
 
@@ -305,17 +299,18 @@ migrations apply automatically on deploy** — no manual migration step in prod.
   game enforced; shows award counts.
 - **Payouts** — process queued withdrawals directly ("Pay now" signs from the
   connected admin wallet via Token-2022), or mark ones paid elsewhere. Shows the
-  payout hot-wallet float.
+  house-wallet float.
 - **Users / auctions / applications** — moderation, ban, listing review.
 
 ### The payout worker (`scripts/payout-worker.mjs`)
 A long-running Node process: every `PAYOUT_INTERVAL_MS` (~15s) it polls the
-shared Neon DB for pending `Withdrawal` rows and sends them from the hot wallet.
-It needs the hot-wallet keypair (`PAYOUT_KEYPAIR_PATH`), the `.env`
-(`DATABASE_URL`, `SOLANA_RPC_URL`), and internet. Run it on any always-on box —
-**systemd** (auto-restart on boot/crash, recommended for launch), **pm2**, or
-**tmux** (testing only; dies on reboot). It's optional: you can skip it entirely
-and clear payouts by hand in `/admin`. Never run it against the treasury key.
+shared Neon DB for pending `Withdrawal` rows and sends them from the house
+wallet. It needs that wallet's key (`PAYOUT_WALLET_KEY` or
+`PAYOUT_KEYPAIR_PATH`), the `.env` (`DATABASE_URL`, `SOLANA_RPC_URL`,
+`OWP_MINT`), and internet. Run it on any always-on box — **systemd**
+(auto-restart on boot/crash, recommended for launch), **pm2**, or **tmux**
+(testing only; dies on reboot). It's optional: you can skip it entirely and
+clear payouts by hand in `/admin`. The key on this box is the treasury key.
 
 ### Data utilities in `scripts/`
 - `prod-smoke.mjs` — 22-check live verification. Run after every deploy.
@@ -360,9 +355,9 @@ first line of defense; the smoke test is the second.
   hardening step if volume grows.
 - **The Anchor program is unaudited.** Get it audited before it holds meaningful
   SOL.
-- **Gambling compliance is jurisdiction-specific.** Burn-to-play with credit
-  prizes is a legal gray area in many places — get advice before marketing this
-  as real-money gaming.
+- **Gambling compliance is jurisdiction-specific.** Wagering $OWP is a legal
+  gray area in many places — get advice before marketing this as real-money
+  gaming.
 - **Treasury solvency is a manual responsibility.** Keep enough $OWP in the
   treasury to cover queued withdrawals and bounty pools; `/treasury` shows both
   sides.
@@ -373,9 +368,9 @@ first line of defense; the smoke test is the second.
 
 - **Secrets are NOT in this repo.** They live in Vercel (write-only) and with the
   owner. `.env.example` names them; get real values from the owner.
-- **Wallet addresses** (treasury, payout hot wallet, admin wallets) — get them
+- **The house wallet** is one pubkey: admin, treasury, and payout. Get it
   from the owner. This guide intentionally omits private keys and specific
-  operational addresses. The mint address is public and in `.env.example`.
+  operational addresses. The mint address is not in the repo until launch.
 - **Never commit** a `.env`, a keypair file, or any secret. Never place a private
   key in Vercel.
 - The owner controls Vercel, Neon, the domain registrar, the treasury multisig,

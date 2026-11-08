@@ -242,14 +242,14 @@ export default function AuctionDetailPage({
                   <p>
                     Minimum next bid {fmtRibbit(minNext)} · from your{" "}
                     <Link href="/auctions" className="text-neon hover:underline">
-                      bidding account
+                      app balance
                     </Link>{" "}
                     ({fmtRibbit(me.ribbitAvailable ?? 0)} available)
                   </p>
                   <p>Bids in the final 2 minutes extend the hammer by 2 minutes.</p>
                   {me.signedIn && needsDeposit && (
                     <p className="text-gold">
-                      Not enough bidding balance —{" "}
+                      Not enough app balance —{" "}
                       <Link href="/auctions" className="text-neon hover:underline">
                         deposit $OWP
                       </Link>{" "}

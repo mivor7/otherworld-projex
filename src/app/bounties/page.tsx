@@ -236,7 +236,7 @@ export default function BountiesPage() {
                     <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
                       {b.progress.potRibbit != null
                         ? `pot ${b.progress.potRibbit.toLocaleString()} / ${b.progress.targetRibbit?.toLocaleString()} $OWP · ${b.progress.pct}%`
-                        : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} chips · ${b.progress.pct}%`}
+                        : `${b.progress.spent.toLocaleString()} / ${b.progress.threshold.toLocaleString()} $OWP · ${b.progress.pct}%`}
                     </span>
                   </div>
                   <div
@@ -253,7 +253,7 @@ export default function BountiesPage() {
                     />
                   </div>
                   <p className="text-xs mt-1.5" style={{ color: "var(--text-dim)" }}>
-                    The pot grows with every chip wagered — its share of the house edge. The
+                    The pot grows with every $OWP wagered — its share of the house edge. The
                     moment it reaches {b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $OWP`} it pays
                     out automatically, split across all eligible winners by how well they did — and a
                     fresh pot opens.
@@ -348,22 +348,18 @@ export default function BountiesPage() {
             </table></div>
           )}
           <p className="text-xs mt-4 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-            Arcade boards rank best score; the tables rank net chips won.
+            Arcade boards rank best score; the tables rank net $OWP won.
             Pools pay in $OWP the moment a bounty triggers.{" "}
-            <span className="text-neon">Prize boards rank active spenders only</span> —{" "}
+            <span className="text-neon">Prize boards rank depositors only</span> —{" "}
             {house.rankedMinBurnedRibbit.toLocaleString()}+ $OWP
-            spent on chips lifetime and{" "}
+            deposited lifetime and{" "}
             {house.rankedMinWindowBurnedRibbit.toLocaleString()}+ inside
-            the board week (a rolling 7 days). Anyone can play free; only spenders collect.
+            the board week (a rolling 7 days). Anyone can play; only depositors collect.
           </p>
         </aside>
       </div>
 
-      {/* The fine print — the whole economy in three rules. Pedagogy: a
-          player should only ever meet TWO numbers (96% / 4%) plus the word
-          "half" — every derived figure (burn split, 1.9/chip, thresholds)
-          lives in the auditors' footnote, because each extra number on the
-          main path reads like an extra fee. Keep sentences in single JSX
+      {/* The fine print — deposit, edge, pot. Keep sentences in single JSX
           expressions — JSX eats newline-adjacent spaces. */}
       <section id="how-pots-work" className="panel p-6 sm:p-8 mt-10 scroll-mt-24">
         <div className="kicker mb-1.5">The fine print</div>
@@ -372,28 +368,27 @@ export default function BountiesPage() {
           {`Three rules run the whole house. Everything else is bookkeeping.`}
         </p>
         {(() => {
-          const price = house.ribbitPerCredit;
-          const burnPct = Math.round(house.buyBurnShare * 100);
           const edgePct = Math.round(house.houseEdge * 100);
           const payback = 100 - edgePct;
           const potPct = Math.round(house.bountyPotShare * 100);
-          const rate =
-            Math.round(house.bountyPotShare * house.houseEdge * (1 - house.buyBurnShare) * price * 100) / 100;
+          const rate = house.bountyPotShare * house.houseEdge;
+          const examplePrize = 4000;
+          const exampleWager = rate > 0 ? Math.ceil(examplePrize / rate) : 0;
           return (
             <>
               <ol className="space-y-5 max-w-3xl">
                 <li className="flex gap-4">
                   <span className="mono text-neon text-sm shrink-0 pt-0.5">01</span>
                   <p className="text-sm text-fog leading-relaxed">
-                    <span className="text-frost font-medium">⛁ Chips only travel one way.</span>{" "}
-                    {`${price.toLocaleString()} $OWP buys one chip. Chips play the tables — blackjack, dice, flip — and never convert back to $OWP. Winning $OWP here happens through the bounty pots, and playing with chips is what enters you. (The free arcade never touches chips.)`}
+                    <span className="text-frost font-medium">$OWP is the balance.</span>{" "}
+                    {`Deposit it and the house wallet holds the tokens while your app balance goes up. Wager it at the tables, bid it, or request a withdrawal — the same wallet pays you automatically. The arcade episodes are free.`}
                   </p>
                 </li>
                 <li className="flex gap-4">
                   <span className="mono text-neon text-sm shrink-0 pt-0.5">02</span>
                   <p className="text-sm text-fog leading-relaxed">
                     <span className="text-frost font-medium">{`The tables keep ${edgePct}% — and that is the only cost in the whole house.`}</span>{" "}
-                    {`For every 100 chips placed on a table, ${payback} come back to players as winnings — on long-run average, per bet. Three honest notes. One: it's an average — any single bet wins or loses in full, and short sessions are pure luck. Two: it's per bet, not per bankroll — chips you win back and wager again meet the same ${edgePct}% again, every time they cross the table. Three: there is no other cost anywhere — no fee on buying chips, no fee on winning, no fee on payouts. This per-bet ${edgePct}% is the house's entire income from play, and every deal and roll is verifiable.`}
+                    {`For every 100 $OWP wagered, ${payback} come back to players as winnings — on long-run average, per bet. Three honest notes. One: it's an average — any single bet wins or loses in full, and short sessions are pure luck. Two: it's per bet, not per bankroll — $OWP you win back and wager again meets the same ${edgePct}% again, every time it crosses the table. Three: there is no fee on depositing and no fee on withdrawing. This per-bet ${edgePct}% is the house's entire income from play, and every deal and roll is verifiable.`}
                   </p>
                 </li>
                 <li className="flex gap-4">
@@ -406,13 +401,13 @@ export default function BountiesPage() {
               </ol>
 
               <p className="text-xs text-fog mt-6 max-w-3xl">
-                {`The arcade is a different world: free, no chips, ever. When an episode is live the week's best verified scores split a $OWP pool at the deadline — no live episode means scores are just for bragging until the next one opens.`}
+                {`The arcade is free — no deposit required to play. When an episode is live the week's best verified scores split a $OWP pool at the deadline. No live episode means scores are just for bragging until the next one opens.`}
               </p>
 
               <div className="panel p-4 mt-6 max-w-3xl">
                 <div className="kicker !text-[0.6rem] mb-2">For the auditors — the exact live numbers</div>
                 <p className="mono text-[0.72rem] leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                  {`chip price ${price.toLocaleString()} $OWP · of every chip purchase ${burnPct}% is burned forever and ${100 - burnPct}% funds the treasury · table edge ${edgePct}% · the pot's share ${potPct}% of the take → the open pot climbs ${rate} $OWP per chip wagered. Example: a 4,000 $OWP pot opening on a 2,000 house seed needs ${Math.ceil(2000 / rate).toLocaleString()} chips of play across all players, then it pays. All values are read live from the house settings.`}
+                  {`table edge ${edgePct}% · the pot's share ${potPct}% of that edge → the open pot climbs ${rate} $OWP per 1 $OWP wagered. A ${examplePrize.toLocaleString()} $OWP pot with no house seed needs ${exampleWager.toLocaleString()} $OWP wagered across all players, then it pays. All values are read live from the house settings.`}
                 </p>
                 <Link href="/fairness" className="text-neon hover:underline text-xs inline-block mt-2">
                   Verify the fairness →

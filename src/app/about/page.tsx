@@ -5,7 +5,6 @@ import { CopyChip } from "@/components/copy-chip";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 import { prisma } from "@/lib/db";
 import { fromRaw } from "@/lib/config";
-import { houseConfig } from "@/lib/settings";
 
 export const metadata = {
   title: "About — Other World Projex",
@@ -93,14 +92,11 @@ const ARCADE = new Set(["frogris", "worm", "hopper"]);
 
 export default async function AboutPage() {
   // Rewards shown here are the LIVE open pools — never a frozen claim.
-  const [cfg, openBounties] = await Promise.all([
-    houseConfig(),
-    prisma.bounty.findMany({
+  const openBounties = await prisma.bounty.findMany({
       where: { status: "open", game: { not: null } },
       select: { game: true, prizeRibbit: true },
       orderBy: { prizeRibbit: "desc" },
-    }),
-  ]);
+    });
   const poolByGame = new Map<string, bigint>();
   for (const b of openBounties) {
     if (b.game && !poolByGame.has(b.game)) poolByGame.set(b.game, b.prizeRibbit);
@@ -122,7 +118,7 @@ export default async function AboutPage() {
         kicker="The dossier"
         title="Beyond the"
         titleAccent="arcade"
-        subtitle="What Other World Projex actually is: seven bounty episodes, one treasury, and a token that only ever gets scarcer."
+        subtitle="What Other World Projex actually is: seven bounty episodes, one house wallet, and $OWP as the balance."
         brand
       />
 
@@ -153,10 +149,10 @@ export default async function AboutPage() {
           <div className="kicker pt-1.5">02 — House rules</div>
           <div className="grid sm:grid-cols-2 gap-4">
             {[
-              ["Buy chips", `${cfg.ribbitPerCredit} $OWP buys one table chip in a single on-chain transaction — ${Math.round(cfg.buyBurnShare * 100)}% burned from supply forever, the rest funds the house that pays the prizes. The arcade episodes are free.`],
+              ["Deposit $OWP", "Send $OWP to the house wallet. It is verified on-chain and credited to your app balance. Wager it, bid it, or withdraw it — payouts are sent automatically. The arcade episodes are free."],
               ["Provably fair", "Every table outcome derives from a seed the house commits to before you play. Rotate your seed and re-check every round yourself."],
               ["Pools that pay themselves", "Every bounty posts a fixed $OWP prize with an unlock meter derived from it. When the table's pot meter fills, all eligible winners are paid pro-rata — automatically."],
-              ["Escrowed bids", "Auction bids lock deposited $OWP held by the treasury. Outbid funds release instantly; withdrawals queue for the payout signer."],
+              ["Escrowed bids", "Auction bids lock $OWP in your app balance. Outbid funds unlock instantly. Withdrawals are paid automatically from the house wallet."],
             ].map(([title, desc]) => (
               <div key={title} className="panel panel-hover p-5">
                 <div className="font-medium tracking-tight mb-1.5">{title}</div>
@@ -217,9 +213,9 @@ export default async function AboutPage() {
           <div className="kicker pt-1.5">04 — The token</div>
           <div className="panel p-7">
             <p className="text-fog text-[0.95rem] leading-relaxed mb-5 max-w-xl">
-              $OWP is the only currency the house accepts: it buys your chips
-              (part of every purchase is burned at the mint), backs your bids,
-              and pays out of every bounty pool.
+              $OWP is the balance. Deposit it to play and bid. Withdraw it
+              whenever you want — the house wallet pays automatically, and
+              bounty pools pay in the same token.
               {CLIENT_CONFIG.ribbitMint
                 ? " The live mint is below."
                 : " The mint is published here at launch."}

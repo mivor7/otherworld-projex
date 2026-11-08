@@ -11,7 +11,7 @@ export const GET = handler(async () => {
   // Every aggregate is GLOBAL (all wallets) — deliberately identical to the
   // sources the bounty board uses, so the same stat can never show two
   // different values on two pages (owner's rule: numbers must be consistent).
-  const [chain, burnAgg, buyAgg, takeAgg, roundCount, paidAgg, recent] =
+  const [chain, burnAgg, buyAgg, depositAgg, takeAgg, roundCount, paidAgg, recent] =
     await Promise.all([
       getTreasuryStats(),
       prisma.burnEvent.aggregate({ _sum: { amountRaw: true }, _count: true }),
@@ -19,6 +19,7 @@ export const GET = handler(async () => {
         _sum: { ribbitRaw: true, burnedRaw: true },
         _count: true,
       }),
+      prisma.deposit.aggregate({ _sum: { amountRaw: true }, _count: true }),
       prisma.gameRound.aggregate({ _sum: { houseTake: true, wager: true } }),
       prisma.gameRound.count(),
       // Same aggregate the bounty board's "paid out" headline uses.
@@ -31,9 +32,8 @@ export const GET = handler(async () => {
     chain,
     ribbitMint: CONFIG.ribbitMint,
     houseEdge: cfg.houseEdge,
-    // How the reward economy is parameterized — every credit purchase splits
-    // between the burn and the treasury, and auto-bounty triggers are sized
-    // from the prize so a pool that pays has already earned its keep.
+    // Live economy knobs the public page quotes. Pots fill from a share of
+    // the table edge on $OWP wagers.
     economy: {
       buyBurnShare: cfg.buyBurnShare,
       bountyPotShare: cfg.bountyPotShare,
@@ -47,6 +47,8 @@ export const GET = handler(async () => {
       burnCount: burnAgg._count,
       creditsSoldRaw: buyAgg._sum.ribbitRaw ?? 0n,
       purchaseCount: buyAgg._count,
+      depositedRaw: depositAgg._sum.amountRaw ?? 0n,
+      depositCount: depositAgg._count,
       // NOTE deliberately NO "house net/profit" figure here: with a small
       // seeded test group the honest number swings wildly with who's counted
       // as a house wallet, and any big green number on a public transparency

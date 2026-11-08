@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://otherworldprojex.xyz"),
   title: "Other World Projex",
   description:
-    "Decentralized gaming on Solana. Turn $OWP into table chips — part burned forever — play provably-fair games, bid in the auction house, and hunt bounties that pay automatically. One transparent treasury.",
+    "Deposit $OWP, play provably-fair games and bid from your in-app balance, hunt bounties, and withdraw anytime. The house wallet pays out automatically.",
   openGraph: {
     title: "Other World Projex",
     description:

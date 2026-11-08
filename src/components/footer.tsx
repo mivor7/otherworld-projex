@@ -17,9 +17,9 @@ export function Footer() {
             </span>
           </div>
           <p className="text-fog leading-relaxed max-w-sm">
-            A decentralized bounty arcade on Solana. Turn $OWP into table chips,
-            play provably-fair games, bid in the auction house, hunt bounties
-            that pay automatically — all against one transparent treasury.
+            A bounty arcade on Solana. Deposit $OWP, play provably-fair games
+            and bid from your in-app balance, hunt bounties, and withdraw
+            anytime — the house wallet pays out automatically.
           </p>
         </div>
         <div>

@@ -1,42 +1,31 @@
 // Prize-board eligibility helpers — one source of truth for the
 // skin-in-the-game rules:
-//   1. lifetime $OWP spent on credits ≥ RANKED_MIN_BURNED_RIBBIT, and
-//   2. spend INSIDE the board window ≥ RANKED_MIN_WINDOW_BURNED_RIBBIT
-// "Spend" counts BOTH pure burns AND credit purchases (a buyer is a spender —
-// they burn part and pay the house the rest; both are skin in the game). Rule
-// 2 is the anti-sybil multiplier: splitting play across N wallets costs N×
-// fresh spend every window. Either threshold set to 0 disables that rule.
+//   1. lifetime $OWP deposited ≥ RANKED_MIN_BURNED_RIBBIT, and
+//   2. deposits INSIDE the board window ≥ RANKED_MIN_WINDOW_BURNED_RIBBIT
+// Rule 2 is the anti-sybil multiplier: splitting play across N wallets costs
+// N× fresh deposits every window. Either threshold set to 0 disables that rule.
 import { prisma } from "./db";
 import { CONFIG, toRaw } from "./config";
 import { houseConfig } from "./settings";
 
 /**
- * Total $OWP a user has committed to credits (burns + buys), optionally
- * restricted to a window. Buys count their full amount — the whole payment is
- * real spend, regardless of the burn/house split.
+ * Total $OWP a user has deposited to the treasury, optionally inside a window.
+ * A deposit is the skin in the game: the tokens sit in the house wallet and
+ * back the in-app balance.
  */
 export async function burnTotals(
   userIds: string[],
   since?: Date
 ): Promise<Map<string, bigint>> {
   if (userIds.length === 0) return new Map();
-  const whenBurn = since ? { createdAt: { gte: since } } : {};
-  const [burns, buys] = await Promise.all([
-    prisma.burnEvent.groupBy({
-      by: ["userId"],
-      where: { userId: { in: userIds }, ...whenBurn },
-      _sum: { amountRaw: true },
-    }),
-    prisma.creditPurchase.groupBy({
-      by: ["userId"],
-      where: { userId: { in: userIds }, ...whenBurn },
-      _sum: { ribbitRaw: true },
-    }),
-  ]);
+  const when = since ? { createdAt: { gte: since } } : {};
+  const deposits = await prisma.deposit.groupBy({
+    by: ["userId"],
+    where: { userId: { in: userIds }, ...when },
+    _sum: { amountRaw: true },
+  });
   const totals = new Map<string, bigint>();
-  for (const b of burns) totals.set(b.userId, b._sum.amountRaw ?? 0n);
-  for (const p of buys)
-    totals.set(p.userId, (totals.get(p.userId) ?? 0n) + (p._sum.ribbitRaw ?? 0n));
+  for (const d of deposits) totals.set(d.userId, d._sum.amountRaw ?? 0n);
   return totals;
 }
 

@@ -5,6 +5,7 @@
 // right before building the split transaction, so a split change can never
 // strand a player's payment against a stale ratio.
 import { handler, ok } from "@/lib/api";
+import { CONFIG } from "@/lib/config";
 import { houseConfig } from "@/lib/settings";
 
 // Live data — never cache; always read current DB state.
@@ -25,5 +26,8 @@ export const GET = handler(async () => {
     gamesPaused: cfg.gamesPaused,
     creditSalesPaused: cfg.creditSalesPaused,
     inviteRequired: cfg.inviteRequired,
+    // Where deposits are sent. Falls back to the admin wallet when
+    // TREASURY_WALLET is unset — one wallet holds the house.
+    treasuryWallet: CONFIG.treasuryWallet,
   });
 });

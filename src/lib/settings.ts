@@ -27,8 +27,8 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   // ---- Economy ----
   {
     key: "buyBurnShare",
-    label: "Burn share of credit buys",
-    desc: "Fraction of every credit purchase that is burned; the rest goes to the treasury. 0.5 = half burned, half to the house. Both legs must exist on-chain, so 0.05–0.95.",
+    label: "Retired chip burn share",
+    desc: "Leftover from chip sales. Deposits, wagers, and withdrawals ignore it.",
     group: "Economy",
     kind: "share",
     min: 0.05,
@@ -37,8 +37,8 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   },
   {
     key: "ribbitPerCredit",
-    label: "$OWP per credit",
-    desc: "Price of one play credit in whole $OWP.",
+    label: "Retired chip price",
+    desc: "Leftover from chip sales. Tables wager whole $OWP and do not use this price.",
     group: "Economy",
     kind: "number",
     min: 1,
@@ -70,7 +70,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "minWager",
     label: "Minimum wager",
-    desc: "Smallest wager the tables accept, in credits.",
+    desc: "Smallest wager the tables accept, in whole $OWP.",
     group: "Limits",
     kind: "number",
     min: 1,
@@ -81,7 +81,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "maxWager",
     label: "Maximum wager",
-    desc: "Largest wager the tables accept, in credits.",
+    desc: "Largest wager the tables accept, in whole $OWP.",
     group: "Limits",
     kind: "number",
     min: 1,
@@ -104,7 +104,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "rankedMinBurnedRibbit",
     label: "Lifetime spend to rank",
-    desc: "Whole $OWP (burned or bought) a wallet needs lifetime before prize boards rank it. Mission rule: only spenders earn — so the panel can't set this below 1 (env can, for dev).",
+    desc: "Whole $OWP a wallet must deposit lifetime before prize boards rank it. Only depositors earn — the panel can't set this below 1 (env can, for dev).",
     group: "Eligibility",
     kind: "number",
     min: 1,
@@ -115,7 +115,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "rankedMinWindowBurnedRibbit",
     label: "In-window spend to rank",
-    desc: "Whole $OWP spent inside the board/bounty window. Repeat abusers must re-spend every window. 0 disables.",
+    desc: "Whole $OWP deposited inside the board/bounty window. Repeat abusers must deposit again every window. 0 disables.",
     group: "Eligibility",
     kind: "number",
     min: 0,
@@ -182,8 +182,8 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   },
   {
     key: "creditSalesPaused",
-    label: "Pause credit sales",
-    desc: "Refuses new burn/buy credit verifications. Players keep existing credits.",
+    label: "Pause deposits",
+    desc: "Refuses new $OWP deposits. Existing balances stay playable and withdrawable.",
     group: "Switches",
     kind: "bool",
     danger: true,

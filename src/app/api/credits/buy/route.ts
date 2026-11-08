@@ -16,7 +16,7 @@ const body = z.object({ signature: z.string().min(64).max(120) });
 
 export const POST = handler(async (req: Request) => {
   const session = await requireSession();
-  if (!CONFIG.treasuryWallet) return err("Buying chips isn't available yet", 400);
+  if (!CONFIG.treasuryWallet) return err("Deposits aren't available yet", 400);
   const cfg = await houseConfig();
   if (cfg.creditSalesPaused) {
     return err("Chip sales are paused — back shortly", 423);

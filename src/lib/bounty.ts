@@ -135,37 +135,19 @@ export function splitPrize(prizeRaw: bigint, splits: number[]): bigint[] {
   return shares;
 }
 
-// ——— Credit-spend-gated bounties ———
-// A credit-game bounty pays once enough credits have been WAGERED on that game
-// since the bounty was created. The threshold is derived straight from the
-// prize — no house edge involved. It's self-correcting for the house: those
-// credits were bought with $OWP, so requiring enough credit-spend means the
-// house already took in more $OWP (its share of the purchases) than the
-// prize. Nothing about creating a bounty waits on anything — the prize simply
-// isn't paid until the meter fills.
+// ——— Wager-gated bounties ———
+// A table bounty pays once enough whole $OWP has been wagered on that game
+// since the bounty was created. The pot fills from a share of the house edge.
 
 /**
- * Credits that must be wagered on the game before a `prizeRaw` bounty pays.
- * Derived from the prize so the $OWP the house netted selling those credits
- * (their price × the house's buy-split share) covers the prize plus margin:
- *   required = prize × (1 + margin) / ((1 − burnShare) × ribbitPerCredit).
- * Changing the credit price or buy-split re-derives it; the house edge never
- * enters into it.
- */
-/**
- * $OWP the pot gains per credit wagered — the pot's share of the edge the
- * house realizes on that wager, valued at what a sold credit actually nets
- * the house: potShare × houseEdge × (1 − burnShare) × ribbitPerCredit.
- * (At defaults: 0.5 × 0.04 × 0.95 × 100 = 1.9 $OWP per credit wagered.)
+ * $OWP added to the pot per 1 whole $OWP wagered: bountyPotShare × houseEdge.
+ * Defaults: 0.5 × 0.04 = 0.02.
  */
 export async function potRatePerCredit(): Promise<number> {
+  // $OWP added to the pot per 1 $OWP wagered: the pot's share of the edge
+  // the house keeps on that wager. (Defaults: 0.5 × 0.04 = 0.02.)
   const cfg = await houseConfig();
-  return (
-    cfg.bountyPotShare *
-    cfg.houseEdge *
-    (1 - cfg.buyBurnShare) *
-    cfg.ribbitPerCredit
-  );
+  return cfg.bountyPotShare * cfg.houseEdge;
 }
 
 /**

@@ -1,27 +1,24 @@
 # Other World Projex — $OWP Bounty Arcade
 
-Decentralized gaming platform on Solana: buy credits with **$OWP** (part
-burned, part to the house), play provably-fair games, bid in community
-auctions, hunt bounties — all backed by one transparent treasury.
+Bounty arcade on Solana. Deposit **$OWP** to the house wallet, play and bid
+from the in-app balance, hunt bounties, and withdraw anytime. The same wallet
+pays out automatically.
 
 > **Taking over the project?** Start with [`ONBOARDING.md`](ONBOARDING.md) — the
 > operator's handoff (gotchas, mental models, deploy + payout runbook).
 
-- **Games**: credit games — Frog Flip (coinflip), Pond Dice (roll-under),
-  Blackjack; free arcade — Hopper, Frogris, Worm Frog. Commit–reveal fairness —
-  every round independently verifiable at `/fairness`.
-- **Buy credits**: one on-chain transaction splits between a verified burn
-  (`BUY_BURN_SHARE`, default 50%) and a treasury transfer — deflation plus
-  real house revenue. Pure burn-to-play remains as the pre-treasury fallback.
-- **Auction house**: bid deposited $OWP on house or community listings.
+- **Games**: tables — Frog Flip (coinflip), Pond Dice (roll-under),
+  Blackjack, wagered in whole $OWP; free arcade — Hopper, Frogris, Worm Frog.
+  Commit–reveal fairness — every round independently verifiable at `/fairness`.
+- **Balance**: a deposit transfers $OWP to the house wallet and credits the
+  app. Withdrawal requests are paid by the payout worker from that wallet.
+- **Auction house**: bid $OWP from the same balance on house or community listings.
   Escrowed bids, instant refunds on outbid, anti-snipe extensions, and a
   community "apply to list" flow with admin review.
-- **Bounties**: fixed $OWP prizes with auto-derived unlock triggers — a
-  credit-game pool pays the moment enough credits are *wagered* on that game (the
-  meter counts gross wager, so it only ever rises; the trigger is sized so the
-  house's revenue from selling those credits covers the prize). Free arcade pools
-  pay weekly. One open bounty per game; every eligible winner is paid pro-rata,
-  automatically.
+- **Bounties**: fixed $OWP prizes. A table pool fills from a share of the
+  house edge (`bountyPotShare × houseEdge` $OWP per 1 $OWP wagered) and pays
+  when the pot reaches the prize. Free arcade pools pay weekly. One open
+  bounty per game; every eligible winner is paid pro-rata, automatically.
 - **Treasury**: live on-chain balances at `/treasury`; SOL custody via a small
   audited-by-design Anchor program with multisig admin + daily payout cap
   (`program/`).
@@ -92,20 +89,20 @@ Money out (never from the web server):
    vault PDA. Until the program is deployed you can start with the multisig
    address itself — deposits/escrow still verify against it.
 5. **Payout worker**: run `npm run payout-worker` on a separate box with
-   `PAYOUT_KEYPAIR_PATH` pointed at a DEDICATED hot wallet the owners keep
-   topped up — never the treasury key (or skip it and pay withdrawals
-   manually in `/admin` — every payout is queued, nothing moves without a
-   signature). `PAYOUT_INTERVAL_MS` tunes the polling cadence; the admin
-   panel's "Pause the payout worker" switch stops it remotely.
+   `PAYOUT_WALLET_KEY` set to the house wallet (the same wallet as
+   `ADMIN_WALLETS` / `TREASURY_WALLET` / Phantom). The worker refuses to
+   start until `OWP_MINT` is set. You can skip it and pay withdrawals by
+   hand in `/admin`. `PAYOUT_INTERVAL_MS` tunes the polling cadence; the
+   admin panel's "Pause the payout worker" switch stops it remotely.
 6. Leave `DEV_FAUCET` **unset** in production (the route also hard-refuses
    when `NODE_ENV=production`).
 
 ## Honest limitations (read before launch)
 
-- **Withdrawal/prize payouts are semi-custodial**: $OWP the users deposit
-  for auctions sits in the treasury token account, and payouts are made by the
-  ops keypair/multisig. The Anchor program hard-limits SOL custody, but SPL
-  escrow with on-chain refunds would be the next upgrade if volume grows.
+- **Withdrawal/prize payouts are semi-custodial**: deposited $OWP sits in
+  the house wallet, and the payout worker signs with that same key. The
+  Anchor program hard-limits SOL custody, but SPL escrow with on-chain
+  refunds would be the next upgrade if volume grows.
 - **The house edge math is transparent but the treasury must stay solvent** —
   keep enough $OWP in the treasury account to cover queued withdrawals and
   bounty pools. `/treasury` shows both sides.

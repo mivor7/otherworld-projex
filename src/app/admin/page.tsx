@@ -554,7 +554,7 @@ export default function AdminPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         <StatCard label="Players" value={s ? s.users.toLocaleString() : "…"} />
         <StatCard
-          label="Credits out"
+          label="$OWP on books"
           value={s ? s.creditsOutstanding.toLocaleString() : "…"}
           tone="neon"
         />
@@ -627,19 +627,19 @@ export default function AdminPage() {
           <StatCard
             label="Wagered · 24h"
             value={pulse ? pulse.wagered24.toLocaleString() : "…"}
-            sub="credits"
+            sub="$OWP"
           />
           <StatCard
             label="$OWP in · 24h"
             value={pulse ? pulse.ribbitIn24.toLocaleString() : "…"}
-            sub="burned + bought"
+            sub="deposited"
             tone="gold"
           />
         </div>
         <div className="panel p-5">
           <h3 className="font-bold mb-1">Most active at the tables · 7d</h3>
           <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
-            By credits wagered. A <span className="text-neon">green net</span> means
+            By $OWP wagered. A <span className="text-neon">green net</span> means
             they&apos;re up on the house over the window — worth a look.
           </p>
           {pulse && pulse.topPlayers.length > 0 ? (
@@ -691,21 +691,20 @@ export default function AdminPage() {
             <p className="text-sm text-fog">No table play in the last 7 days yet.</p>
           )}
 
-          {/* Everyone holding chips right now — outstanding credits are future
-              play (and future pot fuel). */}
+          {/* App balances — $OWP players can still withdraw. */}
           {pulse && (
             <div className="mt-6 pt-5 border-t" style={{ borderColor: "var(--hairline)" }}>
               <div className="flex items-baseline justify-between mb-2">
-                <div className="kicker !text-[0.65rem]">Credit balances</div>
+                <div className="kicker !text-[0.65rem]">App balances</div>
                 <span className="text-xs" style={{ color: "var(--text-dim)" }}>
                   {pulse.creditHolders.length} wallet{pulse.creditHolders.length === 1 ? "" : "s"} ·{" "}
-                  {pulse.creditsOutstanding.toLocaleString()} chips outstanding
+                  {pulse.creditsOutstanding.toLocaleString()} $OWP on the books
                   {typeof pulse.waitlistCount === "number" &&
                     ` · airdrop waitlist ${pulse.waitlistCount.toLocaleString()} / 1,000`}
                 </span>
               </div>
               {pulse.creditHolders.length === 0 ? (
-                <p className="text-sm text-fog">Nobody is holding credits right now.</p>
+                <p className="text-sm text-fog">Nobody has an app balance right now.</p>
               ) : (
                 <div className="overflow-x-auto max-h-72 overflow-y-auto">
                   <table className="w-full text-sm">

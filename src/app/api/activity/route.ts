@@ -21,7 +21,7 @@ const GAME_NAMES: Record<string, string> = {
 
 export const GET = handler(async () => {
   if (cache && Date.now() - cache.at < TTL_MS) return ok(cache.value);
-  const [rounds, bids, burns, scores, awards] = await Promise.all([
+  const [rounds, bids, deposits, scores, awards] = await Promise.all([
     prisma.gameRound.findMany({
       where: { settled: true },
       orderBy: { createdAt: "desc" },
@@ -36,9 +36,9 @@ export const GET = handler(async () => {
         auction: { select: { title: true } },
       },
     }),
-    prisma.burnEvent.findMany({
+    prisma.deposit.findMany({
       orderBy: { createdAt: "desc" },
-      take: 5,
+      take: 6,
       include: { user: { select: { wallet: true } } },
     }),
     prisma.arcadeScore.findMany({
@@ -69,7 +69,7 @@ export const GET = handler(async () => {
       href: `/games/${r.game}`,
       text:
         r.payout > r.wager
-          ? `${short(r.user.wallet)} won ${fmt(r.payout)} credits at ${GAME_NAMES[r.game] ?? r.game}`
+          ? `${short(r.user.wallet)} won ${fmt(r.payout)} $OWP at ${GAME_NAMES[r.game] ?? r.game}`
           : `${short(r.user.wallet)} played ${GAME_NAMES[r.game] ?? r.game}`,
     })),
     ...bids.map((b) => ({
@@ -78,11 +78,11 @@ export const GET = handler(async () => {
       href: `/auctions/${b.auctionId}`,
       text: `${short(b.user.wallet)} bid ${fmt(fromRaw(b.amountRaw))} $OWP on “${b.auction.title}”`,
     })),
-    ...burns.map((b) => ({
-      at: b.createdAt,
+    ...deposits.map((d) => ({
+      at: d.createdAt,
       kind: "burn",
       href: "/games",
-      text: `${short(b.user.wallet)} burned ${fmt(fromRaw(b.amountRaw))} $OWP for ${b.credits} credits`,
+      text: `${short(d.user.wallet)} deposited ${fmt(fromRaw(d.amountRaw))} $OWP`,
     })),
     ...scores.map((s) => ({
       at: s.createdAt,
