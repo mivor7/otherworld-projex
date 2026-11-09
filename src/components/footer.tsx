@@ -29,7 +29,7 @@ export function Footer() {
             <li><Link className="hover:text-frost transition-colors" href="/auctions">Auction House</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/bounties">Bounties</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/leaderboard">Leaderboard</Link></li>
-            <li><Link className="hover:text-frost transition-colors" href="/staking">Staking</Link></li>
+            <li><Link className="hover:text-frost transition-colors" href="/whitepaper">Whitepaper</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/treasury">Treasury</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/fairness">Provable fairness</Link></li>
             <li><Link className="hover:text-frost transition-colors" href="/about">About OWP</Link></li>
@@ -45,22 +45,15 @@ export function Footer() {
                 </a>
               </li>
             )}
-            {CLIENT_CONFIG.meteoraUrl && (
-              <li>
-                <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.meteoraUrl} target="_blank" rel="noreferrer">
-                  Meteora pool ↗
-                </a>
-              </li>
-            )}
             <li>
               <Link className="hover:text-frost transition-colors" href="/waitlist">
                 Airdrop waitlist
               </Link>
             </li>
             <li>
-              <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.xUrl} target="_blank" rel="noreferrer">
-                @OWProjex ↗
-              </a>
+              <Link className="hover:text-frost transition-colors" href="/whitepaper">
+                Whitepaper
+              </Link>
             </li>
             {CLIENT_CONFIG.ribbitMint && (
               <li>

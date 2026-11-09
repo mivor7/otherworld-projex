@@ -213,9 +213,12 @@ export default async function AboutPage() {
           <div className="kicker pt-1.5">04 — The token</div>
           <div className="panel p-7">
             <p className="text-fog text-[0.95rem] leading-relaxed mb-5 max-w-xl">
-              $OWP is the balance. Deposit it to play and bid. Withdraw it
-              whenever you want — the house wallet pays automatically, and
-              bounty pools pay in the same token.
+              $OWP is the balance. People buy and sell it on the open market.
+              The team does not trade the house wallet to move that price.
+              Deposit it to play and bid. Withdraw it whenever you want — the
+              house wallet pays automatically, and bounty pools pay in the
+              same token. On Frog Flip and Pond Dice the only cut is a 4%
+              house edge.
               {CLIENT_CONFIG.ribbitMint
                 ? " The live mint is below."
                 : " The mint is published here at launch."}
@@ -237,14 +240,9 @@ export default async function AboutPage() {
                   pump.fun ↗
                 </a>
               )}
-              {CLIENT_CONFIG.meteoraUrl && (
-                <a href={CLIENT_CONFIG.meteoraUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                  Meteora pool ↗
-                </a>
-              )}
-              <a href={CLIENT_CONFIG.xUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                @OWProjex ↗
-              </a>
+              <Link href="/whitepaper" className="btn btn-ghost">
+                Whitepaper
+              </Link>
               <Link href="/treasury" className="btn btn-ghost">
                 The treasury
               </Link>
@@ -267,10 +265,24 @@ export default async function AboutPage() {
               holding or transacting.
             </p>
             <p>
-              Games are for entertainment. The house edge is published, the math
-              is verifiable, and the outcome is still chance — never burn more
-              than you can afford to lose. Real-money gaming may be restricted
-              in your jurisdiction; you are responsible for your own compliance.
+              The team does not try to control the market. Players buy and sell
+              $OWP themselves, and they win or lose it on the games. The house
+              wallet holds deposits so withdrawals and prizes can be paid. It
+              is not a trading book. The source is public on{" "}
+              <a
+                href="https://github.com/mivor7/otherworld-projex"
+                className="underline hover:text-frost"
+              >
+                GitHub
+              </a>
+              .
+            </p>
+            <p>
+              Games are for entertainment. The 4% edge on Frog Flip and Pond
+              Dice is published, the math is verifiable, and the outcome is
+              still chance — never wager more than you can afford to lose.
+              Real-money gaming may be restricted in your jurisdiction; you are
+              responsible for your own compliance.
             </p>
           </div>
         </section>

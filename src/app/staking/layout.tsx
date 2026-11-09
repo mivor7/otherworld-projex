@@ -1,8 +1,7 @@
-// The staking page is a client component, so its metadata lives here.
 export const metadata = {
   title: "Staking — Other World Projex",
   description:
-    "The Vault: the official $OWP staking pool on Streamflow — live pool stats, APR, lockup and your position.",
+    "Other World Projex does not run a staking pool. $OWP is deposited, played, and withdrawn. The house does not trade it.",
 };
 
 export default function StakingLayout({ children }: { children: React.ReactNode }) {

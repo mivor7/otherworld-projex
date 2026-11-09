@@ -275,11 +275,7 @@ export default function WaitlistPage() {
                       Get $OWP on pump.fun ↗
                     </a>
                   )}
-                  {CLIENT_CONFIG.meteoraUrl && (
-                    <a href={CLIENT_CONFIG.meteoraUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                      Meteora pool ↗
-                    </a>
-                  )}
+
                 </div>
               </>
             ) : (

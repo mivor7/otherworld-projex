@@ -75,9 +75,9 @@ check("/api/activity feed", activity.status === 200 && Array.isArray(activity.js
   `status ${activity.status}`);
 const staking = await get("/api/staking");
 check(
-  "/api/staking reads the Streamflow pool",
-  staking.status === 200 && (staking.json?.pool === null || staking.json?.pool?.totalStakedRibbit >= 0),
-  `status ${staking.status}`
+  "/api/staking reports no pool",
+  staking.status === 200 && staking.json?.pool === null && staking.json?.configured === false,
+  `status ${staking.status} pool ${staking.json?.pool}`
 );
 const wl = await get("/api/waitlist");
 check(
@@ -103,7 +103,8 @@ for (const [p, marker] of [
   ["/bounties", ""],
   ["/treasury", ""],
   ["/fairness", ""],
-  ["/staking", "streamflow"],
+  ["/staking", "not offered"],
+  ["/whitepaper", "4%"],
   ["/waitlist", "waitlist"],
   ["/admin", ""],
 ]) {

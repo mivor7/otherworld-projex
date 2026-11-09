@@ -4,8 +4,33 @@ Bounty arcade on Solana. Deposit **$OWP** to the house wallet, play and bid
 from the in-app balance, hunt bounties, and withdraw anytime. The same wallet
 pays out automatically.
 
+The team does not trade that wallet to move the $OWP market. People buy and
+sell the token themselves, and they win or lose it on the games. On Frog Flip
+and Pond Dice the only cut is a **4% house edge**. The source of this app is
+public. Read [`WHITEPAPER.md`](WHITEPAPER.md).
+
 > **Taking over the project?** Start with [`ONBOARDING.md`](ONBOARDING.md) — the
 > operator's handoff (gotchas, mental models, deploy + payout runbook).
+
+## Ownership
+
+This repository and the Other World Projex application are published by
+[mivor7](https://github.com/mivor7) (GitHub user id 43555740).
+
+Git history in this repository starts on 15 July 2026. The first commit is
+authored `m <msl.tvc@gmail.com>`. The same day includes commits authored
+`OWP Build <dev@otherworldprojex.com>`. The bulk of the history is authored
+`q33wx <43555740+q33wx@users.noreply.github.com>` — that noreply id is this
+same GitHub user. Current commits are authored
+`R <43555740+mivor7@users.noreply.github.com>`. The GitHub repository was
+created on 21 September 2026 under mivor7.
+
+mivor7 is the author and publisher of the code in this repository and asserts
+authorship of Other World Projex as published here. This note records that
+git history. It is not a court order.
+
+The X account `@OWProjex` (`https://x.com/OWProjex`) is not an account of this
+project and is not authorized to speak for it.
 
 - **Games**: tables — Frog Flip (coinflip), Pond Dice (roll-under),
   Blackjack, wagered in whole $OWP; free arcade — Hopper, Frogris, Worm Frog.
@@ -47,8 +72,8 @@ play without burning real tokens.
 ```
 Browser (wallet signs everything; keys never leave the user)
  │  sign-in: ed25519 signature over a server nonce  → JWT cookie
- │  burn:    user burns $OWP  → POSTs tx sig     → server verifies on-chain → credits
- │  deposit: user transfers to treasury ATA → POSTs tx sig → verified → bid balance
+ │  deposit: user transfers $OWP to the house wallet → verified → in-app balance
+ │  buy:     user sends SOL to the house wallet → verified → $OWP queued at the pump.fun spot
  ▼
 Next.js API routes (Vercel serverless)
  │  provably-fair engine: outcome = HMAC-SHA256(serverSeed, clientSeed:nonce)
@@ -118,7 +143,7 @@ Money out (never from the web server):
 
 ```
 src/app/            pages (games, auctions, bounties, treasury, fairness,
-                    account, admin)
+                    whitepaper, account, admin)
 src/app/api/        route handlers (auth, burn, games, auctions, bounties,
                     me, admin…)
 src/lib/            config, fairness engine, credits ledger, bounty engine,

@@ -363,10 +363,10 @@ export default async function Home() {
               <div className="kicker mb-2">Settlement currency</div>
               <h2 className="text-[1.5rem] mb-3">$OWP</h2>
               <p className="text-fog text-[0.9375rem] leading-relaxed max-w-lg mb-5">
-                $OWP is the balance. Buy it from the house wallet at the live
-                pump.fun price, deposit it, play and bid with it, and withdraw
-                it. Bounty pools pay in the same token, automatically. The live
-                mint is below.
+                $OWP is the balance. People buy and sell it on the open market.
+                The house does not trade its wallet to move that price. Deposit
+                it, play and bid with it, and withdraw it. On Frog Flip and Pond
+                Dice the only cut is a 4% house edge. The live mint is below.
               </p>
               {CLIENT_CONFIG.ribbitMint && (
                 <div className="flex items-center gap-2 flex-wrap mb-6">
@@ -388,9 +388,9 @@ export default async function Home() {
                     pump.fun ↗
                   </a>
                 )}
-                <a href={CLIENT_CONFIG.xUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                  @OWProjex ↗
-                </a>
+                <Link href="/whitepaper" className="btn btn-ghost">
+                  Whitepaper
+                </Link>
                 <Link href="/treasury" className="btn btn-ghost">
                   Inspect the treasury
                 </Link>

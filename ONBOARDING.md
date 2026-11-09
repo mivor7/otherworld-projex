@@ -43,6 +43,12 @@ Dexscreener only after the curve migrates) and queues a `Withdrawal` of kind
 does not credit app balance, and the SOL stays in the house wallet. The
 private key stays on the payout box, never on Vercel.
 
+There is no staking pool and no Meteora pool. `STAKE_POOL_ADDRESS` is not
+read. Do not point the site at an old pool, and do not link `@OWProjex` —
+that X account is not this project's. The product statement is
+`WHITEPAPER.md`: the team does not trade the house wallet to move the
+market, and the cut on Frog Flip and Pond Dice is the 4% house edge.
+
 ### 1.2 This is a **modified** Next.js 16 (see `AGENTS.md` / `CLAUDE.md`)
 APIs, conventions, and file layout can differ from the Next.js you know and from
 your training data. **Read the relevant guide in `node_modules/next/dist/docs/`
@@ -72,7 +78,7 @@ the rest must declare it. Grep for it — most API routes have it.
 ## 2. Local development
 
 ```bash
-git clone <repo>                       # q33wx/otherworld-projex on GitHub
+git clone https://github.com/mivor7/otherworld-projex.git
 cd otherworld-projex
 cp .env.example .env                    # fill in DATABASE_URL + SESSION_SECRET at minimum
 npm install                             # runs `prisma generate` on postinstall
@@ -286,9 +292,9 @@ npx vercel alias set <new-deployment-url> otherworld-projex.vercel.app
 # 4. Smoke-test live prod (22 checks against the real site)
 node scripts/prod-smoke.mjs
 
-# 5. Only then commit + push (commits are authored as q33wx)
+# 5. Only then commit + push (commits are authored as R, the mivor7 account)
 git add -A
-git -c user.name="q33wx" -c user.email="43555740+q33wx@users.noreply.github.com" \
+git -c user.name="R" -c user.email="43555740+mivor7@users.noreply.github.com" \
   commit -m "..."
 git push
 ```

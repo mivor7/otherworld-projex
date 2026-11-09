@@ -35,11 +35,6 @@ export const CLIENT_CONFIG = {
   bountyPotShare: Number(process.env.NEXT_PUBLIC_BOUNTY_POT_SHARE ?? 0.5),
   devFaucet: process.env.NEXT_PUBLIC_DEV_FAUCET === "true",
   pumpFunUrl: `https://pump.fun/coin/${owpMint}`,
-  // Meteora liquidity pool, shown alongside pump.fun wherever trading links
-  // appear. Set NEXT_PUBLIC_METEORA_POOL_URL to the pool's page URL; empty
-  // hides the link entirely rather than shipping a dead one.
-  meteoraUrl: process.env.NEXT_PUBLIC_METEORA_POOL_URL ?? "",
-  xUrl: "https://x.com/OWProjex",
 } as const;
 
 export function toRawClient(ribbit: number): bigint {

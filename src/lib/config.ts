@@ -42,11 +42,6 @@ export const CONFIG = {
   // only on the web server — the private key lives on the payout box.
   payoutWallet: process.env.PAYOUT_WALLET || treasuryWallet,
 
-  // Streamflow staking pool for $OWP (public account address, READ-ONLY).
-  // Empty until a pool exists — staking then shows "not live" instead of
-  // another token's pool. The app never holds staked funds.
-  stakePool: process.env.STAKE_POOL_ADDRESS ?? "",
-
   // Burn-to-play: how many whole $OWP one play credit costs.
   // OWP_PER_CREDIT wins; RIBBIT_PER_CREDIT still reads so an existing
   // host doesn't reset the price on deploy.
