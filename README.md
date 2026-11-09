@@ -6,31 +6,41 @@ pays out automatically.
 
 The team does not trade that wallet to move the $OWP market. People buy and
 sell the token themselves, and they win or lose it on the games. On Frog Flip
-and Pond Dice the only cut is a **4% house edge**. The source of this app is
-public. Read [`WHITEPAPER.md`](WHITEPAPER.md).
+and Pond Dice the only cut is a **4% house edge**. The source is public so
+the rules can be read. That is not a license to copy the app. Read
+[`WHITEPAPER.md`](WHITEPAPER.md) and [`COPYRIGHT`](COPYRIGHT).
 
 > **Taking over the project?** Start with [`ONBOARDING.md`](ONBOARDING.md) — the
 > operator's handoff (gotchas, mental models, deploy + payout runbook).
 
 ## Ownership
 
-This repository and the Other World Projex application are published by
-[mivor7](https://github.com/mivor7) (GitHub user id 43555740).
+mivor7 created Other World Projex and wrote the software in this repository.
+The full notice is [`COPYRIGHT`](COPYRIGHT). All rights reserved. Publishing
+the source is not a license to copy it, to use the name, or to launch a token
+with it.
+
+The original site is [https://www.otherworldprojex.xyz](https://www.otherworldprojex.xyz).
+The only token this deployment uses is $OWP.
+
+otherworldprojex.io (Otherworld Reserve) and otherworldprojex.com use the
+Other World Projex name and this codebase. mivor7 did not authorize that, and
+mivor7 does not operate those sites. Tokens they issue, including any coin
+they call RIBBIT or OWX, are not $OWP. Any other site or coin that presents
+itself as Other World Projex is in the same position unless it is this
+repository and www.otherworldprojex.xyz.
+
+The X account `@OWProjex` (`https://x.com/OWProjex`) is not an account of this
+project and is not authorized to speak for it.
 
 Git history in this repository starts on 15 July 2026. The first commit is
 authored `m <msl.tvc@gmail.com>`. The same day includes commits authored
 `OWP Build <dev@otherworldprojex.com>`. The bulk of the history is authored
 `q33wx <43555740+q33wx@users.noreply.github.com>` — that noreply id is this
-same GitHub user. Current commits are authored
+same GitHub user, id 43555740. Current commits are authored
 `R <43555740+mivor7@users.noreply.github.com>`. The GitHub repository was
-created on 21 September 2026 under mivor7.
-
-mivor7 is the author and publisher of the code in this repository and asserts
-authorship of Other World Projex as published here. This note records that
-git history. It is not a court order.
-
-The X account `@OWProjex` (`https://x.com/OWProjex`) is not an account of this
-project and is not authorized to speak for it.
+created on 21 September 2026 under mivor7. This note records that history.
+It is not a court order.
 
 - **Games**: tables — Frog Flip (coinflip), Pond Dice (roll-under),
   Blackjack, wagered in whole $OWP; free arcade — Hopper, Frogris, Worm Frog.

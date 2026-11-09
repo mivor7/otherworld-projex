@@ -2,6 +2,7 @@
   "name": "otherworld-projex",
   "version": "0.1.0",
   "private": true,
+  "author": "mivor7 (https://github.com/mivor7)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

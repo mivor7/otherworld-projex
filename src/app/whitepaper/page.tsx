@@ -40,6 +40,27 @@ export default function WhitepaperPage() {
         repository as <span className="mono">WHITEPAPER.md</span>.
       </p>
 
+      <Section kicker="The creator">
+        <p>
+          mivor7 created Other World Projex and wrote this software. This
+          site, www.otherworldprojex.xyz, is the original. The only token it
+          uses is $OWP.
+        </p>
+        <p>
+          The source is public so the rules can be read. That publication is
+          not a license. No right is granted to copy the app, to use the name
+          Other World Projex, or to launch a token with it. All rights
+          reserved.
+        </p>
+        <p>
+          otherworldprojex.io and otherworldprojex.com use this name and this
+          codebase. mivor7 did not authorize that and does not operate those
+          sites. Tokens they issue, including any coin they call RIBBIT or
+          OWX, are not $OWP. The same is true of any other site or coin that
+          presents itself as Other World Projex.
+        </p>
+      </Section>
+
       <Section kicker="01 — The market">
         <p>
           The team does not trade the house wallet to push the $OWP price up
@@ -69,8 +90,7 @@ export default function WhitepaperPage() {
           and Worm Frog are free. They take no wager.
         </p>
         <p>
-          The app is open source. The rules above are the code in the public
-          repository,{" "}
+          The rules above are the code in the public repository,{" "}
           <a
             href="https://github.com/mivor7/otherworld-projex"
             className="text-frost underline"

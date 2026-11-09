@@ -43,6 +43,9 @@ Dexscreener only after the curve migrates) and queues a `Withdrawal` of kind
 does not credit app balance, and the SOL stays in the house wallet. The
 private key stays on the payout box, never on Vercel.
 
+The creator's notice is `COPYRIGHT`. otherworldprojex.io and
+otherworldprojex.com are not this project. Do not send users there.
+
 There is no staking pool and no Meteora pool. `STAKE_POOL_ADDRESS` is not
 read. Do not point the site at an old pool, and do not link `@OWProjex` —
 that X account is not this project's. The product statement is

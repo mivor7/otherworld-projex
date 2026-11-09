@@ -366,7 +366,8 @@ export default async function Home() {
                 $OWP is the balance. People buy and sell it on the open market.
                 The house does not trade its wallet to move that price. Deposit
                 it, play and bid with it, and withdraw it. On Frog Flip and Pond
-                Dice the only cut is a 4% house edge. The live mint is below.
+                Dice the only cut is a 4% house edge. Created by mivor7 — this
+                site is the original. The live mint is below.
               </p>
               {CLIENT_CONFIG.ribbitMint && (
                 <div className="flex items-center gap-2 flex-wrap mb-6">
