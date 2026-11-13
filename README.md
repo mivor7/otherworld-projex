@@ -1,5 +1,13 @@
 # Other World Projex — $OWP Bounty Arcade
 
+![Solana](https://img.shields.io/badge/Solana-Mainnet-purple?logo=solana)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-blue?logo=typescript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-6-teal?logo=prisma)
+![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)
+
+**[🌐 otherworldprojex.xyz](https://www.otherworldprojex.xyz)**
+
 Bounty arcade on Solana. Deposit **$OWP** to the house wallet, play and bid
 from the in-app balance, hunt bounties, and withdraw anytime. The same wallet
 pays out automatically.
