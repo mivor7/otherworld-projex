@@ -158,7 +158,7 @@ model Withdrawal {
 }
 
 // SOL paid to the house wallet in exchange for $OWP sent back at the
-// pump.fun price. The payout itself is a Withdrawal (kind "buy").
+// Raydium price. The payout itself is a Withdrawal (kind "buy").
 model OwpPurchase {
   id           String   @id @default(cuid())
   userId       String

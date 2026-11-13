@@ -384,9 +384,9 @@ export default async function Home() {
                 <a href="#buy" className="btn btn-primary">
                   Buy from the house
                 </a>
-                {CLIENT_CONFIG.pumpFunUrl && (
-                  <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                    pump.fun ↗
+                {CLIENT_CONFIG.raydiumUrl && (
+                  <a href={CLIENT_CONFIG.raydiumUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                    Raydium ↗
                   </a>
                 )}
                 <Link href="/whitepaper" className="btn btn-ghost">

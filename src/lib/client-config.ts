@@ -34,7 +34,7 @@ export const CLIENT_CONFIG = {
   houseEdge: Number(process.env.NEXT_PUBLIC_HOUSE_EDGE ?? 0.04),
   bountyPotShare: Number(process.env.NEXT_PUBLIC_BOUNTY_POT_SHARE ?? 0.5),
   devFaucet: process.env.NEXT_PUBLIC_DEV_FAUCET === "true",
-  pumpFunUrl: `https://pump.fun/coin/${owpMint}`,
+  raydiumUrl: `https://raydium.io/launchpad/token/?mint=${owpMint}`,
 } as const;
 
 export function toRawClient(ribbit: number): bigint {

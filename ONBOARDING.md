@@ -25,23 +25,24 @@ each if you learn them the hard way. They are why the app broke repeatedly durin
 its build-out.
 
 ### 1.1 The $OWP mint, and do not hardcode its token program
-The launched mint is `GE8JGUE6ssrnFh4FSv9iwniYCwucB15PupT97uVRpump`
+The launched mint is `w63qPqQwjjgtCkgypRTCTMeWH9vfJaH6xtFGJpTAray`
 (`src/lib/owp-mint.ts`). `OWP_MINT` and `NEXT_PUBLIC_OWP_MINT` override it.
 Do not point either at the retired Ribbit mint
-`EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump`.
+`EVHtwfyWoHmUM5RHi3td31sNKCc8f83XKT44ZDqnpump`, or at the unpublished
+pump.fun mint `GE8JGUE6ssrnFh4FSv9iwniYCwucB15PupT97uVRpump`.
 
-Pump.fun `create_v2` coins are Token-2022. Older coins are classic SPL. The
-server, the browser, and the payout worker read the mint account's owner and
-pass that program id into every ATA and transfer. Do not hardcode
-`TOKEN_2022_PROGRAM_ID` again. Until the mint account exists on mainnet,
-buys, deposits, and payouts fail closed.
+The mint may be classic SPL or Token-2022. The server, the browser, and
+the payout worker read the mint account's owner and pass that program id
+into every ATA and transfer. Do not hardcode a token program. Until the
+mint account exists on mainnet, buys, deposits, and payouts fail closed.
 
 Buys (`POST /api/owp/buy`): the user sends SOL to the house wallet. The
-server prices it from the pump.fun bonding curve (spot, not a curve swap;
-Dexscreener only after the curve migrates) and queues a `Withdrawal` of kind
-`buy`. The payout worker sends $OWP from that same wallet. Rejecting a buy
-does not credit app balance, and the SOL stays in the house wallet. The
-private key stays on the payout box, never on Vercel.
+server prices it from the Raydium launchpad pool (constant-product spot,
+not a swap on the curve; Dexscreener only after the pool migrates) and
+queues a `Withdrawal` of kind `buy`. The payout worker sends $OWP from that
+same wallet. Rejecting a buy does not credit app balance, and the SOL stays
+in the house wallet. The private key stays on the payout box, never on
+Vercel.
 
 The creator's notice is `COPYRIGHT`. otherworldprojex.io and
 otherworldprojex.com are not this project. Do not send users there.
@@ -109,7 +110,7 @@ data. Prefer a separate Neon branch for development.
   verified on-chain (`POST /api/deposits/verify`). The full amount credits
   `User.ribbitBalance`. There are no chips and no burn-to-play.
 - Users can **buy $OWP** with SOL (`POST /api/owp/buy`). That SOL lands in
-  the house wallet. The payout is $OWP at the live pump.fun price, queued as
+  the house wallet. The payout is $OWP at the live Raydium price, queued as
   a `Withdrawal` kind `buy`. It does not credit `ribbitBalance`. Pausing
   deposits does not pause this buy.
 - Games and bids spend that balance. `adjustOwp` moves whole tokens and

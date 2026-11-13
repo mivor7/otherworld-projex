@@ -270,9 +270,9 @@ export default function WaitlistPage() {
                   <button className="btn btn-primary btn-lg px-8" onClick={join} disabled={!data.open}>
                     {data.open ? "Connect wallet to join" : "Sign-ups closed"}
                   </button>
-                  {CLIENT_CONFIG.pumpFunUrl && (
-                    <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                      Get $OWP on pump.fun ↗
+                  {CLIENT_CONFIG.raydiumUrl && (
+                    <a href={CLIENT_CONFIG.raydiumUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                      Get $OWP on Raydium ↗
                     </a>
                   )}
 

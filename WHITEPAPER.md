@@ -28,7 +28,7 @@ Blackjack uses its published rules — a natural pays 3:2, the dealer stands on 
 
 $OWP is the balance of the house. There is no second chip. Deposit it, play, bid, hunt bounties, and withdraw the same token.
 
-The published mint is `GE8JGUE6ssrnFh4FSv9iwniYCwucB15PupT97uVRpump`. The app reads that account on Solana. Until the account exists, deposits, website buys, and automatic payouts stay closed. The site does not invent a price.
+The published mint is `w63qPqQwjjgtCkgypRTCTMeWH9vfJaH6xtFGJpTAray`. The app reads that account on Solana. Until the account exists, deposits, website buys, and automatic payouts stay closed. The site does not invent a price.
 
 Decimals default to 6 and are read from the mint when it exists. The token program, classic SPL or Token-2022, is read from the mint account owner. It is not hardcoded.
 
@@ -48,9 +48,9 @@ A withdrawal queues a payment of the available balance back to the same wallet. 
 
 ## Buying
 
-The website can sell $OWP from the house at the live pump.fun spot. The visitor pays SOL from their own wallet. The house sends $OWP to that same wallet. The buy does not credit the in-app balance, and the team does not pick a private price.
+The website can sell $OWP from the house at the live Raydium price. The visitor pays SOL from their own wallet. The house sends $OWP to that same wallet. The buy does not credit the in-app balance, and the team does not pick a private price.
 
-While the coin is on the bonding curve, the payout is one integer division in the house's favor: lamports paid, times the curve's virtual token reserve, divided by its virtual SOL reserve. After the curve migrates, the price is the PumpSwap price. If there is no price, the buy is refused. A buy is 0.01 to 50 SOL. If the house cannot cover the send, the buy is refused.
+While the coin is on the Raydium launchpad, the spot is the constant-product price: SOL on the curve divided by the tokens still on the curve. The payout is one integer division in the house's favor: lamports paid, times the tokens still on the curve, divided by the SOL on the curve. After the pool migrates, the price is the Raydium market price. If there is no price, the buy is refused. A buy is 0.01 to 50 SOL. If the house cannot cover the send, the buy is refused.
 
 Selling $OWP is something the holder does on the open market. The site does not run a sell book, and it does not buy the chart up.
 

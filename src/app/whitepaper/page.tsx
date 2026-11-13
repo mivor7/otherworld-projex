@@ -175,18 +175,20 @@ export default function WhitepaperPage() {
 
       <Section kicker="05 — Buying">
         <p>
-          The website can sell $OWP from the house at the live pump.fun spot.
+          The website can sell $OWP from the house at the live Raydium price.
           The visitor pays SOL from their own wallet. The house sends $OWP to
           that same wallet. The buy does not credit the in-app balance, and
           the team does not pick a private price.
         </p>
         <p>
-          While the coin is on the bonding curve, the payout is one integer
-          division in the house&apos;s favor: lamports paid, times the curve&apos;s
-          virtual token reserve, divided by its virtual SOL reserve. After the
-          curve migrates, the price is the PumpSwap price. If there is no
-          price, the buy is refused. A buy is 0.01 to 50 SOL. If the house
-          cannot cover the send, the buy is refused.
+          While the coin is on the Raydium launchpad, the spot is the
+          constant-product price: SOL on the curve divided by the tokens still
+          on the curve. The payout is one integer division in the house&apos;s
+          favor: lamports paid, times the tokens still on the curve, divided
+          by the SOL on the curve. After the pool migrates, the price is the
+          Raydium market price. If there is no price, the buy is refused. A
+          buy is 0.01 to 50 SOL. If the house cannot cover the send, the buy
+          is refused.
         </p>
         <p>
           Selling $OWP is something the holder does on the open market. The

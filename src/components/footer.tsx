@@ -38,10 +38,10 @@ export function Footer() {
         <div>
           <h3 className="kicker mb-4">$OWP</h3>
           <ul className="space-y-2.5 text-fog">
-            {CLIENT_CONFIG.pumpFunUrl && (
+            {CLIENT_CONFIG.raydiumUrl && (
               <li>
-                <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer">
-                  pump.fun ↗
+                <a className="hover:text-frost transition-colors" href={CLIENT_CONFIG.raydiumUrl} target="_blank" rel="noreferrer">
+                  Raydium ↗
                 </a>
               </li>
             )}

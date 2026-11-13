@@ -1,7 +1,7 @@
 "use client";
 
 // Buy $OWP with SOL. The connected wallet pays the house wallet. The server
-// prices the payment at the pump.fun spot, and that same wallet sends $OWP.
+// prices the payment at the Raydium spot, and that same wallet sends $OWP.
 import { useCallback, useEffect, useState } from "react";
 import { CLIENT_CONFIG, shortWallet } from "@/lib/client-config";
 import { owpRawForQuote } from "@/lib/owp-quote";
@@ -15,7 +15,7 @@ type Price =
       decimals: number;
       lamportsPerWhole: string;
       solPerToken: number;
-      source: "bonding-curve" | "pump-amm";
+      source: "launchpad" | "market";
       virtualToken: string | null;
       virtualSol: string | null;
       houseOwp: number | null;
@@ -51,7 +51,7 @@ export function BuyOwp() {
     } catch {
       setPrice({
         available: false,
-        reason: "Could not read the pump.fun price. Try again in a moment.",
+        reason: "Could not read the Raydium price. Try again in a moment.",
         treasuryWallet: "",
       });
     }
@@ -112,12 +112,12 @@ export function BuyOwp() {
         <h2 className="text-[1.5rem] mb-2">Buy from the house wallet</h2>
         <p className="text-fog text-[0.9375rem] leading-relaxed max-w-xl mb-5">
           Pay SOL from your wallet. The house wallet sends $OWP at the current
-          pump.fun price. The amount locks in when the payment confirms — it
+          Raydium price. The amount locks in when the payment confirms — it
           does not arrive in the same click.
         </p>
 
         {!price ? (
-          <p className="text-sm text-fog">Reading the pump.fun price…</p>
+          <p className="text-sm text-fog">Reading the Raydium price…</p>
         ) : !price.available ? (
           <Notice kind="info">{price.reason}</Notice>
         ) : (
@@ -129,7 +129,7 @@ export function BuyOwp() {
                   {fmtPrice(price.solPerToken)} SOL
                 </div>
                 <p className="text-xs text-fog mt-1">
-                  per $OWP · {price.source === "pump-amm" ? "PumpSwap" : "pump.fun curve"}
+                  per $OWP · {price.source === "market" ? "Raydium market" : "Raydium launchpad"}
                 </p>
               </div>
               <div>
@@ -147,7 +147,7 @@ export function BuyOwp() {
               <div className="mb-4">
                 <Notice kind="info">
                   The house wallet has no $OWP to sell right now. Tokens still
-                  sitting in the pump.fun curve are not part of this balance.
+                  sitting in the Raydium launch pool are not part of this balance.
                 </Notice>
               </div>
             )}
@@ -216,8 +216,8 @@ export function BuyOwp() {
         )}
 
         <div className="mt-5">
-          <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-ghost text-xs">
-            Or trade on pump.fun ↗
+          <a href={CLIENT_CONFIG.raydiumUrl} target="_blank" rel="noreferrer" className="btn btn-ghost text-xs">
+            Or trade on Raydium ↗
           </a>
         </div>
       </div>

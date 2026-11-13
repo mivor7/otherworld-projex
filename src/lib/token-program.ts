@@ -1,7 +1,6 @@
 // The $OWP mint's token program is whatever owns the mint account.
-// Pump.fun coins are Token-2022 when created with create_v2, and classic
-// SPL otherwise. Deriving an ATA with the wrong program targets an account
-// that does not exist.
+// A Raydium launch can be classic SPL or Token-2022. Deriving an ATA with
+// the wrong program targets an account that does not exist.
 import { Connection, PublicKey } from "@solana/web3.js";
 import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 

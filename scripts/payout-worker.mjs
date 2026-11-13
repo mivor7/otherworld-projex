@@ -47,7 +47,7 @@ function rpcFetch(primary) {
   };
 }
 // Public mint. OWP_MINT overrides it. The retired Ribbit mint is not a fallback.
-const OWP_MINT_FALLBACK = "GE8JGUE6ssrnFh4FSv9iwniYCwucB15PupT97uVRpump";
+const OWP_MINT_FALLBACK = "w63qPqQwjjgtCkgypRTCTMeWH9vfJaH6xtFGJpTAray";
 const MINT_ADDRESS = process.env.OWP_MINT || OWP_MINT_FALLBACK;
 const MINT = new PublicKey(MINT_ADDRESS);
 const INTERVAL_MS = Number(process.env.PAYOUT_INTERVAL_MS ?? 15_000);

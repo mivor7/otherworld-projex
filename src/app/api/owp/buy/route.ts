@@ -1,12 +1,12 @@
 // Buy $OWP from the house wallet. The user pays SOL to that wallet; this
-// route prices the payment at the live pump.fun spot and queues a payout.
+// route prices the payment at the live Raydium spot and queues a payout.
 // The web server never holds the key — the payout worker sends the tokens.
 import { z } from "zod";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { CONFIG } from "@/lib/config";
 import { owpRawForQuote } from "@/lib/owp-quote";
-import { pumpQuote } from "@/lib/pump-price";
+import { owpQuote } from "@/lib/owp-price";
 import { rateLimit } from "@/lib/ratelimit";
 import { verifySolPayment } from "@/lib/solana";
 
@@ -34,9 +34,9 @@ export const POST = handler(async (req: Request) => {
   if (payment.status === "too-small") return err("Minimum buy is 0.01 SOL.", 422);
   if (payment.status === "too-large") return err("Maximum buy is 50 SOL.", 422);
 
-  const quote = await pumpQuote({ fresh: true });
+  const quote = await owpQuote({ fresh: true });
   if (!quote.available) {
-    return err("Could not verify the pump.fun price yet. Try again in a moment.", 503);
+    return err("Could not verify the Raydium price yet. Try again in a moment.", 503);
   }
   if (quote.houseOwp === null) {
     return err("Could not verify the house $OWP balance yet. Try again in a moment.", 503);

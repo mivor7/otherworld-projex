@@ -433,7 +433,7 @@ export function useChain() {
   );
 
   /**
-   * Pay SOL to the house wallet. The server prices $OWP at the pump.fun spot
+   * Pay SOL to the house wallet. The server prices $OWP at the Raydium spot
    * when the payment confirms, and the house wallet sends the tokens.
    */
   const buyOwpWithSol = useCallback(
@@ -445,12 +445,12 @@ export function useChain() {
         const priceRes = await fetch("/api/owp/price");
         const price = await priceRes.json();
         if (!price?.available) {
-          return { ok: false, error: price?.reason ?? "No pump.fun price yet." };
+          return { ok: false, error: price?.reason ?? "No Raydium price yet." };
         }
         if (price.houseOwp === 0) {
           return {
             ok: false,
-            error: "The house wallet has no $OWP to sell right now. Tokens still sitting in the pump.fun curve are not part of this balance.",
+            error: "The house wallet has no $OWP to sell right now. Tokens still sitting in the Raydium launch pool are not part of this balance.",
           };
         }
         if (price.houseOwp == null) {

@@ -83,7 +83,7 @@ play without burning real tokens.
 Browser (wallet signs everything; keys never leave the user)
  │  sign-in: ed25519 signature over a server nonce  → JWT cookie
  │  deposit: user transfers $OWP to the house wallet → verified → in-app balance
- │  buy:     user sends SOL to the house wallet → verified → $OWP queued at the pump.fun spot
+ │  buy:     user sends SOL to the house wallet → verified → $OWP queued at the Raydium spot
  ▼
 Next.js API routes (Vercel serverless)
  │  provably-fair engine: outcome = HMAC-SHA256(serverSeed, clientSeed:nonce)
@@ -131,7 +131,7 @@ Money out (never from the web server):
    withdrawals by hand in `/admin`. `PAYOUT_INTERVAL_MS` tunes the polling
    cadence; the admin panel's "Pause the payout worker" switch stops it
    remotely. Website buys (`/api/owp/buy`) are SOL in, $OWP out, from this
-   same wallet, at the pump.fun price.
+   same wallet, at the Raydium price.
 6. Leave `DEV_FAUCET` **unset** in production (the route also hard-refuses
    when `NODE_ENV=production`).
 

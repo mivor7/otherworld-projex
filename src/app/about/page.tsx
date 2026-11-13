@@ -235,9 +235,9 @@ export default async function AboutPage() {
               </div>
             )}
             <div className="flex flex-wrap gap-2.5">
-              {CLIENT_CONFIG.pumpFunUrl && (
-                <a href={CLIENT_CONFIG.pumpFunUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
-                  pump.fun ↗
+              {CLIENT_CONFIG.raydiumUrl && (
+                <a href={CLIENT_CONFIG.raydiumUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
+                  Raydium ↗
                 </a>
               )}
               <Link href="/whitepaper" className="btn btn-ghost">
