@@ -6,13 +6,13 @@ This paper describes the app as it runs at [otherworldprojex.xyz](https://www.ot
 
 The source is public: [github.com/mivor7/otherworld-projex](https://github.com/mivor7/otherworld-projex), published by [mivor7](https://github.com/mivor7). Reading it is not a license to copy the app. See [`COPYRIGHT`](COPYRIGHT).
 
-## The creator
+## The author
 
-mivor7 created Other World Projex and wrote this software. The original site is [www.otherworldprojex.xyz](https://www.otherworldprojex.xyz). The only token it uses is $OWP.
+mivor7 wrote this software and runs [www.otherworldprojex.xyz](https://www.otherworldprojex.xyz). The only token it uses is $OWP.
 
-The source is public so the rules can be read. That publication is not a license. No right is granted to copy the app, to use the name Other World Projex, or to launch a token with it. All rights reserved.
+The source is public so the rules can be read. That publication is not a license. No right is granted to copy the app, to deploy it, or to run a site or a token on it. All rights reserved.
 
-otherworldprojex.io and otherworldprojex.com use this name and this codebase. mivor7 did not authorize that and does not operate those sites. Tokens they issue, including any coin they call RIBBIT or OWX, are not $OWP. The same is true of any other site or coin that presents itself as Other World Projex.
+mivor7 does not run otherworldprojex.io or otherworldprojex.com. This site is not affiliated with them or with any token offered through them.
 
 ## The market
 

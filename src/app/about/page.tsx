@@ -265,11 +265,10 @@ export default async function AboutPage() {
               holding or transacting.
             </p>
             <p>
-              mivor7 created Other World Projex. This site is the original.
-              otherworldprojex.io, otherworldprojex.com, and any coin launched
-              from a copy of this project are not this app and are not $OWP.
-              The source is public so the rules can be read. That is not a
-              license to copy the app or the name.
+              mivor7 wrote the software behind this site. This site is not
+              affiliated with otherworldprojex.io or otherworldprojex.com, and
+              the only token it uses is $OWP. The source is public so the
+              rules can be read. That is not a license to copy the app.
             </p>
             <p>
               The team does not try to control the market. Players buy and sell

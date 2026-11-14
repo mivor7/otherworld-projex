@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://otherworldprojex.xyz"),
   title: "Other World Projex",
   description:
-    "Deposit $OWP, play provably-fair games and bid from your in-app balance, hunt bounties, and withdraw anytime. The house wallet pays out automatically. Created by mivor7.",
+    "Deposit $OWP, play provably-fair games and bid from your in-app balance, hunt bounties, and withdraw anytime. The house wallet pays out automatically. Software by mivor7.",
   authors: [{ name: "mivor7", url: "https://github.com/mivor7" }],
   creator: "mivor7",
   openGraph: {

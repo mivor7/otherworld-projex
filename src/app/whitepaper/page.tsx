@@ -40,24 +40,20 @@ export default function WhitepaperPage() {
         repository as <span className="mono">WHITEPAPER.md</span>.
       </p>
 
-      <Section kicker="The creator">
+      <Section kicker="The author">
         <p>
-          mivor7 created Other World Projex and wrote this software. This
-          site, www.otherworldprojex.xyz, is the original. The only token it
-          uses is $OWP.
+          mivor7 wrote this software and runs this site,
+          www.otherworldprojex.xyz. The only token it uses is $OWP.
         </p>
         <p>
           The source is public so the rules can be read. That publication is
-          not a license. No right is granted to copy the app, to use the name
-          Other World Projex, or to launch a token with it. All rights
-          reserved.
+          not a license. No right is granted to copy the app, to deploy it,
+          or to run a site or a token on it. All rights reserved.
         </p>
         <p>
-          otherworldprojex.io and otherworldprojex.com use this name and this
-          codebase. mivor7 did not authorize that and does not operate those
-          sites. Tokens they issue, including any coin they call RIBBIT or
-          OWX, are not $OWP. The same is true of any other site or coin that
-          presents itself as Other World Projex.
+          mivor7 does not run otherworldprojex.io or otherworldprojex.com.
+          This site is not affiliated with them or with any token offered
+          through them.
         </p>
       </Section>
 

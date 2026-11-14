@@ -44,12 +44,12 @@ same wallet. Rejecting a buy does not credit app balance, and the SOL stays
 in the house wallet. The private key stays on the payout box, never on
 Vercel.
 
-The creator's notice is `COPYRIGHT`. otherworldprojex.io and
-otherworldprojex.com are not this project. Do not send users there.
+The author's notice is `COPYRIGHT`. This deployment is not affiliated with
+otherworldprojex.io or otherworldprojex.com. Do not send users there.
 
 There is no staking pool and no Meteora pool. `STAKE_POOL_ADDRESS` is not
 read. Do not point the site at an old pool, and do not link `@OWProjex` —
-that X account is not this project's. The product statement is
+that X account is not this deployment's. The product statement is
 `WHITEPAPER.md`: the team does not trade the house wallet to move the
 market, and the cut on Frog Flip and Pond Dice is the 4% house edge.
 
