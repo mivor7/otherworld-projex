@@ -77,9 +77,9 @@ export function Footer() {
         Games are for entertainment. $OWP is a memecoin with no promise of financial
         return. Play responsibly — never spend more than you can afford to lose.
         <br />
-        Created by mivor7. This site is the original Other World Projex.
-        otherworldprojex.io, otherworldprojex.com, and any coin launched from
-        a copy of this project are not this app and are not $OWP.
+        Software written by mivor7. This site is not affiliated with
+        otherworldprojex.io or otherworldprojex.com, and the only token it
+        uses is $OWP.
       </div>
     </footer>
   );
