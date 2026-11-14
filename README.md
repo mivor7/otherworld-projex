@@ -15,23 +15,19 @@ the rules can be read. That is not a license to copy the app. Read
 
 ## Ownership
 
-mivor7 created Other World Projex and wrote the software in this repository.
-The full notice is [`COPYRIGHT`](COPYRIGHT). All rights reserved. Publishing
-the source is not a license to copy it, to use the name, or to launch a token
-with it.
+mivor7 wrote the software in this repository. The full notice is
+[`COPYRIGHT`](COPYRIGHT). All rights reserved. Publishing the source is not
+a license to copy it, to deploy it, or to run a site or a token on it.
 
-The original site is [https://www.otherworldprojex.xyz](https://www.otherworldprojex.xyz).
-The only token this deployment uses is $OWP.
+The deployment mivor7 runs is
+[https://www.otherworldprojex.xyz](https://www.otherworldprojex.xyz). The
+only token that deployment uses is $OWP, at the mint published in
+[`COPYRIGHT`](COPYRIGHT).
 
-otherworldprojex.io (Otherworld Reserve) and otherworldprojex.com use the
-Other World Projex name and this codebase. mivor7 did not authorize that, and
-mivor7 does not operate those sites. Tokens they issue, including any coin
-they call RIBBIT or OWX, are not $OWP. Any other site or coin that presents
-itself as Other World Projex is in the same position unless it is this
-repository and www.otherworldprojex.xyz.
-
-The X account `@OWProjex` (`https://x.com/OWProjex`) is not an account of this
-project and is not authorized to speak for it.
+mivor7 does not run otherworldprojex.io or otherworldprojex.com. The
+deployment above is not affiliated with them or with any token offered
+through them. The X account `@OWProjex` (`https://x.com/OWProjex`) is not an
+account of that deployment.
 
 Git history in this repository starts on 15 July 2026. The first commit is
 authored `m <msl.tvc@gmail.com>`. The same day includes commits authored
@@ -55,8 +51,7 @@ It is not a court order.
   when the pot reaches the prize. Free arcade pools pay weekly. One open
   bounty per game; every eligible winner is paid pro-rata, automatically.
 - **Treasury**: live on-chain balances at `/treasury`; SOL custody via a small
-  audited-by-design Anchor program with multisig admin + daily payout cap
-  (`program/`).
+  Anchor program with multisig admin + daily payout cap (`program/`).
 
 ## Stack
 

@@ -1,25 +1,21 @@
 Copyright (c) 2026 mivor7. All rights reserved.
 
-Other World Projex, the software in this repository, was written by mivor7
-(GitHub user id 43555740, https://github.com/mivor7).
+The software in this repository was written by mivor7 (GitHub user id
+43555740, https://github.com/mivor7).
 
-The original deployment is https://www.otherworldprojex.xyz
+The source is public so anyone can read how the house works. Publication
+is not a license. No right is granted to copy this software, to deploy
+it, or to run a site or a token on it.
+
+The deployment mivor7 runs is https://www.otherworldprojex.xyz
 The only token that deployment uses is $OWP. The published mint is
 w63qPqQwjjgtCkgypRTCTMeWH9vfJaH6xtFGJpTAray.
 
-The source is public so anyone can read how the house works. Publication
-is not a license. No right is granted to copy this software, to use the
-name Other World Projex, or to launch a token with it.
-
-The creator states that otherworldprojex.io (Otherworld Reserve) and
-otherworldprojex.com are using this name and this codebase without
-permission. They are not operated by mivor7. Tokens they issue, including
-any coin they call RIBBIT or OWX, are not $OWP and are not issued by the
-creator of this software. The same is true of any other site or coin that
-presents itself as Other World Projex.
-
-The X account @OWProjex is not an account of this project.
+mivor7 does not run otherworldprojex.io or otherworldprojex.com. The
+deployment above is not affiliated with them or with any token offered
+through them. The X account @OWProjex is not an account of that
+deployment.
 
 Git history of this repository starts on 15 July 2026. See the Ownership
-section of README.md. This file is the creator's public claim of
-authorship. It is not a court order.
+section of README.md. This file is the author's statement that mivor7
+wrote this software. It is not a court order.
