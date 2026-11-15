@@ -7,7 +7,6 @@ import { PageHero } from "@/components/hero";
 import { Countdown } from "@/components/ui";
 import { RowSkeleton } from "@/components/skeletons";
 import { EmptyState } from "@/components/empty-state";
-import { ShareOnX } from "@/components/share-x";
 import { fmtRibbit } from "@/lib/client-config";
 import { useHouseConfig } from "@/components/use-house-config";
 
@@ -193,14 +192,6 @@ export default function BountiesPage() {
                         {GAME_LABELS[b.game] ?? b.game} →
                       </Link>
                     )}
-                    <ShareOnX
-                      label="Share"
-                      path={b.game ? `/games/${b.game}` : "/bounties"}
-                      className="badge hover:text-neon transition-colors cursor-pointer"
-                      text={`Live bounty on Other World Projex: "${b.title}" — ${
-                        b.prizeText ?? `${fmtRibbit(b.prizeRibbit)} $OWP`
-                      } up for grabs!`}
-                    />
                   </div>
                   <h3 className="!text-[1.05rem]">
                     {b.title}

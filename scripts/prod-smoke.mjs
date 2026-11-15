@@ -94,12 +94,6 @@ const lb = await get("/api/leaderboard?game=worm");
 check("/api/leaderboard", lb.status === 200 && Array.isArray(lb.json), `status ${lb.status}`);
 const auctions = await get("/api/auctions");
 check("/api/auctions", auctions.status === 200, `status ${auctions.status}`);
-const actionsJson = await get("/actions.json");
-check("/actions.json Solana Blinks manifest", actionsJson.status === 200 && Array.isArray(actionsJson.json?.rules), `status ${actionsJson.status}`);
-const actionHunt = await get("/api/actions/hunt");
-check("/api/actions/hunt Solana Blink card", actionHunt.status === 200 && actionHunt.json?.type === "action", `status ${actionHunt.status}`);
-const ogRes = await fetch(BASE + "/api/og?kind=blink");
-check("/api/og dynamic social card", ogRes.status === 200 && (ogRes.headers.get("content-type") ?? "").includes("image/png"), `status ${ogRes.status}`);
 
 // ---------- pages render ----------
 console.log("— Pages");

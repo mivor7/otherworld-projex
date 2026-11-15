@@ -3,12 +3,11 @@ import { PageHero } from "@/components/hero";
 import { Reveal } from "@/components/reveal";
 import { ActivityTicker } from "@/components/activity-ticker";
 import { BuyOwp } from "@/components/buy-owp";
-import { WelcomeMagnet } from "@/components/welcome-magnet";
 import { CopyChip } from "@/components/copy-chip";
 import { MatteMedia } from "@/components/matte-media";
 import { prisma } from "@/lib/db";
 import { getTreasuryStats } from "@/lib/solana";
-import { CONFIG, fromRaw } from "@/lib/config";
+import { fromRaw } from "@/lib/config";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 import { houseConfig } from "@/lib/settings";
 
@@ -71,38 +70,28 @@ function ago(d: Date): string {
 const shortWallet = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 
 export default async function Home() {
-  const [
-    chain,
-    depositAgg,
-    roundCount,
-    openBounties,
-    awards,
-    paidAgg,
-    gameBounties,
-    openPrizeAgg,
-    waitlistCount,
-  ] = await Promise.all([
-    getTreasuryStats(),
-    prisma.deposit.aggregate({ _sum: { amountRaw: true } }),
-    prisma.gameRound.count(),
-    prisma.bounty.count({ where: { status: "open" } }),
-    prisma.bountyAward.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 8,
-      include: {
-        user: { select: { wallet: true } },
-        bounty: { select: { title: true, game: true } },
-      },
-    }),
-    prisma.bountyAward.aggregate({ _sum: { amountRaw: true } }),
-    prisma.bounty.findMany({
-      where: { status: "open", game: { not: null } },
-      select: { game: true, prizeRibbit: true },
-      orderBy: { prizeRibbit: "desc" },
-    }),
-    prisma.bounty.aggregate({ where: { status: "open" }, _sum: { prizeRibbit: true } }),
-    prisma.waitlistEntry.count(),
-  ]);
+  const [chain, depositAgg, roundCount, openBounties, awards, paidAgg, gameBounties, openPrizeAgg] =
+    await Promise.all([
+      getTreasuryStats(),
+      prisma.deposit.aggregate({ _sum: { amountRaw: true } }),
+      prisma.gameRound.count(),
+      prisma.bounty.count({ where: { status: "open" } }),
+      prisma.bountyAward.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        include: {
+          user: { select: { wallet: true } },
+          bounty: { select: { title: true, game: true } },
+        },
+      }),
+      prisma.bountyAward.aggregate({ _sum: { amountRaw: true } }),
+      prisma.bounty.findMany({
+        where: { status: "open", game: { not: null } },
+        select: { game: true, prizeRibbit: true },
+        orderBy: { prizeRibbit: "desc" },
+      }),
+      prisma.bounty.aggregate({ where: { status: "open" }, _sum: { prizeRibbit: true } }),
+    ]);
   const houseCfg = await houseConfig(); // live, admin-tunable values
   // Richest live pool per game — powers the bounty chip on each card.
   const poolByGame = new Map<string, bigint>();
@@ -138,9 +127,6 @@ export default async function Home() {
             <Link href="/games" className="btn btn-ghost btn-lg" data-magnetic>
               Enter the arcade
             </Link>
-            <Link href="/waitlist" className="btn btn-ghost btn-lg" data-magnetic>
-              Claim Airdrop
-            </Link>
             <Link href="/auctions" className="btn btn-ghost btn-lg" data-magnetic>
               View the lots
             </Link>
@@ -159,13 +145,6 @@ export default async function Home() {
           { value: openBounties.toLocaleString(), label: "Open bounties" },
         ]}
         brand
-      />
-
-      <WelcomeMagnet
-        waitlistCount={waitlistCount}
-        waitlistGoal={1000}
-        minHoldRibbit={CONFIG.waitlistMinHoldRibbit}
-        openPrize={openPrize}
       />
 
       <BuyOwp />

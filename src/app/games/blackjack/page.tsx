@@ -12,7 +12,6 @@ import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
 import { FirstVisitHint } from "@/components/first-visit-hint";
-import { SandboxWinPrompt, ShareOnX } from "@/components/share-x";
 
 type SplitView = {
   cards: number[];
@@ -609,18 +608,6 @@ export default function BlackjackPage() {
           </div>
         )}
 
-        {done && !sandbox && (view?.payout ?? 0) > 0 && (
-          <div className="mt-4 flex justify-center">
-            <ShareOnX
-              label="Post hand on X"
-              path="/games/blackjack"
-              text={`Beat the dealer for +${view?.payout} $OWP on Single-Deck Blackjack at Other World Projex! Provably-fair Solana tables & live $OWP bounties:`}
-            />
-          </div>
-        )}
-        {done && sandbox && (view?.payout ?? 0) > 0 && (
-          <SandboxWinPrompt payout={view?.payout ?? 0} gameName="Blackjack" />
-        )}
         {!sandbox && round && (
           <p
             className="text-xs mt-6 text-center break-all"

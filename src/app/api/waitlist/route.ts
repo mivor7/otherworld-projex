@@ -56,7 +56,7 @@ const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 export const GET = handler(async (req: Request) => {
   const lookupWallet = new URL(req.url).searchParams.get("wallet");
-  const [session, cfg, count, recent, topReferrers] = await Promise.all([
+  const [session, cfg, count, recent] = await Promise.all([
     getSession(),
     houseConfig(),
     prisma.waitlistEntry.count(),
@@ -66,12 +66,6 @@ export const GET = handler(async (req: Request) => {
       orderBy: { position: "desc" },
       take: 8,
       select: { position: true, wallet: true, joinedAt: true },
-    }),
-    prisma.waitlistEntry.findMany({
-      where: { wallet: { not: null }, referrals: { gt: 0 } },
-      orderBy: [{ referrals: "desc" }, { position: "asc" }],
-      take: 10,
-      select: { position: true, wallet: true, referrals: true },
     }),
   ]);
 
@@ -108,12 +102,6 @@ export const GET = handler(async (req: Request) => {
       position: r.position,
       wallet: mask(r.wallet!),
       joinedAt: r.joinedAt,
-    })),
-    topReferrers: topReferrers.map((r, i) => ({
-      rank: i + 1,
-      position: r.position,
-      wallet: mask(r.wallet!),
-      referrals: r.referrals,
     })),
     you,
     checked,

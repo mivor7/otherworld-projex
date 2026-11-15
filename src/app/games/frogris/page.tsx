@@ -11,7 +11,6 @@ import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { ArcadeBountyHeader } from "@/components/arcade-bounty-header";
 import { FirstVisitHint } from "@/components/first-visit-hint";
-import { ShareOnX } from "@/components/share-x";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE, PIECE_COLORS } from "@/lib/arcade-palette";
 import {
@@ -428,15 +427,6 @@ export default function FrogrisPage() {
                 <button className="btn btn-primary btn-lg px-9" onClick={start}>
                   {hud.started && hud.score + hud.lines > 0 ? "Play again" : "Start"}
                 </button>
-                {hud.started && hud.score > 0 && (
-                  <div className="mt-2.5">
-                    <ShareOnX
-                      label="Post score on X"
-                      path="/games/frogris"
-                      text={`Scored ${hud.score} pts (${hud.lines} lines, level ${hud.level}) on Frogris at Other World Projex! Replay-verified Solana arcade & weekly $OWP bounties:`}
-                    />
-                  </div>
-                )}
                 {!me.signedIn && (
                   <p className="text-fog text-xs mt-3 px-8 text-center">
                     Practice run — sign in and deposit $OWP to compete for prizes.
