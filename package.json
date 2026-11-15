@@ -10,6 +10,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tests",
     "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
     "postinstall": "prisma generate",
     "vercel-build": "prisma migrate deploy && next build",
     "db:migrate": "prisma migrate dev",
