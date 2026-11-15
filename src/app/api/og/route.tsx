@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     headline = payout ? `Won +${payout} $OWP` : `Winning Round on ${game}`;
     highlight = "PROVABLY FAIR · 4% HOUSE EDGE";
     sub =
-      "Every wager feeds the live table bounty pot. Verify every deal and roll on-chain at otherworld.fun.";
+      "Every wager feeds the live table bounty pot. Verify every deal and roll on-chain at otherworldprojex.xyz.";
   } else if (kind === "score") {
     kicker = `REPLAY-VERIFIED ARCADE RUN · ${game.toUpperCase()}`;
     headline = score ? `Scored ${score} pts on ${game}` : `${game} Leaderboard Run`;
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <span style={{ color: "#6ee7a0", fontWeight: 700 }}>OTHER WORLD PROJEX</span>
             <span>·</span>
-            <span>otherworld.fun</span>
+            <span>otherworldprojex.xyz</span>
           </div>
           <div style={{ display: "flex", gap: "24px", color: "#d1fae5", fontWeight: 600 }}>
             <span>Arcade</span>

@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
         (openCount > 0
           ? `${openCount} live bounties totaling ${openPrize.toLocaleString("en-US")} $OWP on the board now. `
           : "Provably-fair tables (4% house edge) & replay-verified free arcade. ") +
-        "Buy $OWP directly from the house treasury wallet or visit otherworld.fun to play.",
+        "Buy $OWP directly from the house treasury wallet or visit otherworldprojex.xyz to play.",
       label: "Buy $OWP",
       links: {
         actions: [
@@ -152,13 +152,13 @@ export async function POST(req: NextRequest) {
       {
         type: "transaction",
         transaction: serialized,
-        message: `Pay ${solParam} SOL to the Other World Projex house wallet, then redeem your tx signature on otherworld.fun/#buy to receive $OWP.`,
+        message: `Pay ${solParam} SOL to the Other World Projex house wallet, then redeem your tx signature on otherworldprojex.xyz/#buy to receive $OWP.`,
       },
       { headers: ACTION_HEADERS }
     );
   } catch {
     return NextResponse.json(
-      { message: "Could not build transaction right now — visit otherworld.fun/#buy." },
+      { message: "Could not build transaction right now — visit otherworldprojex.xyz/#buy." },
       { status: 500, headers: ACTION_HEADERS }
     );
   }

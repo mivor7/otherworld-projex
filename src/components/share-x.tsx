@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-const DEFAULT_ORIGIN = "https://otherworld.fun";
+const DEFAULT_ORIGIN = "https://www.otherworldprojex.xyz";
 
 export function ShareOnX({
   text,
