@@ -283,6 +283,17 @@ export default function BlackjackPage() {
     practice.ensure(wager);
     practice.adjust(-wager);
     const deck = shuffledDeck();
+    const isTour =
+      typeof document !== "undefined" &&
+      document.documentElement.hasAttribute("data-owp-tour");
+    if (isTour) {
+      // Showcase shoe for the guided tour: Player gets J♠ (9) + 2♦ (26) = 12,
+      // Dealer shows 6♣ (43) with 10♥ (21) in the hole = 16, next card is 9♥ (20)
+      // so Double/Hit lands 21, and dealer draws 8♠ (6) to bust at 24.
+      const scripted = [9, 43, 26, 21, 20, 6];
+      const rest = deck.filter((c) => !scripted.includes(c));
+      deck.splice(0, deck.length, ...scripted, ...rest);
+    }
     const r: PracticeRound = {
       deck,
       pos: 4,

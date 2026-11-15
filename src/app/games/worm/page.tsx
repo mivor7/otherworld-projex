@@ -149,7 +149,10 @@ export default function WormPage() {
     runTokenRef.current = null;
     popRef.current = null;
     overAtRef.current = 0;
-    if (me.signedIn) {
+    const isTour =
+      typeof document !== "undefined" &&
+      document.documentElement.hasAttribute("data-owp-tour");
+    if (me.signedIn && !isTour) {
       try {
         const res = await fetch("/api/arcade/start", {
           method: "POST",
@@ -306,11 +309,17 @@ export default function WormPage() {
         if (!g) g = a;
       }
       if (g && !g.over && g === gameRef.current) {
+        const isTour =
+          !runTokenRef.current &&
+          typeof document !== "undefined" &&
+          document.documentElement.hasAttribute("data-owp-tour");
+        if (isTour) g.stepMs = 68;
         g.acc += now - g.last;
         g.last = now;
         if (g.acc > 400) g.acc = 400; // background-tab catch-up cap
         while (g.acc >= g.stepMs) {
           g.acc -= g.stepMs;
+          if (isTour) drive(g);
           step(g);
           if (g.over) break;
         }

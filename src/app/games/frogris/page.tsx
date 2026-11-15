@@ -125,7 +125,10 @@ export default function FrogrisPage() {
       pendingSubmitRef.current = null;
     }
     runTokenRef.current = null;
-    if (me.signedIn) {
+    const isTour =
+      typeof document !== "undefined" &&
+      document.documentElement.hasAttribute("data-owp-tour");
+    if (me.signedIn && !isTour) {
       try {
         const res = await fetch("/api/arcade/start", {
           method: "POST",
@@ -268,6 +271,51 @@ export default function FrogrisPage() {
         if (acc > 250) acc = 250;
         while (acc >= FRAME_MS && !g.over) {
           acc -= FRAME_MS;
+          const isTour =
+            !runTokenRef.current &&
+            typeof document !== "undefined" &&
+            document.documentElement.hasAttribute("data-owp-tour");
+          if (isTour && queueRef.current.length === 0 && g.frame > 0 && g.frame % 16 === 0) {
+            const board = g.board;
+            const piece = g.piece;
+            let bestScore = -1e9;
+            let bestRot = g.rot;
+            let bestX = g.x;
+            for (let rot = 0; rot < 4; rot++) {
+              for (let tx = -2; tx < FCOLS; tx++) {
+                if (collides(board, piece, rot, tx, g.y)) continue;
+                let gy = g.y;
+                while (!collides(board, piece, rot, tx, gy + 1)) gy++;
+                const cells = cellsOf(piece, rot);
+                let landingSum = 0;
+                let holes = 0;
+                for (const [cx, cy] of cells) {
+                  const r = gy + cy;
+                  const c = tx + cx;
+                  landingSum += r;
+                  if (r + 1 < FROWS && board[r + 1][c] === null) {
+                    const occupiedBySelf = cells.some(
+                      ([ox, oy]) => tx + ox === c && gy + oy === r + 1
+                    );
+                    if (!occupiedBySelf) holes++;
+                  }
+                }
+                const sc = landingSum * 3 - holes * 14;
+                if (sc > bestScore) {
+                  bestScore = sc;
+                  bestRot = rot;
+                  bestX = tx;
+                }
+              }
+            }
+            const rotDiff = (bestRot - g.rot + 4) % 4;
+            for (let i = 0; i < rotDiff; i++) queueRef.current.push(2);
+            const dx = bestX - g.x;
+            for (let i = 0; i < Math.abs(dx); i++) {
+              queueRef.current.push(dx < 0 ? 0 : 1);
+            }
+            queueRef.current.push(5);
+          }
           let applied = 0;
           while (queueRef.current.length > 0 && applied < MAX_INPUTS_PER_FRAME && !g.over) {
             const a = queueRef.current.shift()!;

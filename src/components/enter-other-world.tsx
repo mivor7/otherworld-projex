@@ -21,61 +21,109 @@ const CHAPTERS: ChapterMeta[] = [
   {
     index: 0,
     code: "01",
-    shortLabel: "Treasury Desk",
+    shortLabel: "Treasury & Wings",
     wing: "House Foundation · Solana Mainnet",
-    title: "One Transparent Treasury",
+    title: "One Treasury · Three Wings",
     route: "/",
     stageSelector: "#buy",
     initialLine:
-      "Welcome to Other World Projex. Every table, auction lot, and bounty pool runs through one verifiable Solana treasury.",
+      "Welcome to Other World Projex. Every game table, auction lot, and bounty pool runs through one transparent Solana treasury.",
     initialMood: "welcome",
   },
   {
     index: 1,
     code: "02",
     shortLabel: "Frog Flip",
-    wing: "Wing I · Provably-Fair Table",
-    title: "Frog Flip · Double or Nothing",
+    wing: "Wing I · Table 01",
+    title: "Frog Flip · 3× Streak & Cash Out",
     route: "/games/flip",
     stageSelector: ".game-stage",
     initialLine:
-      "Every table has an instant Sandbox mode. Watch me call Frog, flip the coin, and press our winning streak.",
+      "Every table includes a zero-risk Sandbox. Watch me call Frog, press a 3× Double-or-Nothing streak, and bank the pot.",
     initialMood: "focused",
   },
   {
     index: 2,
     code: "03",
     shortLabel: "Pond Dice",
-    wing: "Wing I · Custom Odds Slider",
-    title: "Pond Dice · Dial Your Own Edge",
+    wing: "Wing I · Table 02",
+    title: "Pond Dice · Custom Odds Slider",
     route: "/games/dice",
     stageSelector: ".game-stage",
     initialLine:
-      "Slide the target line anywhere from 2 to 98. Tighter zones pay higher multipliers — watch me dial 30% for a 3.23× roll.",
+      "Slide the win line anywhere from 2 to 98. We'll roll a safe 65% warm-up, then dial a 24% sniper line for a 4.00× payout.",
     initialMood: "focused",
   },
   {
     index: 3,
     code: "04",
-    shortLabel: "60 Hz Hopper",
-    wing: "Wing I · Deterministic Skill Arcade",
-    title: "Hopper · 60 Hz Server-Verified Replay",
-    route: "/games/hopper",
+    shortLabel: "Blackjack",
+    wing: "Wing I · Table 03",
+    title: "Single-Deck Blackjack · Double to 21",
+    route: "/games/blackjack",
     stageSelector: ".game-stage",
     initialLine:
-      "Free arcade episodes run a deterministic 60 Hz simulation. Every hop is recorded and replayed on the server for weekly prizes.",
+      "Single-deck rules, dealer stands on 17, naturals pay 3:2, and the entire 52-card shoe is SHA-256 committed before the deal.",
     initialMood: "focused",
   },
   {
     index: 4,
     code: "05",
-    shortLabel: "Bounty Board",
-    wing: "Wing III · Pro-Rata Prize Pools",
-    title: "The Bounty Board · Automatic Payouts",
+    shortLabel: "60 Hz Hopper",
+    wing: "Wing I · Free Skill Arcade",
+    title: "Hopper · Full Road Crossing",
+    route: "/games/hopper",
+    stageSelector: ".game-stage",
+    initialLine:
+      "Free arcade episodes run a deterministic 60 Hz simulation. Watch the frog thread all 10 lanes into the top goal verge!",
+    initialMood: "focused",
+  },
+  {
+    index: 5,
+    code: "06",
+    shortLabel: "Frogris",
+    wing: "Wing I · Free Skill Arcade",
+    title: "Frogris · 60 Hz Falling Blocks",
+    route: "/games/frogris",
+    stageSelector: ".game-stage",
+    initialLine:
+      "Every rotation, shift, and hard-drop in Frogris is recorded at frame boundaries and replayed on the server to verify scores.",
+    initialMood: "focused",
+  },
+  {
+    index: 6,
+    code: "07",
+    shortLabel: "Worm Frog",
+    wing: "Wing I · Free Skill Arcade",
+    title: "Worm Frog · Fly-Hunting Serpent",
+    route: "/games/worm",
+    stageSelector: ".game-stage",
+    initialLine:
+      "Steer the serpent across the grid — each fly scores +10 and speeds up the pace. Top weekly runs share the $OWP bounty pool.",
+    initialMood: "focused",
+  },
+  {
+    index: 7,
+    code: "08",
+    shortLabel: "Bounties & Lots",
+    wing: "Wings II & III · Prizes & Gavel",
+    title: "Bounty Board & The Auction House",
     route: "/bounties",
     stageSelector: "main",
     initialLine:
-      "Every round played across the House unlocks fixed $OWP bounty pools. When a meter fills, eligible hunters are paid automatically.",
+      "Every round played across the House unlocks fixed $OWP bounty pools — and Wing II puts collectibles and 1/1s under the gavel.",
+    initialMood: "impressed",
+  },
+  {
+    index: 8,
+    code: "09",
+    shortLabel: "Fairness & Vault",
+    wing: "Cryptographic Proof · Live Ledger",
+    title: "Provable Fairness & Live Treasury",
+    route: "/fairness",
+    stageSelector: "main",
+    initialLine:
+      "Don't trust — verify. Watch me recompute a roll and derive a full 52-card Blackjack deck via HMAC-SHA256 right in your browser.",
     initialMood: "impressed",
   },
 ];
@@ -93,7 +141,7 @@ export function launchOtherWorldTour(chapter = 0) {
 
 /* ————————————————————————————————————————————————————————————————
    1. HOMEPAGE LAUNCHER CARD (<EnterOtherWorld />)
-   Featuring a live 60fps 3D Portal Vortex Canvas + Chapter Jumpers
+   Featuring a live 60fps 3D Portal Vortex Canvas + 9 Station Jumpers
    ———————————————————————————————————————————————————————————————— */
 
 function PortalVortexCanvas({ hovered }: { hovered: boolean }) {
@@ -112,15 +160,15 @@ function PortalVortexCanvas({ hovered }: { hovered: boolean }) {
     if (!ctx) return;
 
     const W = 320;
-    const H = 210;
+    const H = 220;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const stars = Array.from({ length: 42 }, (_, i) => ({
-      angle: (i / 42) * Math.PI * 2 + (i % 5) * 0.3,
-      z: (i / 42) * 1,
+    const stars = Array.from({ length: 44 }, (_, i) => ({
+      angle: (i / 44) * Math.PI * 2 + (i % 5) * 0.3,
+      z: (i / 44) * 1,
       speed: 0.0045 + (i % 4) * 0.0012,
       gold: i % 3 === 0,
     }));
@@ -139,7 +187,7 @@ function PortalVortexCanvas({ hovered }: { hovered: boolean }) {
       const cy = H * 0.5 + m.y * 12;
 
       // Deep ambient portal glow
-      const bgGrad = ctx.createRadialGradient(cx, cy, 6, cx, cy, 128);
+      const bgGrad = ctx.createRadialGradient(cx, cy, 6, cx, cy, 132);
       bgGrad.addColorStop(0, "oklch(0.78 0.11 150 / 0.24)");
       bgGrad.addColorStop(0.45, "oklch(0.74 0.12 290 / 0.10)");
       bgGrad.addColorStop(1, "oklch(0.08 0.01 165 / 0)");
@@ -151,8 +199,8 @@ function PortalVortexCanvas({ hovered }: { hovered: boolean }) {
       for (let i = 0; i < ringCount; i++) {
         const progress = ((i / ringCount + t * 0.18 * boost) % 1 + 1) % 1;
         const scale = Math.pow(progress, 1.55);
-        const rx = 18 + scale * 120;
-        const ry = 12 + scale * 76;
+        const rx = 18 + scale * 122;
+        const ry = 12 + scale * 80;
         const ox = W * 0.5 + m.x * (1 - progress) * 26;
         const oy = H * 0.5 + m.y * (1 - progress) * 18;
         const alpha = Math.sin(progress * Math.PI) * 0.52;
@@ -178,8 +226,8 @@ function PortalVortexCanvas({ hovered }: { hovered: boolean }) {
         if (s.z > 1) s.z -= 1;
         s.angle += 0.008 * boost;
         const depth = Math.pow(s.z, 1.4);
-        const px = cx + Math.cos(s.angle) * (14 + depth * 124);
-        const py = cy + Math.sin(s.angle) * (10 + depth * 78);
+        const px = cx + Math.cos(s.angle) * (14 + depth * 126);
+        const py = cy + Math.sin(s.angle) * (10 + depth * 82);
         const r = 0.8 + depth * 2.1;
         const a = Math.sin(s.z * Math.PI) * 0.85;
         ctx.beginPath();
@@ -273,14 +321,14 @@ function PortalVortexCanvas({ hovered }: { hovered: boolean }) {
     >
       <canvas
         ref={canvasRef}
-        className="block w-full h-[188px] sm:h-[204px] object-cover"
+        className="block w-full h-[196px] sm:h-[216px] object-cover"
       />
       <div className="pointer-events-none absolute inset-x-3 bottom-2.5 flex items-center justify-between text-[0.65rem] mono uppercase tracking-wider">
         <span className="px-2 py-0.5 rounded bg-abyss/80 text-neon border border-white/10">
           Live Co-Pilot · 60 FPS
         </span>
         <span className="px-2 py-0.5 rounded bg-abyss/80 text-gold border border-white/10">
-          5 Live Stops
+          9 Live Chapters
         </span>
       </div>
     </div>
@@ -302,10 +350,10 @@ export function EnterOtherWorld() {
             <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
               <span className="inline-flex items-center gap-2 text-xs mono uppercase tracking-widest text-neon">
                 <span className="live-dot" />
-                Interactive House Walkthrough
+                Interactive Grand House Tour
               </span>
               <span className="text-xs mono text-fog/70">
-                · Opt-in · Real site interaction
+                · Opt-in · Plays all 6 games &amp; all 3 wings live
               </span>
             </div>
 
@@ -314,14 +362,19 @@ export function EnterOtherWorld() {
             </h2>
 
             <p className="text-fog text-sm sm:text-base leading-relaxed max-w-2xl mb-5">
-              Take a 45-second guided run with the House Croupier. Watch our
-              live co-pilot glide across the real site — inspecting the Solana
-              treasury desk, flipping a winning streak on{" "}
-              <span className="text-frost">Frog Flip</span>, dialing a{" "}
-              <span className="text-gold">3.23×</span> roll on{" "}
-              <span className="text-frost">Pond Dice</span>, dodging traffic in{" "}
-              <span className="text-frost">60 Hz Hopper</span>, and unlocking
-              the <span className="text-frost">Bounty Board</span>.
+              Let the House Croupier take the wheel for a full live walkthrough
+              across the real website — inspecting the Solana treasury desk,
+              building a 3× streak on{" "}
+              <span className="text-frost">Frog Flip</span>, sniping a{" "}
+              <span className="text-gold">4.00×</span> roll on{" "}
+              <span className="text-frost">Pond Dice</span>, doubling to 21 in{" "}
+              <span className="text-frost">Blackjack</span>, playing{" "}
+              <span className="text-frost">Hopper</span>,{" "}
+              <span className="text-frost">Frogris</span> &amp;{" "}
+              <span className="text-frost">Worm Frog</span>, exploring{" "}
+              <span className="text-frost">Bounties &amp; Auctions</span>, and
+              verifying rolls via{" "}
+              <span className="text-frost">HMAC-SHA256</span>.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -337,7 +390,7 @@ export function EnterOtherWorld() {
                 </span>
               </button>
               <span className="text-xs text-fog">
-                Or jump straight to any live station below:
+                Or jump straight to any of the 9 live stations:
               </span>
             </div>
 
@@ -600,7 +653,13 @@ interface ClickBurst {
 
 export function OtherWorldDirector() {
   const router = useRouter();
+  const routerRef = useRef(router);
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+
   const [active, setActive] = useState(false);
+  const [completed, setCompleted] = useState(false);
   const [chapter, setChapter] = useState(0);
   const [paused, setPaused] = useState(false);
   const [line, setLine] = useState(CHAPTERS[0].initialLine);
@@ -633,6 +692,7 @@ export function OtherWorldDirector() {
   const stopTour = useCallback(() => {
     runIdRef.current += 1;
     setActive(false);
+    setCompleted(false);
     setPaused(false);
     cursorTargetElRef.current = null;
     if (typeof document !== "undefined") {
@@ -641,33 +701,46 @@ export function OtherWorldDirector() {
     cleanupStageAttributes();
   }, [cleanupStageAttributes]);
 
-  const startTour = useCallback(
-    (startChapter = 0) => {
-      const idx = Math.max(0, Math.min(CHAPTERS.length - 1, startChapter));
-      runIdRef.current += 1;
-      if (typeof window !== "undefined") {
-        cursorPosRef.current = {
-          x: window.innerWidth * 0.5,
-          y: window.innerHeight * 0.45,
-        };
-        cursorFallbackRef.current = {
-          x: window.innerWidth * 0.5,
-          y: window.innerHeight * 0.45,
-        };
-      }
-      portalWaveBornRef.current = performance.now();
-      if (typeof document !== "undefined") {
-        document.documentElement.setAttribute("data-owp-tour", "1");
-      }
-      setPaused(false);
-      setChapter(idx);
-      setLine(CHAPTERS[idx].initialLine);
-      setMood(CHAPTERS[idx].initialMood);
-      setStepProgress(0.08);
-      setActive(true);
-    },
-    []
-  );
+  const finishTourToFinale = useCallback(() => {
+    runIdRef.current += 1;
+    cursorTargetElRef.current = null;
+    if (typeof document !== "undefined") {
+      document.documentElement.removeAttribute("data-owp-tour");
+    }
+    cleanupStageAttributes();
+    setStepProgress(1);
+    setMood("excited");
+    setLine(
+      "You've toured all three wings, played all six games, and verified the cryptographic proof. Where would you like to play first?"
+    );
+    setCompleted(true);
+  }, [cleanupStageAttributes]);
+
+  const startTour = useCallback((startChapter = 0) => {
+    const idx = Math.max(0, Math.min(CHAPTERS.length - 1, startChapter));
+    runIdRef.current += 1;
+    if (typeof window !== "undefined") {
+      cursorPosRef.current = {
+        x: window.innerWidth * 0.5,
+        y: window.innerHeight * 0.45,
+      };
+      cursorFallbackRef.current = {
+        x: window.innerWidth * 0.5,
+        y: window.innerHeight * 0.45,
+      };
+    }
+    portalWaveBornRef.current = performance.now();
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-owp-tour", "1");
+    }
+    setCompleted(false);
+    setPaused(false);
+    setChapter(idx);
+    setLine(CHAPTERS[idx].initialLine);
+    setMood(CHAPTERS[idx].initialMood);
+    setStepProgress(0.08);
+    setActive(true);
+  }, []);
 
   // Listen for homepage trigger button & Esc key
   useEffect(() => {
@@ -690,7 +763,7 @@ export function OtherWorldDirector() {
 
   // 60fps Transparent Comet Cursor & Shockwave Overlay Canvas Loop
   useEffect(() => {
-    if (!active) return;
+    if (!active || completed) return;
     const canvas = overlayCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -892,11 +965,11 @@ export function OtherWorldDirector() {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, [active]);
+  }, [active, completed]);
 
-  // Single-owner async/await choreography runner (depends ONLY on [active, chapter])
+  // Single-owner async/await choreography runner
   useEffect(() => {
-    if (!active) return;
+    if (!active || completed) return;
 
     const myRunId = ++runIdRef.current;
     const isCancelled = () => runIdRef.current !== myRunId;
@@ -944,15 +1017,43 @@ export function OtherWorldDirector() {
       );
       for (const el of candidates) {
         if (el.closest("[data-owp-dock]")) continue;
+        if (el.hasAttribute("data-owp-trigger")) continue;
         const label = (el.textContent || "").trim().toLowerCase();
         if (label.includes(needle)) return el;
       }
       return null;
     };
 
+    const waitForButtonByText = async (
+      textSnippet: string,
+      root: ParentNode = document,
+      timeoutMs = 3600
+    ): Promise<HTMLElement | null> => {
+      let waited = 0;
+      while (waited < timeoutMs) {
+        if (isCancelled()) return null;
+        const found = findButtonByText(textSnippet, root);
+        if (found && !found.hasAttribute("disabled")) return found;
+        await new Promise((r) => setTimeout(r, 60));
+        waited += 60;
+      }
+      return findButtonByText(textSnippet, root);
+    };
+
+    const scrollElementIntoComfortZone = (el: HTMLElement) => {
+      const rect = el.getBoundingClientRect();
+      const targetScrollY = Math.max(
+        0,
+        window.scrollY +
+          rect.top -
+          Math.max(76, (window.innerHeight - Math.min(rect.height, 560)) * 0.34)
+      );
+      window.scrollTo({ top: targetScrollY, behavior: "smooth" });
+    };
+
     const aimAndClick = async (
       el: HTMLElement | null,
-      waitBeforeClickMs = 520,
+      waitBeforeClickMs = 540,
       triggerClick = true
     ) => {
       if (!el || isCancelled()) return false;
@@ -971,9 +1072,9 @@ export function OtherWorldDirector() {
       selector: string
     ): Promise<HTMLElement | null> => {
       if (window.location.pathname !== route) {
-        router.push(route);
+        routerRef.current.push(route);
       }
-      for (let i = 0; i < 90; i++) {
+      for (let i = 0; i < 100; i++) {
         if (isCancelled()) return null;
         if (window.location.pathname === route) {
           const el = document.querySelector<HTMLElement>(selector);
@@ -982,6 +1083,14 @@ export function OtherWorldDirector() {
         await new Promise((r) => setTimeout(r, 60));
       }
       return document.querySelector<HTMLElement>("main");
+    };
+
+    const ensureSandboxActive = async (stageEl: HTMLElement) => {
+      const sandboxBtn = await waitForButtonByText("sandbox", stageEl, 2500);
+      if (sandboxBtn && !sandboxBtn.classList.contains("active")) {
+        await aimAndClick(sandboxBtn, 400, true);
+        await sleep(180);
+      }
     };
 
     const runChapter = async () => {
@@ -995,18 +1104,13 @@ export function OtherWorldDirector() {
       if (!stageEl || isCancelled()) return;
 
       stageEl.setAttribute("data-owp-stage", "active");
-      const rect = stageEl.getBoundingClientRect();
-      const targetScrollY = Math.max(
-        0,
-        window.scrollY + rect.top - Math.max(72, (window.innerHeight - Math.min(rect.height, 560)) * 0.35)
-      );
-      window.scrollTo({ top: targetScrollY, behavior: "smooth" });
+      scrollElementIntoComfortZone(stageEl);
       cursorTargetElRef.current = stageEl;
-      if (!(await sleep(520))) return;
+      if (!(await sleep(550))) return;
 
       if (chapter === 0) {
-        // CHAPTER 1: Treasury Desk (#buy)
-        setStepProgress(0.35);
+        // CHAPTER 01: Treasury Desk + Three Wings + 8-Game Slate (/)
+        setStepProgress(0.28);
         const preset100k = findButtonByText("100k", stageEl);
         const raydiumBtn = findButtonByText("raydium", stageEl);
         if (preset100k) {
@@ -1020,109 +1124,166 @@ export function OtherWorldDirector() {
             "The House Desk connects directly to Solana & Raydium liquidity — one wallet backs every table and bounty."
           );
           setMood("focused");
-          await aimAndClick(raydiumBtn, 620, false);
-        }
-        if (!(await sleep(900))) return;
-
-        setStepProgress(0.75);
-        const preset250k = findButtonByText("250k", stageEl);
-        const arcadeWingBtn = findButtonByText("enter", document);
-        if (preset250k) {
-          setLine(
-            "Scale up to 250k $OWP — zero middlemen, one house wallet funding every game and bounty."
-          );
-          setMood("impressed");
-          await aimAndClick(preset250k, 580, true);
-        } else if (arcadeWingBtn) {
-          setLine(
-            "Three wings — Arcade, Auction House, and Bounty Board — all settle through this same transparent treasury."
-          );
-          setMood("impressed");
-          await aimAndClick(arcadeWingBtn, 620, false);
+          await aimAndClick(raydiumBtn, 650, false);
         }
         if (!(await sleep(1100))) return;
+
+        // Scroll to the Three Wings & Game Slate
+        setStepProgress(0.65);
+        const bountyLink =
+          findButtonByText("open board", document) ||
+          findButtonByText("view lots", document);
+        if (bountyLink) {
+          const wingCard = bountyLink.closest<HTMLElement>(".panel, article, div") || bountyLink;
+          scrollElementIntoComfortZone(wingCard);
+          if (!(await sleep(480))) return;
+          setLine(
+            "Three interconnected wings — The Arcade, The Auction House, and The Bounty Board — all settle from your in-app balance."
+          );
+          setMood("impressed");
+          await aimAndClick(bountyLink, 680, false);
+        }
+        if (!(await sleep(1350))) return;
       } else if (chapter === 1) {
-        // CHAPTER 2: Frog Flip (/games/flip)
-        setStepProgress(0.25);
-        const sandboxBtn = findButtonByText("sandbox", stageEl);
-        if (sandboxBtn && !sandboxBtn.classList.contains("active")) {
-          await aimAndClick(sandboxBtn, 420, true);
-        }
+        // CHAPTER 02: Frog Flip (/games/flip) — 3x Streak + Cash Out
+        setStepProgress(0.2);
+        await ensureSandboxActive(stageEl);
 
-        const frogSideBtn = findButtonByText("frog", stageEl);
+        const frogSideBtn = await waitForButtonByText("frog", stageEl, 2000);
         if (frogSideBtn) {
-          await aimAndClick(frogSideBtn, 450, true);
+          await aimAndClick(frogSideBtn, 420, true);
         }
 
-        setStepProgress(0.5);
+        setStepProgress(0.38);
         const flipBtn =
-          findButtonByText("flip (practice)", stageEl) ||
+          (await waitForButtonByText("flip (practice)", stageEl, 2500)) ||
           findButtonByText("flip it", stageEl);
         if (flipBtn) {
-          setLine("Calling Frog on the practice table — let's send the coin spinning!");
+          setLine("Calling 🐸 Frog on the practice table — let's send the first coin spinning!");
           setMood("focused");
           await aimAndClick(flipBtn, 560, true);
         }
 
-        // Wait for 700ms practice timeout + 1150ms coin spin animation
-        if (!(await sleep(2050))) return;
-
-        setStepProgress(0.8);
-        const doubleBtn = findButtonByText("double or nothing", stageEl);
-        if (doubleBtn) {
-          setLine(
-            "First flip landed Frog! Let's press the pot with Double or Nothing for a 2× streak."
-          );
+        // Wait for Double or Nothing button after Win #1
+        const doubleBtn1 = await waitForButtonByText("double or nothing", stageEl, 3500);
+        setStepProgress(0.62);
+        if (doubleBtn1) {
+          setLine("First flip landed Frog! Let's press the pot with Double or Nothing for a 2× streak.");
           setMood("excited");
-          await aimAndClick(doubleBtn, 620, true);
-          if (!(await sleep(2050))) return;
+          await aimAndClick(doubleBtn1, 640, true);
         }
-        setLine("🔥 2× streak on the board! Cash out anytime or keep letting it ride.");
-        setMood("excited");
-        if (!(await sleep(900))) return;
+
+        // Wait for Double or Nothing button after Win #2 -> press for 3x streak!
+        const doubleBtn2 = await waitForButtonByText("double or nothing", stageEl, 3500);
+        setStepProgress(0.82);
+        if (doubleBtn2) {
+          setLine("🔥 2 in a row! Let's press it one more time for a 3× streak!");
+          setMood("excited");
+          await aimAndClick(doubleBtn2, 640, true);
+        }
+
+        // Wait for Cash Out button after Win #3 and bank the pot!
+        const cashOutBtn = await waitForButtonByText("cash out", stageEl, 3500);
+        setStepProgress(0.95);
+        if (cashOutBtn) {
+          setLine("🔥 3× streak! Now watch me click Cash Out to lock the winnings into our balance.");
+          setMood("impressed");
+          await aimAndClick(cashOutBtn, 720, true);
+        }
+        if (!(await sleep(1100))) return;
       } else if (chapter === 2) {
-        // CHAPTER 3: Pond Dice (/games/dice)
-        setStepProgress(0.3);
-        const sandboxBtn = findButtonByText("sandbox", stageEl);
-        if (sandboxBtn && !sandboxBtn.classList.contains("active")) {
-          await aimAndClick(sandboxBtn, 420, true);
-        }
+        // CHAPTER 03: Pond Dice (/games/dice) — 65% Safe Roll + 24% 4.00x Sniper Roll
+        setStepProgress(0.2);
+        await ensureSandboxActive(stageEl);
 
         const slider = stageEl.querySelector<HTMLInputElement>("input[type='range']");
         if (slider) {
           cursorTargetElRef.current = slider;
-          setLine("Dialing the target line to 30% — boosting our payout multiplier to 3.23×.");
+          setLine("First, let's set a wide 65% win zone (1.48× multiplier) for a high-probability roll.");
           setMood("focused");
-          for (const val of [44, 36, 30]) {
-            if (!(await sleep(180))) return;
+          for (const val of [55, 60, 65]) {
+            if (!(await sleep(160))) return;
             window.dispatchEvent(new CustomEvent("owp:dice-target", { detail: val }));
           }
           spawnClickBurst(slider);
         }
 
-        if (!(await sleep(450))) return;
-        setStepProgress(0.65);
-        const rollBtn =
-          findButtonByText("roll (practice)", stageEl) ||
+        const rollBtn1 =
+          (await waitForButtonByText("roll (practice)", stageEl, 2500)) ||
           findButtonByText("roll", stageEl);
-        if (rollBtn) {
-          setLine("Rolling under 30 for a 3.23× payout…");
-          await aimAndClick(rollBtn, 560, true);
+        setStepProgress(0.45);
+        if (rollBtn1) {
+          await aimAndClick(rollBtn1, 520, true);
+        }
+        if (!(await sleep(1100))) return;
+
+        // Second roll: tighten slider to 24% for a 4.00x multiplier!
+        setStepProgress(0.68);
+        if (slider) {
+          cursorTargetElRef.current = slider;
+          setLine("Easy win! Now watch me tighten the target line to 24% for a 4.00× payout multiplier.");
+          setMood("excited");
+          for (const val of [48, 34, 24]) {
+            if (!(await sleep(170))) return;
+            window.dispatchEvent(new CustomEvent("owp:dice-target", { detail: val }));
+          }
+          spawnClickBurst(slider);
+        }
+
+        const rollBtn2 =
+          (await waitForButtonByText("roll (practice)", stageEl, 2500)) ||
+          findButtonByText("roll", stageEl);
+        setStepProgress(0.88);
+        if (rollBtn2) {
+          setLine("Rolling under 24 for a 4.00× hit…");
+          await aimAndClick(rollBtn2, 560, true);
+        }
+        if (!(await sleep(1250))) return;
+        setLine("Boom — 4.00× landed right inside the green zone! Every roll is SHA-256 verifiable.");
+        setMood("excited");
+        if (!(await sleep(1100))) return;
+      } else if (chapter === 3) {
+        // CHAPTER 04: Single-Deck Blackjack (/games/blackjack) — Deal + Double to 21!
+        setStepProgress(0.25);
+        await ensureSandboxActive(stageEl);
+
+        const dealBtn =
+          (await waitForButtonByText("deal (practice)", stageEl, 2500)) ||
+          findButtonByText("deal", stageEl);
+        if (dealBtn) {
+          setLine("Dealing a hand of single-deck Blackjack on the etched emerald felt…");
+          setMood("focused");
+          await aimAndClick(dealBtn, 580, true);
+        }
+
+        if (!(await sleep(900))) return;
+        setStepProgress(0.65);
+        const doubleBtn =
+          (await waitForButtonByText("double", stageEl, 2500)) ||
+          findButtonByText("hit", stageEl);
+        if (doubleBtn) {
+          setLine(
+            "We hold 12 against the dealer's 6 — let's Double Down to draw one card for 21!"
+          );
+          setMood("excited");
+          await aimAndClick(doubleBtn, 680, true);
         }
 
         if (!(await sleep(1100))) return;
         setStepProgress(0.92);
-        setLine("Right inside the green win zone! Every live roll is SHA-256 verifiable.");
+        setLine(
+          "21 on the felt and the dealer busts at 24 — doubled payout banked! Every 52-card shoe is verifiable."
+        );
         setMood("excited");
-        if (!(await sleep(1150))) return;
-      } else if (chapter === 3) {
-        // CHAPTER 4: 60 Hz Hopper (/games/hopper)
-        setStepProgress(0.3);
+        if (!(await sleep(1400))) return;
+      } else if (chapter === 4) {
+        // CHAPTER 05: 60 Hz Hopper (/games/hopper) — Full Road Crossing!
+        setStepProgress(0.25);
         const startBtn =
-          findButtonByText("start hopping", stageEl) ||
+          (await waitForButtonByText("start hopping", stageEl, 2500)) ||
           findButtonByText("hop again", stageEl);
         if (startBtn) {
-          setLine("Launching the 60 Hz Hopper canvas — watch the frog thread live traffic!");
+          setLine("Starting 60 Hz Hopper — watch our lookahead autopilot dodge cars across all 10 lanes!");
           setMood("focused");
           await aimAndClick(startBtn, 540, true);
         }
@@ -1132,24 +1293,154 @@ export function OtherWorldDirector() {
           cursorTargetElRef.current = canvasEl;
         }
 
-        if (!(await sleep(1400))) return;
-        setStepProgress(0.75);
+        if (!(await sleep(2400))) return;
+        setStepProgress(0.65);
         setLine(
-          "Every forward lane scores progress points — server replay verifies the exact frame trace."
+          "Halfway across at the safe median — now threading the upper lanes toward the +10 goal verge!"
         );
         setMood("excited");
-        if (!(await sleep(1900))) return;
-      } else if (chapter === 4) {
-        // CHAPTER 5: Bounty Board (/bounties)
-        setStepProgress(0.45);
-        const firstCard =
-          document.querySelector<HTMLElement>("main .panel") || stageEl;
-        cursorTargetElRef.current = firstCard;
+        if (!(await sleep(2800))) return;
+        setStepProgress(0.95);
+        setLine("Full crossing completed! Server replay verifies every hop frame-by-frame.");
+        setMood("impressed");
+        if (!(await sleep(900))) return;
+      } else if (chapter === 5) {
+        // CHAPTER 06: Frogris (/games/frogris) — 60 Hz Falling Blocks!
+        setStepProgress(0.25);
+        const startBtn =
+          (await waitForButtonByText("start", stageEl, 2500)) ||
+          findButtonByText("play again", stageEl);
+        if (startBtn) {
+          setLine("Launching 60 Hz Frogris — watch the co-pilot rotate, align, and hard-drop glossy blocks!");
+          setMood("focused");
+          await aimAndClick(startBtn, 540, true);
+        }
+
+        const canvasEl = stageEl.querySelector<HTMLElement>("canvas");
+        if (canvasEl) {
+          cursorTargetElRef.current = canvasEl;
+        }
+
+        if (!(await sleep(2300))) return;
+        setStepProgress(0.68);
         setLine(
-          "Live Bounty Pools unlock automatically as rounds settle. Play any game or explore on your own!"
+          "Every piece is seeded from the signed run token — ghost outlines show the exact landing slot."
+        );
+        setMood("excited");
+        if (!(await sleep(2500))) return;
+      } else if (chapter === 6) {
+        // CHAPTER 07: Worm Frog (/games/worm) — Fly-Hunting Serpent!
+        setStepProgress(0.25);
+        const startBtn =
+          (await waitForButtonByText("start slithering", stageEl, 2500)) ||
+          findButtonByText("slither again", stageEl);
+        if (startBtn) {
+          setLine("Launching Worm Frog — watch the serpent lock onto flies across the checkerboard well!");
+          setMood("focused");
+          await aimAndClick(startBtn, 540, true);
+        }
+
+        const canvasEl = stageEl.querySelector<HTMLElement>("canvas");
+        if (canvasEl) {
+          cursorTargetElRef.current = canvasEl;
+        }
+
+        if (!(await sleep(2300))) return;
+        setStepProgress(0.7);
+        setLine(
+          "Every fly scores +10 and accelerates the pace — weekly top scores split the $OWP prize pool!"
+        );
+        setMood("excited");
+        if (!(await sleep(2500))) return;
+      } else if (chapter === 7) {
+        // CHAPTER 08: Bounty Board (/bounties) -> Auction House (/auctions)
+        setStepProgress(0.25);
+        const flipTab = findButtonByText("frog flip", stageEl);
+        if (flipTab) {
+          setLine(
+            "On the Bounty Board, every game has its own rolling 7-day leaderboard and automatic $OWP prize pot."
+          );
+          setMood("focused");
+          await aimAndClick(flipTab, 560, true);
+        }
+        if (!(await sleep(900))) return;
+
+        const bjTab = findButtonByText("blackjack", stageEl);
+        if (bjTab) {
+          await aimAndClick(bjTab, 480, true);
+        }
+        if (!(await sleep(900))) return;
+
+        // Now visit Wing II: The Auction House (/auctions)
+        setStepProgress(0.65);
+        setLine(
+          "Now visiting Wing II — The Auction House, where escrowed $OWP bids and two-minute anti-snipe rules protect every lot."
         );
         setMood("impressed");
-        if (!(await sleep(2200))) return;
+        const auctionStage = await waitForRouteAndStage("/auctions", "main");
+        if (!auctionStage || isCancelled()) return;
+
+        const endingChip = findButtonByText("ending soon", auctionStage);
+        if (endingChip) {
+          await aimAndClick(endingChip, 560, true);
+        }
+        if (!(await sleep(800))) return;
+        const liveChip = findButtonByText("live ·", auctionStage);
+        if (liveChip) {
+          await aimAndClick(liveChip, 480, true);
+        }
+        if (!(await sleep(1100))) return;
+      } else if (chapter === 8) {
+        // CHAPTER 09: Provable Fairness (/fairness) -> Live Treasury (/treasury)
+        setStepProgress(0.22);
+        const randomizeBtn = findButtonByText("randomize", stageEl);
+        if (randomizeBtn) {
+          setLine(
+            "Half of every roll is your browser's Client Seed — click Randomize anytime after the House commits."
+          );
+          setMood("focused");
+          await aimAndClick(randomizeBtn, 560, true);
+        }
+        if (!(await sleep(800))) return;
+
+        const verifierEl = document.getElementById("verifier");
+        if (verifierEl) {
+          verifierEl.setAttribute("data-owp-stage", "active");
+          scrollElementIntoComfortZone(verifierEl);
+          window.dispatchEvent(new Event("owp:fairness-demo"));
+          if (!(await sleep(500))) return;
+
+          setStepProgress(0.52);
+          const recomputeBtn = findButtonByText("recompute roll", verifierEl);
+          if (recomputeBtn) {
+            setLine(
+              "Running the Independent Verifier in your browser — computing HMAC-SHA256(serverSeed, clientSeed:nonce)…"
+            );
+            setMood("excited");
+            await aimAndClick(recomputeBtn, 560, true);
+          }
+          if (!(await sleep(900))) return;
+
+          const deriveBtn = findButtonByText("derive blackjack deck", verifierEl);
+          if (deriveBtn) {
+            setLine(
+              "And re-deriving all 52 cards of the committed Blackjack shoe right here in the browser!"
+            );
+            await aimAndClick(deriveBtn, 540, true);
+          }
+          if (!(await sleep(1300))) return;
+        }
+
+        // Finally visit /treasury for the grand finale
+        setStepProgress(0.85);
+        setLine(
+          "Finally, The Treasury page streams live Solana vault balances, deposits, and automatic prize payouts."
+        );
+        setMood("impressed");
+        const treasuryStage = await waitForRouteAndStage("/treasury", "main");
+        if (!treasuryStage || isCancelled()) return;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (!(await sleep(1600))) return;
       }
 
       setStepProgress(1);
@@ -1158,12 +1449,12 @@ export function OtherWorldDirector() {
       if (chapter < CHAPTERS.length - 1) {
         setChapter((c) => c + 1);
       } else {
-        stopTour();
+        finishTourToFinale();
       }
     };
 
     runChapter();
-  }, [active, chapter, cleanupStageAttributes, router, stopTour]);
+  }, [active, chapter, completed, cleanupStageAttributes, finishTourToFinale]);
 
   if (!active) return null;
 
@@ -1172,18 +1463,20 @@ export function OtherWorldDirector() {
   return (
     <>
       {/* Full-viewport transparent 60fps Comet Cursor & Click Sparks Canvas */}
-      <canvas
-        ref={overlayCanvasRef}
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 w-screen h-screen z-50"
-        style={{ width: "100vw", height: "100vh" }}
-      />
+      {!completed && (
+        <canvas
+          ref={overlayCanvasRef}
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 w-screen h-screen z-50"
+          style={{ width: "100vw", height: "100vh" }}
+        />
+      )}
 
       {/* Compact Floating Glass Story Dock — bottom-right, never blocks the site */}
       <aside
         data-owp-dock="1"
         aria-label="Other World Live Co-Pilot"
-        className="fixed bottom-4 right-4 z-50 w-[min(92vw,430px)] rounded-2xl border p-4 shadow-2xl transition-all"
+        className="fixed bottom-4 right-4 z-50 w-[min(92vw,448px)] rounded-2xl border p-4 shadow-2xl transition-all"
         style={{
           background:
             "linear-gradient(165deg, oklch(0.13 0.014 165 / 0.94), oklch(0.09 0.01 265 / 0.96))",
@@ -1197,12 +1490,16 @@ export function OtherWorldDirector() {
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-[0.65rem] mono uppercase tracking-wider text-neon">
-              <span className="whitespace-nowrap shrink-0">Chapter {meta.code} / 05</span>
+              <span className="whitespace-nowrap shrink-0">
+                {completed ? "Tour Complete · 09 / 09" : `Chapter ${meta.code} / 09`}
+              </span>
               <span className="text-fog shrink-0">·</span>
-              <span className="text-gold truncate">{meta.wing}</span>
+              <span className="text-gold truncate">
+                {completed ? "The House Is Yours" : meta.wing}
+              </span>
             </div>
             <h3 className="display text-base text-frost truncate">
-              {meta.title}
+              {completed ? "Ready to Enter the House" : meta.title}
             </h3>
           </div>
 
@@ -1234,19 +1531,57 @@ export function OtherWorldDirector() {
           </p>
         </div>
 
+        {completed && (
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => {
+                stopTour();
+                routerRef.current.push("/games");
+              }}
+              className="btn btn-primary !py-1.5 !px-3.5 text-xs"
+            >
+              Enter the Arcade →
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                stopTour();
+                routerRef.current.push("/bounties");
+              }}
+              className="btn btn-ghost !py-1.5 !px-3 text-xs"
+            >
+              Bounty Board
+            </button>
+            <button
+              type="button"
+              onClick={() => startTour(0)}
+              className="btn btn-ghost !py-1.5 !px-3 text-xs"
+            >
+              Replay Tour ↻
+            </button>
+          </div>
+        )}
+
         {/* Chapter Progress Pills + Transport Controls */}
         <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/10">
           <div className="flex items-center gap-1 flex-1">
             {CHAPTERS.map((ch) => {
-              const isCurrent = ch.index === chapter;
-              const isDone = ch.index < chapter;
+              const isCurrent = !completed && ch.index === chapter;
+              const isDone = completed || ch.index < chapter;
               return (
                 <button
                   key={ch.code}
                   type="button"
-                  onClick={() => setChapter(ch.index)}
+                  onClick={() => {
+                    if (completed) {
+                      startTour(ch.index);
+                    } else {
+                      setChapter(ch.index);
+                    }
+                  }}
                   title={`${ch.code} · ${ch.shortLabel}`}
-                  className="group relative h-6 flex-1 rounded-md border overflow-hidden transition-all text-[0.62rem] mono"
+                  className="group relative h-6 flex-1 rounded-md border overflow-hidden transition-all text-[0.58rem] mono"
                   style={{
                     borderColor: isCurrent
                       ? "oklch(0.78 0.11 150 / 0.65)"
@@ -1286,8 +1621,14 @@ export function OtherWorldDirector() {
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
-              disabled={chapter === 0}
-              onClick={() => setChapter((c) => Math.max(0, c - 1))}
+              disabled={chapter === 0 && !completed}
+              onClick={() => {
+                if (completed) {
+                  startTour(CHAPTERS.length - 1);
+                } else {
+                  setChapter((c) => Math.max(0, c - 1));
+                }
+              }}
               aria-label="Previous chapter"
               className="w-7 h-6 rounded border border-white/10 text-xs text-fog hover:text-frost disabled:opacity-35"
             >
@@ -1304,10 +1645,10 @@ export function OtherWorldDirector() {
             <button
               type="button"
               onClick={() => {
-                if (chapter < CHAPTERS.length - 1) {
+                if (!completed && chapter < CHAPTERS.length - 1) {
                   setChapter((c) => c + 1);
                 } else {
-                  stopTour();
+                  finishTourToFinale();
                 }
               }}
               aria-label="Next chapter"

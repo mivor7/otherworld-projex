@@ -193,7 +193,7 @@ export default function HopperPage() {
             !runTokenRef.current &&
             typeof document !== "undefined" &&
             document.documentElement.hasAttribute("data-owp-tour");
-          if (isTour && queueRef.current.length === 0 && g.frame > 0 && g.frame % 13 === 0) {
+          if (isTour && queueRef.current.length === 0 && g.frame > 0 && g.frame % 7 === 0) {
             const cars = g.cars;
             const cellClear = (row: number, col: number) => {
               if (col < 0 || col >= HCOLS) return false;
@@ -201,8 +201,8 @@ export default function HopperPage() {
               const fx1 = (col + 1) * HCELL - 2;
               for (const c of cars) {
                 if (c.lane !== row) continue;
-                const cx0 = c.x + c.speed * 4 - 10;
-                const cx1 = c.x + c.len + c.speed * 4 + 10;
+                const cx0 = c.x + c.speed * 3 - 8;
+                const cx1 = c.x + c.len + c.speed * 3 + 8;
                 if (fx1 > cx0 && fx0 < cx1) return false;
               }
               return true;
