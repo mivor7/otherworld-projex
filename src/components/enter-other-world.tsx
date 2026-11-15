@@ -753,8 +753,8 @@ export function OtherWorldDirector() {
         }
       }
 
-      // Draw subtle corner brackets around active target button
-      if (targetRect) {
+      // Draw subtle corner brackets around active target button/control (skip large containers)
+      if (targetRect && targetRect.width < 340 && targetRect.height < 96) {
         const pad = 6;
         const x0 = targetRect.left - pad;
         const y0 = targetRect.top - pad;
@@ -762,7 +762,7 @@ export function OtherWorldDirector() {
         const y1 = targetRect.bottom + pad;
         const cLen = Math.min(10, targetRect.height * 0.35);
 
-        ctx.strokeStyle = "oklch(0.82 0.12 150 / 0.72)";
+        ctx.strokeStyle = "oklch(0.82 0.12 150 / 0.78)";
         ctx.lineWidth = 1.6;
         ctx.beginPath();
         ctx.moveTo(x0, y0 + cLen);
@@ -1008,25 +1008,39 @@ export function OtherWorldDirector() {
         // CHAPTER 1: Treasury Desk (#buy)
         setStepProgress(0.35);
         const preset100k = findButtonByText("100k", stageEl);
+        const raydiumBtn = findButtonByText("raydium", stageEl);
         if (preset100k) {
           setLine(
-            "Pick a quick $OWP preset on the live Jupiter Swap Quote desk — quotes stream straight from Solana liquidity."
+            "Pick a quick $OWP preset on the live swap desk — quotes stream straight from Solana liquidity."
           );
           setMood("focused");
           await aimAndClick(preset100k, 600, true);
+        } else if (raydiumBtn) {
+          setLine(
+            "The House Desk connects directly to Solana & Raydium liquidity — one wallet backs every table and bounty."
+          );
+          setMood("focused");
+          await aimAndClick(raydiumBtn, 620, false);
         }
         if (!(await sleep(900))) return;
 
         setStepProgress(0.75);
         const preset250k = findButtonByText("250k", stageEl);
+        const arcadeWingBtn = findButtonByText("enter", document);
         if (preset250k) {
           setLine(
             "Scale up to 250k $OWP — zero middlemen, one house wallet funding every game and bounty."
           );
           setMood("impressed");
           await aimAndClick(preset250k, 580, true);
+        } else if (arcadeWingBtn) {
+          setLine(
+            "Three wings — Arcade, Auction House, and Bounty Board — all settle through this same transparent treasury."
+          );
+          setMood("impressed");
+          await aimAndClick(arcadeWingBtn, 620, false);
         }
-        if (!(await sleep(1300))) return;
+        if (!(await sleep(1100))) return;
       } else if (chapter === 1) {
         // CHAPTER 2: Frog Flip (/games/flip)
         setStepProgress(0.25);
@@ -1161,7 +1175,8 @@ export function OtherWorldDirector() {
       <canvas
         ref={overlayCanvasRef}
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-50"
+        className="pointer-events-none fixed inset-0 w-screen h-screen z-50"
+        style={{ width: "100vw", height: "100vh" }}
       />
 
       {/* Compact Floating Glass Story Dock — bottom-right, never blocks the site */}
@@ -1182,8 +1197,8 @@ export function OtherWorldDirector() {
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-[0.65rem] mono uppercase tracking-wider text-neon">
-              <span>Chapter {meta.code} / 05</span>
-              <span className="text-fog">·</span>
+              <span className="whitespace-nowrap shrink-0">Chapter {meta.code} / 05</span>
+              <span className="text-fog shrink-0">·</span>
               <span className="text-gold truncate">{meta.wing}</span>
             </div>
             <h3 className="display text-base text-frost truncate">
