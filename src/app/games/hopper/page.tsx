@@ -67,8 +67,9 @@ export default function HopperPage() {
     }
   }, [tourSim.active, hud.score]);
 
-  const displayedBoard = tourSim.active
-    ? computeRankedEntries(tourSim.bounties.hopper).entries.map((e) => ({
+  const simRanked = tourSim.active ? computeRankedEntries(tourSim.bounties.hopper) : null;
+  const displayedBoard = simRanked
+    ? simRanked.entries.map((e) => ({
         rank: e.rank,
         player: e.isYou ? `${e.wallet} · you` : e.wallet,
         score: e.value,
@@ -76,8 +77,8 @@ export default function HopperPage() {
     : board;
 
   const displayedSubmitMsg =
-    tourSim.active && tourSim.bounties.hopper.yourValue > 0
-      ? `Score ${tourSim.bounties.hopper.yourValue} verified (tour sim) — leading #1 for Hopper Weekly Crossing.`
+    tourSim.active && simRanked && tourSim.bounties.hopper.yourValue > 0
+      ? `Score ${tourSim.bounties.hopper.yourValue} verified (tour sim) — ranked #${simRanked.yourRank} of ${simRanked.entries.length} in Hopper Weekly Crossing.`
       : submitMsg;
 
   const loadBoard = useCallback(() => {

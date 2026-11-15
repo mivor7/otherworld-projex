@@ -85,8 +85,9 @@ export default function FrogrisPage() {
     }
   }, [tourSim.active, hud.score]);
 
-  const displayedBoard = tourSim.active
-    ? computeRankedEntries(tourSim.bounties.frogris).entries.map((e) => ({
+  const simRanked = tourSim.active ? computeRankedEntries(tourSim.bounties.frogris) : null;
+  const displayedBoard = simRanked
+    ? simRanked.entries.map((e) => ({
         rank: e.rank,
         player: e.isYou ? `${e.wallet} · you` : e.wallet,
         score: e.value,
@@ -94,8 +95,8 @@ export default function FrogrisPage() {
     : board;
 
   const displayedSubmitMsg =
-    tourSim.active && tourSim.bounties.frogris.yourValue > 0
-      ? `Score ${tourSim.bounties.frogris.yourValue} verified (tour sim) — climbing Frogris Weekly Grid.`
+    tourSim.active && simRanked && tourSim.bounties.frogris.yourValue > 0
+      ? `Score ${tourSim.bounties.frogris.yourValue} verified (tour sim) — ranked #${simRanked.yourRank} of ${simRanked.entries.length} in Frogris Weekly Grid.`
       : submitMsg;
 
   const loadBoard = useCallback(() => {

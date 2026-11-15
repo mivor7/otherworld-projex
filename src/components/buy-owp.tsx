@@ -26,6 +26,18 @@ type Price =
 
 const PRESETS = [0.05, 0.1, 0.5, 1];
 
+const SIM_FALLBACK_PRICE: Price = {
+  available: true,
+  decimals: 6,
+  lamportsPerWhole: "50000",
+  solPerToken: 0.00005,
+  source: "market",
+  virtualToken: null,
+  virtualSol: null,
+  houseOwp: 25_000_000,
+  treasuryWallet: "7n9FsimHouseVault91xK3qW8vZ",
+};
+
 function fmtPrice(sol: number): string {
   if (!Number.isFinite(sol) || sol <= 0) return "—";
   if (sol < 0.0001) return sol.toExponential(3);
@@ -67,13 +79,17 @@ export function BuyOwp() {
     return () => clearInterval(t);
   }, [load]);
 
-  const quote = price?.available ? price : null;
+  const effectivePrice: Price | null =
+    price?.available ? price : tourSim.active ? SIM_FALLBACK_PRICE : price;
+  const quote = effectivePrice?.available ? effectivePrice : null;
   const lamports = Number.isFinite(sol) && sol > 0 ? BigInt(Math.round(sol * 1_000_000_000)) : 0n;
   const estimate =
     quote && lamports > 0n ? Number(owpRawForQuote(lamports, quote)) / 10 ** quote.decimals : 0;
-  const treasury = quote?.treasuryWallet || price?.treasuryWallet || "";
+  const treasury = quote?.treasuryWallet || effectivePrice?.treasuryWallet || "";
   const soldOut = quote?.houseOwp === 0;
   const isSignedIn = me.signedIn || tourSim.active;
+  const effectiveMessage =
+    message && (!message.text.includes("(tour sim)") || tourSim.active) ? message : null;
   const canBuy =
     !!quote &&
     !soldOut &&
@@ -137,28 +153,28 @@ export function BuyOwp() {
           does not arrive in the same click.
         </p>
 
-        {!price ? (
+        {!effectivePrice ? (
           <p className="text-sm text-fog">Reading the Raydium price…</p>
-        ) : !price.available ? (
-          <Notice kind="info">{price.reason}</Notice>
+        ) : !effectivePrice.available ? (
+          <Notice kind="info">{effectivePrice.reason}</Notice>
         ) : (
           <>
             <div className="flex flex-wrap gap-6 mb-5">
               <div>
                 <div className="kicker !text-[0.6rem] mb-1">Price</div>
                 <div className="stat-number text-neon text-lg">
-                  {fmtPrice(price.solPerToken)} SOL
+                  {fmtPrice(effectivePrice.solPerToken)} SOL
                 </div>
                 <p className="text-xs text-fog mt-1">
-                  per $OWP · {price.source === "market" ? "Raydium market" : "Raydium launchpad"}
+                  per $OWP · {effectivePrice.source === "market" ? "Raydium market" : "Raydium launchpad"}
                 </p>
               </div>
               <div>
                 <div className="kicker !text-[0.6rem] mb-1">House wallet holds</div>
                 <div className="stat-number text-lg">
-                  {price.houseOwp == null
+                  {effectivePrice.houseOwp == null
                     ? "—"
-                    : price.houseOwp.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    : effectivePrice.houseOwp.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </div>
                 <p className="text-xs text-fog mt-1">$OWP ready to send</p>
               </div>
@@ -172,7 +188,7 @@ export function BuyOwp() {
                 </Notice>
               </div>
             )}
-            {price.houseOwp == null && (
+            {effectivePrice.houseOwp == null && (
               <div className="mb-4">
                 <Notice kind="info">
                   Could not read how much $OWP the house wallet holds, so buying
@@ -230,9 +246,9 @@ export function BuyOwp() {
           </>
         )}
 
-        {message && (
+        {effectiveMessage && (
           <div className="mt-4">
-            <Notice kind={message.kind}>{message.text}</Notice>
+            <Notice kind={effectiveMessage.kind}>{effectiveMessage.text}</Notice>
           </div>
         )}
 

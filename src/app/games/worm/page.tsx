@@ -84,8 +84,9 @@ export default function WormPage() {
     }
   }, [tourSim.active, hud.score]);
 
-  const displayedBoard = tourSim.active
-    ? computeRankedEntries(tourSim.bounties.worm).entries.map((e) => ({
+  const simRanked = tourSim.active ? computeRankedEntries(tourSim.bounties.worm) : null;
+  const displayedBoard = simRanked
+    ? simRanked.entries.map((e) => ({
         rank: e.rank,
         player: e.isYou ? `${e.wallet} · you` : e.wallet,
         score: e.value,
@@ -93,8 +94,8 @@ export default function WormPage() {
     : board;
 
   const displayedSubmitMsg =
-    tourSim.active && tourSim.bounties.worm.yourValue > 0
-      ? `Score ${tourSim.bounties.worm.yourValue} verified (tour sim) — ranked #1 in Worm Frog Serpent Race.`
+    tourSim.active && simRanked && tourSim.bounties.worm.yourValue > 0
+      ? `Score ${tourSim.bounties.worm.yourValue} verified (tour sim) — ranked #${simRanked.yourRank} of ${simRanked.entries.length} in Worm Frog Serpent Race.`
       : submitMsg;
 
   const loadBoard = useCallback(() => {

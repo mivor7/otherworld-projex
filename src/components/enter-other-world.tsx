@@ -1354,27 +1354,25 @@ export function OtherWorldDirector() {
       } else if (chapter === 7) {
         // CHAPTER 08: Homepage Bounty Board (/#owp-bounty-board) -> Auction House Bid
         setStepProgress(0.18);
-        const boardLedger =
-          document.getElementById("owp-bounty-board-ledger") || stageEl;
-        scrollElementIntoComfortZone(boardLedger);
+        setLine(
+          "Here on the Homepage Bounty Board, every game's fixed $OWP pot fills live as rounds are wagered."
+        );
+        setMood("focused");
+        if (!(await sleep(750))) return;
+
         const awardRow = stageEl.querySelector<HTMLElement>(
           "[data-owp-sim-award='1']"
         );
         if (awardRow) {
           cursorTargetElRef.current = awardRow;
           setLine(
-            "Right here on the Homepage Bounty Board — the Frog Flip pool hit 100%, settled to 1st place, and +1,850 $OWP landed in our balance!"
+            "And down in Recent Payouts — our Frog Flip streak filled the pool 100%, awarding +1,850 $OWP straight to our balance!"
           );
           setMood("excited");
           if (!(await sleep(750))) return;
           spawnClickBurst(awardRow);
-        } else {
-          setLine(
-            "Every wagered game and arcade run feeds the Homepage Bounty Board live, filling fixed $OWP prize pots automatically."
-          );
-          setMood("focused");
         }
-        if (!(await sleep(1300))) return;
+        if (!(await sleep(1250))) return;
 
         // Now visit Wing II: The Auction House (/auctions) and place a real-art simulated bid!
         setStepProgress(0.45);
@@ -1395,7 +1393,7 @@ export function OtherWorldDirector() {
         if (targetLotCard) {
           scrollElementIntoComfortZone(targetLotCard);
           setLine(
-            "Let's open the Croupier Frog Desk Plushie lot and put down a competitive live bid."
+            "Let's open the Croupier Frog Plush 1/1 prototype lot and place a competitive live bid."
           );
           setMood("focused");
           await aimAndClick(targetLotCard, 620, true);
@@ -1410,7 +1408,7 @@ export function OtherWorldDirector() {
           const plus10Btn = await waitForButtonByText("+10%", lotDetailStage, 2600);
           if (plus10Btn) {
             scrollElementIntoComfortZone(plus10Btn);
-            setLine("Bump our opening offer by +10% above the current high bid…");
+            setLine("Bump our opening offer +10% above the current high bid…");
             await aimAndClick(plus10Btn, 560, true);
           }
           if (!(await sleep(420))) return;
@@ -1418,7 +1416,7 @@ export function OtherWorldDirector() {
           setStepProgress(0.86);
           const bidBtn = await waitForButtonByText("place bid", lotDetailStage, 2600);
           if (bidBtn) {
-            setLine("Locking 1,320 $OWP into escrow — bid placed and leading the lot!");
+            setLine("Locking our +10% bid into escrow — confirmed and leading the Velvet Croupier Frog Plush lot!");
             setMood("excited");
             await aimAndClick(bidBtn, 600, true);
           }
