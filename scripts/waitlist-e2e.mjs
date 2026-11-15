@@ -161,6 +161,12 @@ try {
   });
   const aAfter = await a.api("/api/waitlist");
   check("referrer's count is visible to them", aAfter.data?.you?.referrals === 1);
+  check(
+    "topReferrers leaderboard lists masked wallets with referrals > 0",
+    Array.isArray(aAfter.data?.topReferrers) &&
+      aAfter.data.topReferrers.length >= 1 &&
+      aAfter.data.topReferrers.every((r) => r.wallet.includes("…") && r.referrals >= 1 && !("email" in r))
+  );
   const bRow = await prisma.waitlistEntry.findFirst({ where: { wallet: b.wallet } });
   check("referred member records who sent them", bRow.referredBy === a.wallet);
   check("positions are sequential, never reused", bRow.position === maxPos + 2);

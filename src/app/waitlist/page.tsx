@@ -12,6 +12,7 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useSession } from "@/components/session";
 import { PageHero } from "@/components/hero";
 import { Notice } from "@/components/ui";
+import { ShareOnX } from "@/components/share-x";
 import { CLIENT_CONFIG } from "@/lib/client-config";
 
 type You =
@@ -33,6 +34,7 @@ type Data = {
   open: boolean;
   minHoldRibbit: number;
   recent: { position: number; wallet: string; joinedAt: string }[];
+  topReferrers?: { rank: number; position: number; wallet: string; referrals: number }[];
   you: You | null;
   checked: Checked | null;
 };
@@ -253,9 +255,14 @@ export default function WaitlistPage() {
                       >
                         {copied ? "Copied" : "Copy"}
                       </button>
+                      <ShareOnX
+                        label="Post referral on X"
+                        path={`/waitlist?ref=${you.referralWallet}`}
+                        text={`Locked in spot #${you.position} on the Other World Projex ($OWP) early-holder Airdrop waitlist (${n(data.count)}/${n(data.goal)} claimed)! Hold ${n(data.minHoldRibbit)} $OWP on Solana & claim your place:`}
+                      />
                     </div>
                     <p className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
-                      Anyone who joins through your link counts as your referral.
+                      Anyone who joins through your link counts as your referral and climbs you up the recruiter board.
                     </p>
                   </div>
                 )}
@@ -340,6 +347,33 @@ export default function WaitlistPage() {
         </div>
 
         <aside className="panel p-5 h-fit lg:sticky lg:top-24">
+          {data?.topReferrers && data.topReferrers.length > 0 && (
+            <div className="mb-5 pb-4 border-b" style={{ borderColor: "var(--hairline)" }}>
+              <div className="kicker mb-1.5">Top referrers</div>
+              <p className="text-xs mb-3" style={{ color: "var(--text-dim)" }}>
+                Holders recruiting new {n(data.minHoldRibbit)}+ $OWP members.
+              </p>
+              <table className="w-full text-sm">
+                <tbody>
+                  {data.topReferrers.map((r) => (
+                    <tr key={`${r.position}-${r.wallet}`} className="table-row">
+                      <td className="py-1.5 pr-2 mono text-xs text-gold">
+                        #{r.rank}
+                      </td>
+                      <td className="py-1.5 pr-2 mono text-xs">
+                        {r.wallet}{" "}
+                        <span style={{ color: "var(--text-dim)" }}>(spot #{r.position})</span>
+                      </td>
+                      <td className="py-1.5 text-right stat-number text-neon text-xs">
+                        {r.referrals} ref{r.referrals === 1 ? "" : "s"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <div className="kicker mb-1.5">Latest to join</div>
           <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
             Wallets only — no names, no emails, ever.

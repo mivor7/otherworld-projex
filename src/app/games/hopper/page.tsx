@@ -12,6 +12,7 @@ import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { ArcadeBountyHeader } from "@/components/arcade-bounty-header";
 import { FirstVisitHint } from "@/components/first-visit-hint";
+import { ShareOnX } from "@/components/share-x";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE, CAR_COLORS } from "@/lib/arcade-palette";
 import {
@@ -457,6 +458,15 @@ export default function HopperPage() {
                 <button className="btn btn-primary text-lg px-10 py-3" onClick={start}>
                   {hud.started && hud.score > 0 ? "Hop again" : "Start hopping"}
                 </button>
+                {hud.started && hud.score > 0 && (
+                  <div className="mt-2.5">
+                    <ShareOnX
+                      label="Post score on X"
+                      path="/games/hopper"
+                      text={`Scored ${hud.score} pts (wave ${hud.level + 1}) on Hopper at Other World Projex! Replay-verified Solana arcade & weekly $OWP bounties:`}
+                    />
+                  </div>
+                )}
                 {!me.signedIn && (
                   <p className="text-fog text-xs mt-3 px-6 text-center">
                     Practice run — sign in and deposit $OWP to compete for prizes.

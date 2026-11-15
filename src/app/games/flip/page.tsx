@@ -12,6 +12,7 @@ import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
 import { FirstVisitHint } from "@/components/first-visit-hint";
+import { SandboxWinPrompt, ShareOnX } from "@/components/share-x";
 
 type FlipResult = {
   outcome: { landed: "frog" | "fly" };
@@ -335,6 +336,20 @@ export default function FlipPage() {
             </div>
           )}
 
+          {result && !sandbox && result.win && !busy && (
+            <div className="mt-4 flex justify-center">
+              <ShareOnX
+                label="Post win on X"
+                path="/games/flip"
+                text={`Won +${result.payout} $OWP on Frog Flip${
+                  streak > 1 ? ` (${streak} win streak)` : ""
+                } at Other World Projex! Provably-fair Solana tables & live $OWP bounty pots:`}
+              />
+            </div>
+          )}
+          {result && sandbox && result.win && !busy && (
+            <SandboxWinPrompt payout={result.payout} gameName="Frog Flip" />
+          )}
           {result && !sandbox && result.seedHash && (
             <p className="text-xs text-fog/70 mt-6 break-all">
               round nonce {result.nonce} · seed hash {result.seedHash.slice(0, 16)}… ·{" "}

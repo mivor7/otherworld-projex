@@ -13,6 +13,7 @@ import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
 import { FirstVisitHint } from "@/components/first-visit-hint";
+import { SandboxWinPrompt, ShareOnX } from "@/components/share-x";
 
 type DiceResult = {
   outcome: { rolled: number; target: number; multiplier: number };
@@ -308,6 +309,18 @@ export default function DicePage() {
           <div className="mt-4">
             <Notice kind="err">{error}</Notice>
           </div>
+        )}
+        {result && !sandbox && result.win && !rolling && (
+          <div className="mt-4 flex justify-center">
+            <ShareOnX
+              label="Post win on X"
+              path="/games/dice"
+              text={`Rolled ${result.outcome.rolled.toFixed(2)} under ${result.outcome.target} (${result.outcome.multiplier.toFixed(2)}x) for +${result.payout} $OWP on Pond Dice at Other World Projex!`}
+            />
+          </div>
+        )}
+        {result && sandbox && result.win && !rolling && (
+          <SandboxWinPrompt payout={result.payout} gameName="Pond Dice" />
         )}
         {result && !sandbox && result.seedHash && (
           <p className="text-xs text-fog/70 mt-6 text-center break-all">

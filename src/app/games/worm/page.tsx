@@ -10,6 +10,7 @@ import { useSession } from "@/components/session";
 import { Notice, SectionTitle } from "@/components/ui";
 import { ArcadeBountyHeader } from "@/components/arcade-bounty-header";
 import { FirstVisitHint } from "@/components/first-visit-hint";
+import { ShareOnX } from "@/components/share-x";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE } from "@/lib/arcade-palette";
 import {
@@ -537,6 +538,15 @@ export default function WormPage() {
                 <button className="btn btn-primary btn-lg px-9" onClick={start}>
                   {hud.started ? "Slither again" : "Start slithering"}
                 </button>
+                {hud.started && hud.score > 0 && (
+                  <div className="mt-2.5">
+                    <ShareOnX
+                      label="Post score on X"
+                      path="/games/worm"
+                      text={`Scored ${hud.score} pts (${hud.flies} flies) on Worm Frog at Other World Projex! Replay-verified Solana arcade & live $OWP bounties:`}
+                    />
+                  </div>
+                )}
                 {!me.signedIn && (
                   <p className="text-fog text-xs mt-3 px-8 text-center">
                     Practice run — sign in and deposit $OWP to compete for prizes.
