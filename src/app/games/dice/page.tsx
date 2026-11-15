@@ -47,6 +47,14 @@ export default function DicePage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!me.signedIn) setSandbox(true);
   }, [loading, me.signedIn]);
+  useEffect(() => {
+    const onTourTarget = (e: Event) => {
+      const n = Number((e as CustomEvent<number>).detail);
+      if (Number.isFinite(n)) setTarget(Math.max(DICE_MIN_TARGET, Math.min(DICE_MAX_TARGET, n)));
+    };
+    window.addEventListener("owp:dice-target", onTourTarget);
+    return () => window.removeEventListener("owp:dice-target", onTourTarget);
+  }, []);
   const practice = usePractice();
   const { seed: clientSeed } = useClientSeed();
   const house = useHouseConfig();

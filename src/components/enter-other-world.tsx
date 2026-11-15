@@ -2,1148 +2,1091 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 
-type SceneId = 0 | 1 | 2 | 3 | 4;
+export type TourStepIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
-interface SceneMeta {
-  id: SceneId;
+interface TourStop {
+  id: TourStepIndex;
   code: string;
-  shortTitle: string;
+  chipLabel: string;
   kicker: string;
   title: string;
-  speech: string;
-  caption: string;
-  highlights: { label: string; value: string }[];
-  scrollTarget?: string;
+  summary: string;
+  route: string;
+  targetSelector: string;
+  targetTag: string;
+  art: string;
+  metrics: { label: string; value: string }[];
 }
 
-const SCENES: SceneMeta[] = [
+export const TOUR_STOPS: TourStop[] = [
   {
     id: 0,
     code: "01",
-    shortTitle: "The Gate & $OWP",
-    kicker: "Act I · Sign In & Load Up",
-    title: "One wallet signature. Instant $OWP from the house.",
-    speech:
-      "Psst! Welcome to the Other World. Watch my cursor: one free wallet signature opens the vault, and swapping SOL sends $OWP straight into your playable balance!",
-    caption:
-      "Connect Phantom or Solflare with a gasless message signature — no email, no password. Buy $OWP with SOL at the live Raydium spot price or deposit $OWP 1:1 into your balance.",
-    highlights: [
-      { label: "Sign-in", value: "Free message sig" },
-      { label: "Swap rate", value: "Live Raydium spot" },
-      { label: "Deposit credit", value: "1 : 1 $OWP" },
+    chipLabel: "Treasury Desk",
+    kicker: "Stop 01 / 06 · Instant $OWP Desk",
+    title: "Gasless wallet sign-in & live Raydium treasury swaps",
+    summary:
+      "Connect with a free message signature — no email or password. Pay SOL on the homepage desk and the house wallet sends $OWP at the live Raydium spot price, or deposit $OWP 1:1 into your balance.",
+    route: "/",
+    targetSelector: "#buy .panel",
+    targetTag: "LIVE TARGET · TREASURY SWAP DESK",
+    art: "/art/hero-flagship.jpg",
+    metrics: [
+      { label: "Auth", value: "0 SOL message sig" },
+      { label: "Pricing", value: "Live Raydium spot" },
+      { label: "Deposits", value: "1 : 1 $OWP credit" },
     ],
-    scrollTarget: "#buy",
   },
   {
     id: 1,
     code: "02",
-    shortTitle: "Provably-Fair Tables",
-    kicker: "Act II · Wing I — The Tables",
-    title: "Flip the coin, roll the dice, verify every SHA-256 seed.",
-    speech:
-      "Now watch me call FROG for 500 $OWP! Every flip and dice roll commits a cryptographic SHA-256 hash before you bet — 96% RTP, zero house tricks. Click the coin to flip it yourself!",
-    caption:
-      "Wager $OWP directly from your balance on Frog Flip (1.92×), Pond Dice (up to 96×), and Blackjack (3:2 naturals). Every round publishes its server seed hash upfront so anyone can audit the math.",
-    highlights: [
+    chipLabel: "Frog Flip",
+    kicker: "Stop 02 / 06 · Wing I — Table 01",
+    title: "Frog Flip — 1.92× payouts & SHA-256 commit-reveal",
+    summary:
+      "Watch the co-pilot switch to the live practice table, call a side, and flip the 3D coin. Every round locks a SHA-256 server seed hash upfront at a published 4% house edge.",
+    route: "/games/flip",
+    targetSelector: ".game-stage",
+    targetTag: "LIVE DEMO · FROG FLIP TABLE",
+    art: "/art/owp_pump.png",
+    metrics: [
+      { label: "Win multiplier", value: "1.92× even odds" },
       { label: "House edge", value: "Published 4%" },
-      { label: "Frog Flip payout", value: "1.92× instant" },
-      { label: "Fairness", value: "SHA-256 commit-reveal" },
+      { label: "Verification", value: "SHA-256 seed hash" },
     ],
   },
   {
     id: 2,
     code: "03",
-    shortTitle: "Free Skill Arcade",
-    kicker: "Act III · Wing I — Free Arcade",
-    title: "Free-to-play classics protected by 60 Hz server replay.",
-    speech:
-      "Don't want to wager a single token? Hop into Hopper, Frogris, or Worm Frog for FREE! Every keystroke is re-simulated at 60 Hz on the server so bots get squashed and real skill wins.",
-    caption:
-      "Play Hopper, Frogris, and Worm Frog at zero cost. Your inputs are recorded and deterministically replayed by the server before a high score or weekly episode bounty is awarded.",
-    highlights: [
-      { label: "Entry cost", value: "100% Free" },
-      { label: "Anti-cheat", value: "60 Hz server replay" },
-      { label: "Rewards", value: "Weekly $OWP episodes" },
+    chipLabel: "Pond Dice",
+    kicker: "Stop 03 / 06 · Wing I — Table 02",
+    title: "Pond Dice — dial your own risk line & roll live",
+    summary:
+      "Watch the co-pilot sweep the win-zone line across the track and trigger live rolls. Lower targets multiply payouts up to 96× under the same cryptographic fairness protocol.",
+    route: "/games/dice",
+    targetSelector: ".game-stage",
+    targetTag: "LIVE DEMO · POND DICE TRACK",
+    art: "/art/art-dice.jpg",
+    metrics: [
+      { label: "Win zone", value: "2% – 94% custom" },
+      { label: "Max multiplier", value: "Up to 96.00×" },
+      { label: "Bounty feed", value: "50% of house edge" },
     ],
   },
   {
     id: 3,
     code: "04",
-    shortTitle: "Bounties & Auctions",
-    kicker: "Act IV · Wings II & III — The Loop",
-    title: "Half the house edge feeds live bounties that pay out automatically.",
-    speech:
-      "Here's the magic of the house: 50% of the edge from every table bet flows straight into that game's Bounty Pot! When the pot unlocks, top hunters get paid automatically — plus you can bid $OWP on 1/1 auctions!",
-    caption:
-      "Every wager grows the prize pool on that table. When a bounty's activity threshold is reached, the pool unlocks and credits every eligible winner pro-rata. In the Auction House, bids are escrowed in $OWP with instant outbid refunds.",
-    highlights: [
-      { label: "Pot rakeback", value: "50% of house edge" },
-      { label: "Bounty payout", value: "Auto pro-rata" },
-      { label: "Auction bids", value: "Escrowed + anti-snipe" },
+    chipLabel: "Free Hopper",
+    kicker: "Stop 04 / 06 · Wing I — Free Skill Arcade",
+    title: "Hopper — free-to-play with 60 Hz deterministic server replay",
+    summary:
+      "Watch the co-pilot start a live Hopper run and hop across traffic. Every arcade run (Hopper, Frogris, Worm Frog) is free to play and re-simulated at 60 Hz on the server so bots can never fake a score.",
+    route: "/games/hopper",
+    targetSelector: ".game-stage",
+    targetTag: "LIVE DEMO · 60 HZ HOPPER CANVAS",
+    art: "/art/owp_frogger.png",
+    metrics: [
+      { label: "Entry cost", value: "Free to play" },
+      { label: "Anti-cheat", value: "60 Hz server replay" },
+      { label: "Prizes", value: "Weekly $OWP pools" },
     ],
   },
   {
     id: 4,
     code: "05",
-    shortTitle: "Auto Cash-Out",
-    kicker: "Act V · Self-Custody & Withdrawals",
-    title: "Withdraw anytime. The same treasury wallet pays you on-chain.",
-    speech:
-      "Done hunting for the night? Click Withdraw and the house treasury sends your $OWP straight back to your Solana wallet automatically. No lockups, no waiting room. Ready to jump in?",
-    caption:
-      "Your balance is always yours to withdraw. Request a payout from your account drawer and the treasury signs and broadcasts the Solana transfer straight to your wallet.",
-    highlights: [
-      { label: "Withdrawals", value: "Automatic on-chain" },
-      { label: "Lockups", value: "None — anytime" },
-      { label: "Network", value: "Solana Mainnet" },
+    chipLabel: "Bounty Board",
+    kicker: "Stop 05 / 06 · Wing III — The Bounty Board",
+    title: "Self-filling $OWP pools that pay out automatically",
+    summary:
+      "Half of the house edge from every table bet feeds that game's live bounty pool. When the activity meter reaches 100%, the treasury credits every eligible hunter pro-rata, automatically.",
+    route: "/bounties",
+    targetSelector: "main",
+    targetTag: "LIVE TARGET · ACTIVE BOUNTY POOLS",
+    art: "/art/art-bounty.jpg",
+    metrics: [
+      { label: "Pool funding", value: "50% of table edge" },
+      { label: "Settlement", value: "Automatic pro-rata" },
+      { label: "Arcade boards", value: "7-day verified runs" },
+    ],
+  },
+  {
+    id: 5,
+    code: "06",
+    chipLabel: "Auction House",
+    kicker: "Stop 06 / 06 · Wing II & Self-Custody Vault",
+    title: "Escrowed $OWP auctions & instant automatic withdrawals",
+    summary:
+      "Bid on 1/1 lots and community consignments with automatic outbid refunds and 2-minute anti-snipe protection. Ready to cash out? Withdraw anytime and the same treasury wallet pays you on-chain.",
+    route: "/auctions",
+    targetSelector: "main",
+    targetTag: "LIVE TARGET · THE AUCTION HOUSE",
+    art: "/art/hero-auction.jpg",
+    metrics: [
+      { label: "Bidding", value: "Escrowed $OWP" },
+      { label: "Outbid refund", value: "Instant credit" },
+      { label: "Withdrawals", value: "Auto on-chain" },
     ],
   },
 ];
 
-const SCENE_DURATION_MS = 9500;
+const STOP_DURATION_MS = 11000;
 
-/**
- * Cartoon Frog Mascot SVG ("Ribbit the Bounty Hunter")
- * Pure inline SVG so it loads instantaneously with zero external asset risk.
- */
-function CartoonFrogMascot({
-  mood,
-  className = "w-20 h-20",
-}: {
-  mood: "wave" | "excited" | "gamer" | "rich" | "cool";
-  className?: string;
-}) {
-  return (
-    <svg
-      viewBox="0 0 120 120"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      {/* Subtle aura glow */}
-      <circle cx="60" cy="64" r="48" fill="url(#frogAura)" opacity="0.35" />
-
-      {/* Gold crown / hunter hat */}
-      <path
-        d="M38 30L46 16L60 26L74 16L82 30H38Z"
-        fill="#EAB308"
-        stroke="#18181B"
-        strokeWidth="3"
-        strokeLinejoin="round"
-      />
-      <circle cx="46" cy="15" r="3.5" fill="#FDE047" />
-      <circle cx="60" cy="12" r="4" fill="#4ADE80" />
-      <circle cx="74" cy="15" r="3.5" fill="#FDE047" />
-
-      {/* Left & Right Eye Domes */}
-      <circle
-        cx="41"
-        cy="42"
-        r="14"
-        fill="#22C55E"
-        stroke="#14532D"
-        strokeWidth="3.5"
-      />
-      <circle
-        cx="79"
-        cy="42"
-        r="14"
-        fill="#22C55E"
-        stroke="#14532D"
-        strokeWidth="3.5"
-      />
-
-      {/* Head / Body */}
-      <ellipse
-        cx="60"
-        cy="68"
-        rx="38"
-        ry="30"
-        fill="#22C55E"
-        stroke="#14532D"
-        strokeWidth="3.5"
-      />
-
-      {/* Cream Belly */}
-      <ellipse cx="60" cy="76" rx="26" ry="18" fill="#DCFCE7" />
-
-      {/* Eyes Whites */}
-      <circle cx="41" cy="42" r="9.5" fill="#FFFFFF" />
-      <circle cx="79" cy="42" r="9.5" fill="#FFFFFF" />
-
-      {/* Pupils / Expressions */}
-      {mood === "rich" ? (
-        <>
-          <text
-            x="41"
-            y="47"
-            textAnchor="middle"
-            fill="#15803D"
-            fontSize="14"
-            fontWeight="900"
-            fontFamily="monospace"
-          >
-            $
-          </text>
-          <text
-            x="79"
-            y="47"
-            textAnchor="middle"
-            fill="#15803D"
-            fontSize="14"
-            fontWeight="900"
-            fontFamily="monospace"
-          >
-            $
-          </text>
-        </>
-      ) : mood === "cool" ? (
-        <>
-          {/* Deal-with-it shades */}
-          <rect x="27" y="35" width="28" height="13" rx="3" fill="#09090B" />
-          <rect x="65" y="35" width="28" height="13" rx="3" fill="#09090B" />
-          <line
-            x1="55"
-            y1="40"
-            x2="65"
-            y2="40"
-            stroke="#09090B"
-            strokeWidth="3.5"
-          />
-          <line
-            x1="31"
-            y1="38"
-            x2="39"
-            y2="38"
-            stroke="#4ADE80"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          <line
-            x1="69"
-            y1="38"
-            x2="77"
-            y2="38"
-            stroke="#4ADE80"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </>
-      ) : (
-        <>
-          <circle cx="43" cy="42" r="5" fill="#09090B" />
-          <circle cx="81" cy="42" r="5" fill="#09090B" />
-          <circle cx="45" cy="39.5" r="2" fill="#FFFFFF" />
-          <circle cx="83" cy="39.5" r="2" fill="#FFFFFF" />
-        </>
-      )}
-
-      {/* Rosy Cheeks */}
-      <ellipse cx="31" cy="63" rx="5.5" ry="3.5" fill="#86EFAC" opacity="0.8" />
-      <ellipse cx="89" cy="63" rx="5.5" ry="3.5" fill="#86EFAC" opacity="0.8" />
-
-      {/* Mouth */}
-      {mood === "excited" || mood === "rich" ? (
-        <path
-          d="M42 62C46 74 74 74 78 62Z"
-          fill="#14532D"
-          stroke="#14532D"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-      ) : (
-        <path
-          d="M43 63Q60 74 77 63"
-          stroke="#14532D"
-          strokeWidth="4"
-          strokeLinecap="round"
-        />
-      )}
-
-      {/* Tongue on excited */}
-      {(mood === "excited" || mood === "rich") && (
-        <ellipse cx="60" cy="69" rx="8" ry="4.5" fill="#FB7185" />
-      )}
-
-      {/* Collar / Gold Chain */}
-      <path
-        d="M37 86Q60 97 83 86"
-        stroke="#EAB308"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeDasharray="5 4"
-      />
-      <circle
-        cx="60"
-        cy="93"
-        r="6"
-        fill="#EAB308"
-        stroke="#18181B"
-        strokeWidth="2"
-      />
-
-      <defs>
-        <radialGradient
-          id="frogAura"
-          cx="0"
-          cy="0"
-          r="1"
-          gradientUnits="userSpaceOnUse"
-          gradientTransform="translate(60 64) scale(48)"
-        >
-          <stop stopColor="#4ADE80" />
-          <stop offset="1" stopColor="#4ADE80" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-    </svg>
+export function launchOtherWorldTour(step: TourStepIndex = 0) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("owp:enter-other-world", { detail: { step } })
   );
 }
 
 /**
- * Animated Ghost Cursor SVG that moves to target coordinates and shows click ripples.
+ * Homepage Showcase Strip ("Enter the Other World")
+ * Built 100% with native House classes (.panel, .panel-glow, .coin-face, .kicker, .chips, .chip, .btn-primary).
  */
-function AnimatedCursor({
-  x,
-  y,
-  clicking,
-  label,
-}: {
-  x: string;
-  y: string;
-  clicking: boolean;
-  label?: string;
-}) {
-  return (
-    <div
-      className="pointer-events-none absolute z-30 transition-all duration-700 ease-out"
-      style={{ left: x, top: y }}
-      aria-hidden="true"
-    >
-      {/* Click pulse ring */}
-      {clicking && (
-        <span className="absolute -left-3 -top-3 h-9 w-9 animate-ping rounded-full bg-[color:var(--color-neon)] opacity-60" />
-      )}
-      <div
-        className={`relative flex items-center gap-1.5 transition-transform duration-200 ${
-          clicking ? "scale-90" : "scale-100"
-        }`}
-      >
-        <svg
-          width="26"
-          height="26"
-          viewBox="0 0 28 28"
-          fill="none"
-          className="drop-shadow-[0_4px_10px_rgba(0,0,0,0.75)]"
-        >
-          <path
-            d="M5 3L23 12.5L14.5 15L11.5 23.5L5 3Z"
-            fill="#4ADE80"
-            stroke="#09090B"
-            strokeWidth="2.2"
-            strokeLinejoin="round"
-          />
-        </svg>
-        {label && (
-          <span className="whitespace-nowrap rounded-full border border-[color:var(--color-neon)]/50 bg-[#0b0d13]/95 px-2.5 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-[color:var(--color-neon)] uppercase shadow-lg">
-            {label}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function EnterOtherWorld() {
-  const [open, setOpen] = useState(false);
-  const [scene, setScene] = useState<SceneId>(0);
-  const [playing, setPlaying] = useState(true);
-  const [stepTick, setStepTick] = useState(0);
+  const [coinAngle, setCoinAngle] = useState(0);
 
-  // Interactive states inside the 5 cartoon scenes so users can click & play too!
-  const [walletBalance, setWalletBalance] = useState(25000);
-  const [coinFlipping, setCoinFlipping] = useState(false);
-  const [flipStreak, setFlipStreak] = useState(2);
-  const [frogLane, setFrogLane] = useState(2); // 0..3
-  const [arcadeScore, setArcadeScore] = useState(1450);
-  const [potPct, setPotPct] = useState(84);
-  const [potUnlocked, setPotUnlocked] = useState(false);
-  const [withdrawn, setWithdrawn] = useState(false);
-
-  const stageRef = useRef<HTMLDivElement | null>(null);
-
-  const selectScene = useCallback((next: SceneId, keepPlaying = false) => {
-    setScene(next);
-    setStepTick(0);
-    setPlaying(keepPlaying);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setCoinAngle((a) => a + 180);
+    }, 3600);
+    return () => window.clearInterval(id);
   }, []);
 
-  // Sub-step ticker inside each scene (drives the animated cursor & cartoon sequence)
-  useEffect(() => {
-    if (!open) return;
-    const id = window.setInterval(() => {
-      setStepTick((prev) => {
-        const next = (prev + 1) % 6;
-        if (scene === 0) {
-          if (next === 2) setWalletBalance(25000);
-          if (next === 4) setWalletBalance(50000);
-        } else if (scene === 1) {
-          if (next === 1 || next === 4) {
-            setCoinFlipping(true);
-            window.setTimeout(() => {
-              setCoinFlipping(false);
-              setFlipStreak((s) => Math.min(9, s + 1));
-            }, 600);
-          }
-        } else if (scene === 2) {
-          setFrogLane(next % 4);
-          setArcadeScore((s) => s + 120);
-        } else if (scene === 3) {
-          if (next === 0) {
-            setPotPct(78);
-            setPotUnlocked(false);
-          } else if (next === 1) {
-            setPotPct(92);
-          } else if (next >= 2) {
-            setPotPct(100);
-            setPotUnlocked(true);
-          }
-        } else if (scene === 4) {
-          setWithdrawn(next >= 2);
-        }
-        return next;
-      });
-    }, 1500);
-    return () => window.clearInterval(id);
-  }, [open, scene]);
+  return (
+    <section className="mt-8" aria-label="Enter the Other World interactive walkthrough">
+      <div
+        className="panel panel-glow panel-etched p-5 sm:p-7 relative overflow-hidden"
+        style={{
+          background:
+            "radial-gradient(120% 140% at 0% 0%, oklch(0.78 0.11 150 / 0.09), transparent 55%), radial-gradient(100% 120% at 100% 100%, oklch(0.8 0.1 85 / 0.08), transparent 55%), var(--color-surface)",
+        }}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="flex items-start sm:items-center gap-4 sm:gap-5">
+            {/* Real 3D House Coin Emblem */}
+            <button
+              type="button"
+              onClick={() => launchOtherWorldTour(0)}
+              aria-label="Launch Enter the Other World live walkthrough"
+              className="shrink-0 group relative cursor-pointer"
+              style={{ width: 68, height: 68, perspective: "500px" }}
+            >
+              <div
+                className="w-full h-full relative"
+                style={{
+                  transformStyle: "preserve-3d",
+                  transition: "transform 1.1s cubic-bezier(0.22, 1, 0.36, 1)",
+                  transform: `rotateY(${coinAngle}deg)`,
+                }}
+              >
+                <div className="coin-face coin-face--front">
+                  <img
+                    src="/art/owp_coin_frog.png"
+                    alt="OWP Frog Coin"
+                    className="coin-face-art"
+                  />
+                  <span className="coin-face-sheen" aria-hidden />
+                </div>
+                <div className="coin-face coin-face--back">
+                  <img
+                    src="/art/owp_coin_fly.png"
+                    alt="OWP Fly Coin"
+                    className="coin-face-art"
+                  />
+                  <span className="coin-face-sheen" aria-hidden />
+                </div>
+              </div>
+            </button>
 
-  // Auto-advance between scenes when playing is true
-  useEffect(() => {
-    if (!open || !playing) return;
-    const id = window.setTimeout(() => {
-      setScene((prev) => ((prev + 1) % 5) as SceneId);
-      setStepTick(0);
-    }, SCENE_DURATION_MS);
-    return () => window.clearTimeout(id);
-  }, [open, playing, scene]);
+            <div>
+              <div className="flex flex-wrap items-center gap-2.5 mb-2">
+                <span className="badge badge-live">
+                  <span className="live-dot" /> Autonomous Live Walkthrough
+                </span>
+                <span className="kicker !text-[0.62rem]">
+                  6 live stops · Real clicks &amp; plays
+                </span>
+              </div>
 
-  // Gently scroll the matching real homepage section into view behind the theater
-  useEffect(() => {
-    if (!open) return;
-    const target = SCENES[scene]?.scrollTarget;
-    if (!target) return;
-    try {
-      const el = document.querySelector(target);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    } catch {
-      // ignore selector issues
+              <h2 className="text-[1.35rem] sm:text-[1.6rem] tracking-tight">
+                Enter the{" "}
+                <span className="text-neon">Other World</span>
+              </h2>
+
+              <p className="text-fog text-[0.875rem] leading-relaxed max-w-2xl mt-1">
+                Watch the house co-pilot drive the live site in real time — pricing
+                SOL → $OWP on the treasury desk, flipping the 3D coin on Frog Flip,
+                rolling Pond Dice, hopping live traffic in Hopper, and inspecting
+                active bounty pools.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => launchOtherWorldTour(0)}
+              className="btn btn-primary btn-lg"
+            >
+              Enter the Other World →
+            </button>
+            <span
+              className="mono text-[0.68rem] text-center lg:text-right"
+              style={{ color: "var(--text-dim)" }}
+            >
+              Or jump directly to a live stop below
+            </span>
+          </div>
+        </div>
+
+        {/* Direct Stop Jump Chips */}
+        <div
+          className="mt-5 pt-4 border-t flex flex-wrap items-center justify-between gap-3"
+          style={{ borderColor: "var(--hairline)" }}
+        >
+          <div className="chips">
+            {TOUR_STOPS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => launchOtherWorldTour(s.id)}
+                className="chip"
+              >
+                <span className="mono text-neon mr-1.5">{s.code}</span>
+                {s.chipLabel}
+              </button>
+            ))}
+          </div>
+
+          <span className="mono text-[0.68rem] hidden xl:inline" style={{ color: "var(--text-dim)" }}>
+            100% sandboxed demo · Never touches your wallet balance
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Helper to find a visible button containing specific text inside a root selector.
+ */
+function findButtonByText(
+  rootSelector: string,
+  textMatch: string | RegExp
+): HTMLButtonElement | null {
+  if (typeof document === "undefined") return null;
+  const root = document.querySelector(rootSelector) ?? document.body;
+  const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>("button"));
+  for (const btn of buttons) {
+    const label = (btn.textContent ?? "").trim();
+    const matched =
+      typeof textMatch === "string"
+        ? label.toLowerCase().includes(textMatch.toLowerCase())
+        : textMatch.test(label);
+    if (matched && btn.offsetParent !== null) {
+      return btn;
     }
-  }, [open, scene]);
+  }
+  return null;
+}
 
-  // Keyboard navigation (Escape to close, Left/Right arrows to switch scenes)
+/**
+ * Ensure Sandbox mode is active on table games so the autonomous tour can always play
+ * rounds without requiring a wallet or touching a signed-in user's real $OWP.
+ */
+function ensureSandboxMode() {
+  const sandboxChip = findButtonByText(".game-stage", "Sandbox");
+  if (sandboxChip && sandboxChip.getAttribute("aria-pressed") !== "true") {
+    try {
+      sandboxChip.click();
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/**
+ * Scroll element smoothly into the upper-middle viewport so the bottom Director Dock
+ * never overlaps the interactive area.
+ */
+function scrollElementAboveDock(el: Element) {
+  if (typeof window === "undefined") return;
+  const rect = el.getBoundingClientRect();
+  const viewportAvailHeight = Math.max(260, window.innerHeight - 230);
+  if (rect.top < 76 || rect.bottom > viewportAvailHeight) {
+    const targetY =
+      window.scrollY +
+      rect.top -
+      Math.max(
+        84,
+        (viewportAvailHeight - Math.min(rect.height, viewportAvailHeight * 0.75)) / 2
+      );
+    window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+  }
+}
+
+/**
+ * Persistent Autonomous Live Tour Director (mounted in RootLayout).
+ * Drives the real Next.js router, spotlights live DOM targets, moves a hardware-style
+ * co-pilot cursor to real controls, and executes real clicks/plays in Sandbox mode.
+ */
+export function OtherWorldDirector() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [active, setActive] = useState(false);
+  const [step, setStep] = useState<TourStepIndex>(0);
+  const [autoPlay, setAutoPlay] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [actionText, setActionText] = useState("Initializing live walkthrough…");
+
+  // Cursor state in viewport coordinates
+  const [cursor, setCursor] = useState<{
+    x: number;
+    y: number;
+    label: string;
+    clicking: boolean;
+    visible: boolean;
+  }>({
+    x: 480,
+    y: 320,
+    label: "CO-PILOT",
+    clicking: false,
+    visible: false,
+  });
+
+  // Spotlight bounding box in viewport coordinates
+  const [spotRect, setSpotRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    visible: boolean;
+  }>({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+    visible: false,
+  });
+
+  const timersRef = useRef<number[]>([]);
+  const clearAllTimers = useCallback(() => {
+    for (const id of timersRef.current) {
+      window.clearTimeout(id);
+    }
+    timersRef.current = [];
+  }, []);
+
+  const schedule = useCallback((fn: () => void, delayMs: number) => {
+    const id = window.setTimeout(fn, delayMs);
+    timersRef.current.push(id);
+    return id;
+  }, []);
+
+  // Listen for global launch event
   useEffect(() => {
-    if (!open) return;
+    const onLaunch = (e: Event) => {
+      const detail = (e as CustomEvent<{ step?: TourStepIndex }>).detail;
+      const startStep = detail?.step ?? 0;
+      clearAllTimers();
+      setStep(startStep);
+      setAutoPlay(true);
+      setProgress(0);
+      setActive(true);
+      setCursor({
+        x: Math.round(window.innerWidth * 0.5),
+        y: Math.round(window.innerHeight * 0.38),
+        label: "CO-PILOT READY",
+        clicking: false,
+        visible: true,
+      });
+    };
+    window.addEventListener("owp:enter-other-world", onLaunch);
+    return () => window.removeEventListener("owp:enter-other-world", onLaunch);
+  }, [clearAllTimers]);
+
+  const closeTour = useCallback(() => {
+    clearAllTimers();
+    setActive(false);
+    setSpotRect((r) => ({ ...r, visible: false }));
+    setCursor((c) => ({ ...c, visible: false }));
+  }, [clearAllTimers]);
+
+  const goToStep = useCallback(
+    (nextStep: TourStepIndex, keepAuto = false) => {
+      clearAllTimers();
+      setStep(nextStep);
+      setProgress(0);
+      setAutoPlay(keepAuto);
+    },
+    [clearAllTimers]
+  );
+
+  // Keyboard shortcuts (Escape to exit)
+  useEffect(() => {
+    if (!active) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setOpen(false);
-      } else if (e.key === "ArrowRight") {
-        setPlaying(false);
-        setStepTick(0);
-        setScene((s) => ((s + 1) % 5) as SceneId);
-      } else if (e.key === "ArrowLeft") {
-        setPlaying(false);
-        setStepTick(0);
-        setScene((s) => ((s + 4) % 5) as SceneId);
+        closeTour();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [active, closeTour]);
 
-  // User interactive handlers inside the cartoon stage
-  const handleManualSwap = useCallback(() => {
-    setPlaying(false);
-    setWalletBalance((b) => b + 25000);
-  }, []);
+  // Continuous progress bar + auto-advance timer (starts once pathname matches the stop's route)
+  useEffect(() => {
+    if (!active || !autoPlay) return;
+    const currentStop = TOUR_STOPS[step];
+    if (pathname !== currentStop.route) return;
 
-  const handleManualFlip = useCallback(() => {
-    setPlaying(false);
-    if (coinFlipping) return;
-    setCoinFlipping(true);
-    window.setTimeout(() => {
-      setCoinFlipping(false);
-      setFlipStreak((s) => s + 1);
-      setWalletBalance((b) => b + 960);
-    }, 600);
-  }, [coinFlipping]);
+    const startedAt = performance.now();
+    const interval = window.setInterval(() => {
+      const elapsed = performance.now() - startedAt;
+      const pct = Math.min(100, (elapsed / STOP_DURATION_MS) * 100);
+      setProgress(pct);
+      if (elapsed >= STOP_DURATION_MS) {
+        window.clearInterval(interval);
+        setStep((prev) => ((prev + 1) % TOUR_STOPS.length) as TourStepIndex);
+        setProgress(0);
+      }
+    }, 80);
+    return () => window.clearInterval(interval);
+  }, [active, autoPlay, step, pathname]);
 
-  const handleManualHop = useCallback(() => {
-    setPlaying(false);
-    setFrogLane((l) => (l + 1) % 4);
-    setArcadeScore((s) => s + 250);
-  }, []);
+  // Track the spotlighted DOM element at 60fps so scrolling/resizing keeps the frame locked on target
+  useEffect(() => {
+    if (!active) return;
+    let rafId = 0;
+    const stopMeta = TOUR_STOPS[step];
 
-  const handleManualPumpPot = useCallback(() => {
-    setPlaying(false);
-    setPotPct((p) => {
-      const next = Math.min(100, p + 12);
-      if (next >= 100) setPotUnlocked(true);
-      return next;
-    });
-  }, []);
+    const updateRect = () => {
+      if (pathname === stopMeta.route) {
+        const el = document.querySelector(stopMeta.targetSelector);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          if (r.width > 20 && r.height > 20) {
+            setSpotRect({
+              left: Math.max(8, r.left - 8),
+              top: Math.max(68, r.top - 8),
+              width: Math.min(window.innerWidth - 16, r.width + 16),
+              height: Math.min(r.height + 16, window.innerHeight - 100),
+              visible: true,
+            });
+          }
+        } else {
+          setSpotRect((prev) => ({ ...prev, visible: false }));
+        }
+      } else {
+        setSpotRect((prev) => ({ ...prev, visible: false }));
+      }
+      rafId = window.requestAnimationFrame(updateRect);
+    };
 
-  const handleManualWithdraw = useCallback(() => {
-    setPlaying(false);
-    setWithdrawn((w) => !w);
-  }, []);
+    rafId = window.requestAnimationFrame(updateRect);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [active, step, pathname]);
 
-  const currentScene = SCENES[scene];
+  // Helper to move cursor to a live DOM element getter and optionally click it
+  const moveAndClickElement = useCallback(
+    (
+      getEl: () => HTMLElement | null,
+      cursorLabel: string,
+      statusMessage: string,
+      doClick = true
+    ) => {
+      setActionText(statusMessage);
+      const el = getEl();
+      if (!el) return;
+      scrollElementAboveDock(el);
+      const r = el.getBoundingClientRect();
+      setCursor({
+        x: Math.round(r.left + r.width * 0.5),
+        y: Math.round(r.top + r.height * 0.5),
+        label: cursorLabel,
+        clicking: false,
+        visible: true,
+      });
 
-  const frogMood: "wave" | "excited" | "gamer" | "rich" | "cool" =
-    scene === 0
-      ? "wave"
-      : scene === 1
-        ? "excited"
-        : scene === 2
-          ? "gamer"
-          : scene === 3
-            ? "rich"
-            : "cool";
+      if (doClick) {
+        schedule(() => {
+          const freshEl = getEl() ?? el;
+          const fresh = freshEl.getBoundingClientRect();
+          setCursor({
+            x: Math.round(fresh.left + fresh.width * 0.5),
+            y: Math.round(fresh.top + fresh.height * 0.5),
+            label: cursorLabel,
+            clicking: true,
+            visible: true,
+          });
+          try {
+            freshEl.click();
+          } catch {
+            // ignore
+          }
+          schedule(() => {
+            setCursor((c) => ({ ...c, clicking: false }));
+          }, 360);
+        }, 520);
+      }
+    },
+    [schedule]
+  );
+
+  // Choreograph the real website interactions for each stop!
+  useEffect(() => {
+    if (!active) return;
+    clearAllTimers();
+
+    const currentStop = TOUR_STOPS[step];
+
+    // 1. Navigate to the stop's route if not already there
+    if (pathname !== currentStop.route) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActionText(`Opening ${currentStop.chipLabel} (${currentStop.route})…`);
+      router.push(currentStop.route);
+      return;
+    }
+
+    // 2. Poll until the target container is mounted in the DOM, then start the stop choreography
+    let attempts = 0;
+    const waitReady = () => {
+      const targetEl = document.querySelector(currentStop.targetSelector) as HTMLElement | null;
+      if (!targetEl && attempts < 25) {
+        attempts += 1;
+        schedule(waitReady, 120);
+        return;
+      }
+
+      if (step === 0) {
+        // STOP 01: Homepage #buy Treasury Desk
+        if (targetEl) scrollElementAboveDock(targetEl);
+        schedule(() => {
+          moveAndClickElement(
+            () => findButtonByText("#buy", "0.1 SOL"),
+            "CLICK · 0.1 SOL",
+            "Quoting 0.1 SOL on the live Raydium treasury desk…"
+          );
+        }, 450);
+
+        schedule(() => {
+          moveAndClickElement(
+            () => findButtonByText("#buy", "0.5 SOL"),
+            "CLICK · 0.5 SOL",
+            "Quoting 0.5 SOL → instant $OWP payout from the house wallet…"
+          );
+        }, 3400);
+
+        schedule(() => {
+          moveAndClickElement(
+            () => findButtonByText("#buy", "1 SOL"),
+            "CLICK · 1 SOL",
+            "Quoting 1.0 SOL → live on-chain rate locked on confirmation…"
+          );
+        }, 6500);
+      } else if (step === 1) {
+        // STOP 02: Frog Flip (/games/flip)
+        if (targetEl) scrollElementAboveDock(targetEl);
+        ensureSandboxMode();
+
+        schedule(() => {
+          ensureSandboxMode();
+          moveAndClickElement(
+            () => findButtonByText(".game-stage", "Frog"),
+            "CALL · 🐸 FROG",
+            "Selecting 🐸 Frog on the provably-fair table…"
+          );
+        }, 450);
+
+        schedule(() => {
+          ensureSandboxMode();
+          moveAndClickElement(
+            () =>
+              findButtonByText(
+                ".game-stage",
+                /Flip \(practice\)|Flip it|Double or nothing/i
+              ),
+            "CLICK · FLIP 3D COIN",
+            "Flipping the 3D coin (1.92× payout, SHA-256 seed committed)…"
+          );
+        }, 2100);
+
+        schedule(() => {
+          ensureSandboxMode();
+          const flyBtn = findButtonByText(".game-stage", "Fly");
+          if (flyBtn && !flyBtn.disabled) {
+            moveAndClickElement(
+              () => findButtonByText(".game-stage", "Fly"),
+              "CALL · 🪰 FLY",
+              "Switching call to 🪰 Fly for the next hand…"
+            );
+          }
+        }, 5500);
+
+        schedule(() => {
+          ensureSandboxMode();
+          moveAndClickElement(
+            () =>
+              findButtonByText(
+                ".game-stage",
+                /Double or nothing|Flip \(practice\)|Flip it/i
+              ),
+            "CLICK · RIDE STREAK",
+            "Flipping again — ride the streak ladder or cash out anytime!"
+          );
+        }, 7000);
+      } else if (step === 2) {
+        // STOP 03: Pond Dice (/games/dice)
+        if (targetEl) scrollElementAboveDock(targetEl);
+        ensureSandboxMode();
+
+        schedule(() => {
+          ensureSandboxMode();
+          window.dispatchEvent(new CustomEvent("owp:dice-target", { detail: 68 }));
+          moveAndClickElement(
+            () =>
+              document.querySelector(
+                '.game-stage input[type="range"]'
+              ) as HTMLElement | null,
+            "DIAL · WIN ZONE < 68",
+            "Dialing Pond Dice win zone to 68% (1.41× payout)…",
+            false
+          );
+        }, 450);
+
+        schedule(() => {
+          ensureSandboxMode();
+          moveAndClickElement(
+            () => findButtonByText(".game-stage", /Roll \(practice\)|Roll/i),
+            "CLICK · ROLL DICE",
+            "Rolling Pond Dice across the laser track…"
+          );
+        }, 2200);
+
+        schedule(() => {
+          ensureSandboxMode();
+          window.dispatchEvent(new CustomEvent("owp:dice-target", { detail: 32 }));
+          moveAndClickElement(
+            () =>
+              document.querySelector(
+                '.game-stage input[type="range"]'
+              ) as HTMLElement | null,
+            "DIAL · WIN ZONE < 32 (3.0×)",
+            "Tightening the line to < 32 for a 3.00× multiplier…",
+            false
+          );
+        }, 5200);
+
+        schedule(() => {
+          ensureSandboxMode();
+          moveAndClickElement(
+            () => findButtonByText(".game-stage", /Roll \(practice\)|Roll/i),
+            "CLICK · HIGH-MULT ROLL",
+            "Rolling for 3.00× — every roll feeds 50% of the edge to the bounty pot!"
+          );
+        }, 6800);
+      } else if (step === 3) {
+        // STOP 04: Hopper (/games/hopper)
+        if (targetEl) scrollElementAboveDock(targetEl);
+
+        schedule(() => {
+          const startBtn = findButtonByText(
+            ".game-stage",
+            /Start hopping|Hop again/i
+          );
+          if (startBtn) {
+            moveAndClickElement(
+              () => findButtonByText(".game-stage", /Start hopping|Hop again/i),
+              "CLICK · START HOPPING",
+              "Starting a live 60 Hz deterministic Hopper run…"
+            );
+          } else {
+            moveAndClickElement(
+              () => document.querySelector(".game-stage canvas") as HTMLElement | null,
+              "LIVE · 60 HZ CANVAS",
+              "Hopper running live on the 60 Hz deterministic canvas…",
+              false
+            );
+          }
+        }, 450);
+
+        const hops: { delay: number; key: string; label: string }[] = [
+          { delay: 1800, key: "ArrowUp", label: "HOP · ↑ FORWARD" },
+          { delay: 2650, key: "ArrowUp", label: "HOP · ↑ DODGE LANE" },
+          { delay: 3500, key: "ArrowRight", label: "HOP · → SIDESTEP" },
+          { delay: 4350, key: "ArrowUp", label: "HOP · ↑ CROSS ROAD" },
+          { delay: 5200, key: "ArrowLeft", label: "HOP · ← ALIGN LOG" },
+          { delay: 6050, key: "ArrowUp", label: "HOP · ↑ RIVER LOG" },
+          { delay: 6900, key: "ArrowUp", label: "HOP · ↑ CLIMB WAVE" },
+          { delay: 7750, key: "ArrowUp", label: "HOP · ↑ GOAL BANK" },
+        ];
+
+        for (const h of hops) {
+          schedule(() => {
+            const canvas = document.querySelector(
+              ".game-stage canvas"
+            ) as HTMLElement | null;
+            if (canvas) {
+              const r = canvas.getBoundingClientRect();
+              setCursor({
+                x: Math.round(r.left + r.width * 0.5),
+                y: Math.round(r.top + r.height * 0.55),
+                label: h.label,
+                clicking: true,
+                visible: true,
+              });
+              window.dispatchEvent(
+                new KeyboardEvent("keydown", { key: h.key, bubbles: true })
+              );
+              setActionText(
+                `Live 60 Hz input (${h.label}) — server replays the exact frame trace to verify scores.`
+              );
+              schedule(() => {
+                setCursor((c) => ({ ...c, clicking: false }));
+              }, 240);
+            }
+          }, h.delay);
+        }
+      } else if (step === 4) {
+        // STOP 05: Bounty Board (/bounties)
+        schedule(() => {
+          window.scrollTo({ top: 180, behavior: "smooth" });
+          moveAndClickElement(
+            () => findButtonByText("main", "Frogris"),
+            "CLICK · FROGRIS BOARD",
+            "Inspecting live $OWP bounty pools & switching weekly arcade standings…"
+          );
+        }, 600);
+
+        schedule(() => {
+          moveAndClickElement(
+            () => findButtonByText("main", "Worm Frog"),
+            "CLICK · WORM FROG BOARD",
+            "Checking Worm Frog 7-day replay-verified leaderboard…"
+          );
+        }, 4000);
+
+        schedule(() => {
+          moveAndClickElement(
+            () => findButtonByText("main", "Hopper"),
+            "CLICK · HOPPER BOARD",
+            "When any bounty's unlock meter reaches 100%, winners are paid automatically."
+          );
+        }, 7200);
+      } else if (step === 5) {
+        // STOP 06: Auction House (/auctions)
+        schedule(() => {
+          window.scrollTo({ top: 160, behavior: "smooth" });
+          moveAndClickElement(
+            () => findButtonByText("main", "Ending soon"),
+            "FILTER · ENDING SOON",
+            "Browsing Auction House lots — escrowed $OWP bids & anti-snipe protection…"
+          );
+        }, 600);
+
+        schedule(() => {
+          moveAndClickElement(
+            () => findButtonByText("main", "Live ·"),
+            "FILTER · LIVE LOTS",
+            "Outbid players are refunded to their in-app balance immediately."
+          );
+        }, 4000);
+
+        schedule(() => {
+          moveAndClickElement(
+            () => document.querySelector("main aside.panel") as HTMLElement | null,
+            "VAULT · AUTO WITHDRAW",
+            "Your $OWP balance is always yours — withdraw anytime for automatic on-chain payout.",
+            false
+          );
+        }, 7200);
+      }
+    };
+
+    waitReady();
+
+    return () => clearAllTimers();
+  }, [active, step, pathname, router, clearAllTimers, schedule, moveAndClickElement]);
+
+  if (!active) return null;
+
+  const currentStop = TOUR_STOPS[step];
 
   return (
     <>
-      {/* Shining Homepage Launcher Banner — 100% opt-in, never forced */}
-      <div className="mt-8">
-        <div className="group relative overflow-hidden rounded-2xl border border-[color:var(--color-neon)]/40 bg-gradient-to-r from-[#111520] via-[#151c24] to-[#121620] p-5 sm:p-6 shadow-[0_0_40px_-12px_rgba(74,222,128,0.28)] transition-all duration-300 hover:border-[color:var(--color-neon)]/75 hover:shadow-[0_0_52px_-8px_rgba(74,222,128,0.42)]">
-          {/* Ambient animated sheen */}
+      {/* 1. Precision Spotlight Reticle around the real DOM target (pointer-events-none so user can still interact) */}
+      {spotRect.visible && (
+        <div
+          aria-hidden="true"
+          className="fixed z-40 pointer-events-none transition-all duration-300 ease-out rounded-xl"
+          style={{
+            left: spotRect.left,
+            top: spotRect.top,
+            width: spotRect.width,
+            height: spotRect.height,
+            border: "1.5px solid oklch(0.78 0.11 150 / 0.78)",
+            boxShadow:
+              "0 0 0 9999px oklch(0.06 0.008 270 / 0.48), 0 0 38px oklch(0.78 0.11 150 / 0.25), inset 0 0 24px oklch(0.78 0.11 150 / 0.08)",
+          }}
+        >
+          {/* Top-left telemetry tag */}
           <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -top-24 left-1/3 h-48 w-96 -translate-x-1/2 rounded-full bg-[color:var(--color-neon)]/10 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-24 right-1/4 h-48 w-96 rounded-full bg-[color:var(--color-gold)]/10 blur-3xl"
-          />
-
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-4 sm:gap-5">
-              {/* Cartoon Frog Mascot Badge */}
-              <button
-                type="button"
-                onClick={() => {
-                  selectScene(0, true);
-                  setOpen(true);
-                }}
-                aria-label="Enter the Other World interactive cartoon"
-                className="relative shrink-0 rounded-2xl border border-[color:var(--color-neon)]/40 bg-[#0b0e15] p-2 shadow-inner transition-transform duration-300 group-hover:scale-105"
-              >
-                <CartoonFrogMascot mood="wave" className="h-16 w-16 sm:h-20 sm:w-20" />
-                <span className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-[#0b0e15] bg-[color:var(--color-neon)] text-[11px] font-bold text-[#09090b] shadow">
-                  ▶
-                </span>
-              </button>
-
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-neon)]/45 bg-[color:var(--color-neon)]/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold tracking-widest text-[color:var(--color-neon)] uppercase">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[color:var(--color-neon)]" />
-                    Interactive Cartoon Story · 60 sec
-                  </span>
-                  <span className="hidden sm:inline-block font-mono text-[11px] text-[color:var(--color-text-dim)]">
-                    Click, flip &amp; see how the house works
-                  </span>
-                </div>
-
-                <h2 className="mt-1.5 font-display text-xl sm:text-2xl font-bold tracking-tight text-[color:var(--color-bone)]">
-                  New here?{" "}
-                  <span className="bg-gradient-to-r from-[color:var(--color-neon)] via-[#bbf7d0] to-[color:var(--color-gold)] bg-clip-text text-transparent">
-                    Enter the Other World
-                  </span>
-                </h2>
-
-                <p className="mt-1 max-w-2xl text-xs sm:text-sm leading-relaxed text-[color:var(--color-text-muted)]">
-                  Follow Ribbit the Bounty Hunter through a live, clickable cartoon tour of
-                  provably-fair tables, free replay-verified arcade games, self-filling $OWP
-                  bounties, and instant automatic payouts.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  selectScene(0, true);
-                  setOpen(true);
-                }}
-                className="btn btn-primary btn-lg group/btn relative overflow-hidden shadow-[0_0_25px_rgba(74,222,128,0.35)]"
-              >
-                <span className="mr-1.5 inline-block text-base transition-transform duration-200 group-hover/btn:translate-x-0.5">
-                  ✦
-                </span>
-                Enter the Other World
-              </button>
-            </div>
+            className="absolute -top-3 left-3 px-2 py-0.5 rounded mono text-[0.6rem] uppercase tracking-wider"
+            style={{
+              background: "oklch(0.13 0.009 270 / 0.96)",
+              border: "1px solid oklch(0.78 0.11 150 / 0.55)",
+              color: "var(--color-neon)",
+            }}
+          >
+            ● {currentStop.targetTag}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Interactive Cartoon Theater Modal */}
-      {open && (
+      {/* 2. Autonomous Co-Pilot Hardware Cursor */}
+      {cursor.visible && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="enter-other-world-title"
+          aria-hidden="true"
+          className="fixed z-50 pointer-events-none"
+          style={{
+            left: 0,
+            top: 0,
+            transform: `translate3d(${cursor.x}px, ${cursor.y}px, 0)`,
+            transition: "transform 520ms cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
         >
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
-            onClick={() => setOpen(false)}
-          />
+          {/* Expanding click ring on real DOM click */}
+          {cursor.clicking && (
+            <span
+              className="absolute -left-5 -top-5 w-10 h-10 rounded-full animate-ping"
+              style={{
+                border: "2px solid var(--color-neon)",
+                background: "oklch(0.78 0.11 150 / 0.25)",
+              }}
+            />
+          )}
 
-          {/* Stage Container */}
           <div
-            ref={stageRef}
-            className="relative z-10 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-[color:var(--color-neon)]/40 bg-[#0d1017] text-[color:var(--color-bone)] shadow-[0_24px_80px_rgba(0,0,0,0.85)]"
+            className="relative flex items-center gap-2"
+            style={{
+              transform: cursor.clicking ? "scale(0.88)" : "scale(1)",
+              transition: "transform 160ms ease",
+            }}
           >
-            {/* Top Theater Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--hairline)] bg-[#111520] px-4 py-3 sm:px-6">
-              <div className="flex items-center gap-2.5">
+            {/* Sleek precision pointer */}
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{
+                filter: "drop-shadow(0 4px 12px oklch(0 0 0 / 0.85))",
+              }}
+            >
+              <path
+                d="M3.5 2.5L20 10.5L12.5 13L9.5 20.5L3.5 2.5Z"
+                fill="oklch(0.82 0.12 150)"
+                stroke="oklch(0.12 0.008 270)"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+            </svg>
+
+            {/* Telemetry label chip attached to cursor */}
+            <span
+              className="mono text-[0.62rem] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
+              style={{
+                background: "oklch(0.12 0.009 270 / 0.95)",
+                border: "1px solid oklch(0.78 0.11 150 / 0.6)",
+                color: "var(--color-neon)",
+                boxShadow: "0 8px 24px oklch(0 0 0 / 0.7)",
+              }}
+            >
+              {cursor.label}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Editorial House Director Dock (Bottom HUD) */}
+      <aside
+        role="region"
+        aria-label="Enter the Other World live walkthrough controls"
+        className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-1.25rem)] max-w-4xl"
+      >
+        <div
+          className="panel panel-glow overflow-hidden"
+          style={{
+            background: "oklch(0.13 0.009 270 / 0.95)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid var(--hairline-strong)",
+            boxShadow:
+              "0 24px 64px oklch(0 0 0 / 0.85), 0 0 42px -10px oklch(0.78 0.11 150 / 0.28)",
+          }}
+        >
+          {/* Top Progress Line */}
+          <div
+            className="h-[2px] w-full"
+            style={{ background: "oklch(1 0 0 / 0.07)" }}
+          >
+            <div
+              className="h-full transition-all duration-100"
+              style={{
+                width: `${progress}%`,
+                background:
+                  "linear-gradient(90deg, var(--color-neon), var(--color-gold))",
+              }}
+            />
+          </div>
+
+          <div className="p-3.5 sm:p-4">
+            <div className="flex flex-col md:flex-row md:items-center gap-3.5">
+              {/* Stop Artwork & Kicker */}
+              <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
                 <img
-                  src="/art/logo.png"
-                  alt=""
-                  className="h-6 w-6 rounded-full object-contain"
+                  src={currentStop.art}
+                  alt={currentStop.chipLabel}
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover shrink-0 border"
+                  style={{ borderColor: "var(--hairline-strong)" }}
                 />
-                <span className="font-mono text-xs font-semibold tracking-wider text-[color:var(--color-neon)] uppercase">
-                  Enter the Other World
-                </span>
-                <span className="hidden sm:inline-block font-mono text-[11px] text-[color:var(--color-text-dim)]">
-                  · Interactive Cartoon Guide
-                </span>
-              </div>
 
-              {/* Scene Tabs */}
-              <div className="flex items-center gap-1 overflow-x-auto py-0.5">
-                {SCENES.map((s) => {
-                  const active = s.id === scene;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => selectScene(s.id, false)}
-                      className={`rounded-lg px-2.5 py-1 font-mono text-[11px] transition-colors ${
-                        active
-                          ? "bg-[color:var(--color-neon)] font-bold text-[#09090b]"
-                          : "bg-[#171c29] text-[color:var(--color-text-muted)] hover:text-[color:var(--color-bone)]"
-                      }`}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                    <span className="kicker !text-[0.6rem]">
+                      {currentStop.kicker}
+                    </span>
+                    <span
+                      className="mono text-[0.64rem] truncate"
+                      style={{ color: "var(--color-gold)" }}
                     >
-                      {s.code} <span className="hidden md:inline">{s.shortTitle}</span>
-                    </button>
-                  );
-                })}
+                      ▸ {actionText}
+                    </span>
+                  </div>
+
+                  <h3 className="text-[0.95rem] sm:text-[1.05rem] font-semibold tracking-tight text-frost truncate">
+                    {currentStop.title}
+                  </h3>
+
+                  <p className="text-fog text-[0.78rem] sm:text-[0.82rem] leading-snug line-clamp-2 mt-0.5">
+                    {currentStop.summary}
+                  </p>
+                </div>
               </div>
 
-              {/* Auto-Play & Close Controls */}
-              <div className="flex items-center gap-2">
+              {/* Key Metrics Pills (Desktop) */}
+              <div className="hidden lg:grid grid-cols-3 gap-2 shrink-0">
+                {currentStop.metrics.map((m) => (
+                  <div
+                    key={m.label}
+                    className="px-2.5 py-1.5 rounded-lg border"
+                    style={{
+                      background: "oklch(0.16 0.008 270 / 0.7)",
+                      borderColor: "var(--hairline)",
+                    }}
+                  >
+                    <div
+                      className="mono text-[0.55rem] uppercase tracking-wider"
+                      style={{ color: "var(--text-dim)" }}
+                    >
+                      {m.label}
+                    </div>
+                    <div className="stat-number text-[0.75rem] text-neon mt-0.5 whitespace-nowrap">
+                      {m.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Transport & Stop Selector Row */}
+            <div
+              className="mt-3 pt-2.5 border-t flex flex-wrap items-center justify-between gap-2"
+              style={{ borderColor: "var(--hairline)" }}
+            >
+              {/* 6 Stop Chips */}
+              <div className="chips overflow-x-auto max-w-full">
+                {TOUR_STOPS.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => goToStep(s.id, false)}
+                    className={`chip !py-1 !px-2.5 !text-[0.72rem] ${
+                      s.id === step ? "active" : ""
+                    }`}
+                    aria-pressed={s.id === step}
+                  >
+                    <span className="mono mr-1">{s.code}</span>
+                    <span className="hidden sm:inline">{s.chipLabel}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Transport Controls */}
+              <div className="flex items-center gap-1.5 ml-auto">
                 <button
                   type="button"
-                  onClick={() => setPlaying((p) => !p)}
-                  className="rounded-lg border border-[color:var(--border-solid)] bg-[#171c29] px-2.5 py-1 font-mono text-[11px] text-[color:var(--color-bone)] hover:border-[color:var(--color-neon)]/50"
-                  title={playing ? "Pause auto-play" : "Resume auto-play"}
+                  onClick={() =>
+                    goToStep(
+                      ((step + TOUR_STOPS.length - 1) %
+                        TOUR_STOPS.length) as TourStepIndex,
+                      false
+                    )
+                  }
+                  className="btn btn-ghost !py-1 !px-2.5 !text-xs"
+                  title="Previous stop"
                 >
-                  {playing ? "⏸ Auto" : "▶ Play"}
+                  ← Prev
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => setOpen(false)}
-                  aria-label="Close cartoon tour"
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--border-solid)] bg-[#171c29] text-sm text-[color:var(--color-text-muted)] hover:border-[color:var(--color-neon)]/50 hover:text-[color:var(--color-bone)]"
+                  onClick={() => setAutoPlay((p) => !p)}
+                  className="btn btn-ghost !py-1 !px-2.5 !text-xs mono"
+                  title={autoPlay ? "Pause auto-pilot" : "Resume auto-pilot"}
+                >
+                  {autoPlay ? "⏸ Auto" : "▶ Auto"}
+                </button>
+
+                {step < 5 ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      goToStep(((step + 1) % TOUR_STOPS.length) as TourStepIndex, true)
+                    }
+                    className="btn btn-primary !py-1 !px-3 !text-xs"
+                  >
+                    Next Stop →
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeTour();
+                      router.push("/#buy");
+                    }}
+                    className="btn btn-primary !py-1 !px-3 !text-xs"
+                  >
+                    Buy $OWP →
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={closeTour}
+                  aria-label="Exit live walkthrough"
+                  className="btn btn-ghost !py-1 !px-2.5 !text-xs"
+                  title="Exit walkthrough (Esc)"
                 >
                   ✕
                 </button>
               </div>
             </div>
-
-            {/* Scrollable Main Theater Content */}
-            <div className="overflow-y-auto p-4 sm:p-6">
-              {/* Cartoon Speech Bubble & Mascot Header */}
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center rounded-xl border border-[color:var(--border-solid)] bg-[#131824] p-4">
-                <div className="flex items-center gap-3 sm:shrink-0">
-                  <CartoonFrogMascot mood={frogMood} className="h-16 w-16 sm:h-20 sm:w-20" />
-                  <div className="sm:hidden">
-                    <div className="font-mono text-[10px] tracking-widest text-[color:var(--color-neon)] uppercase">
-                      {currentScene.kicker}
-                    </div>
-                    <h3
-                      id="enter-other-world-title"
-                      className="font-display text-base font-bold text-[color:var(--color-bone)]"
-                    >
-                      {currentScene.title}
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="flex-1">
-                  <div className="hidden sm:block font-mono text-[10px] tracking-widest text-[color:var(--color-neon)] uppercase">
-                    {currentScene.kicker}
-                  </div>
-                  <h3 className="hidden sm:block font-display text-lg font-bold text-[color:var(--color-bone)]">
-                    {currentScene.title}
-                  </h3>
-                  <div className="mt-1.5 rounded-lg border border-[color:var(--color-neon)]/25 bg-[#0c1018] px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed text-[color:var(--color-bone)]">
-                    <span className="mr-1.5 font-mono text-[10px] font-bold tracking-wider text-[color:var(--color-neon)] uppercase">
-                      Ribbit:
-                    </span>
-                    “{currentScene.speech}”
-                  </div>
-                </div>
-              </div>
-
-              {/* INTERACTIVE CARTOON STAGE WINDOW (Mini Browser / Game Stage) */}
-              <div className="relative mt-4 min-h-[260px] overflow-hidden rounded-xl border border-[color:var(--color-neon)]/30 bg-gradient-to-b from-[#0b0e16] to-[#111726] p-4 sm:p-6">
-                {/* Mini Browser Chrome Header */}
-                <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-2.5 font-mono text-[11px] text-[color:var(--color-text-dim)]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500/70" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400/70" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
-                    <span className="ml-2 rounded bg-white/5 px-2 py-0.5 text-[10px] text-[color:var(--color-bone)]">
-                      otherworldprojex.xyz
-                      {scene === 0
-                        ? "/#buy"
-                        : scene === 1
-                          ? "/games/flip"
-                          : scene === 2
-                            ? "/games/hopper"
-                            : scene === 3
-                              ? "/bounties"
-                              : "/account"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full border border-[color:var(--color-gold)]/40 bg-[color:var(--color-gold)]/10 px-2.5 py-0.5 text-[10px] font-bold text-[color:var(--color-gold)]">
-                      Balance: {walletBalance.toLocaleString()} $OWP
-                    </span>
-                  </div>
-                </div>
-
-                {/* SCENE 0 STAGE: Connect Wallet & Swap SOL -> $OWP */}
-                {scene === 0 && (
-                  <div className="relative grid gap-4 sm:grid-cols-2 items-center py-2">
-                    <AnimatedCursor
-                      x={stepTick < 2 ? "22%" : "68%"}
-                      y={stepTick < 2 ? "56%" : "62%"}
-                      clicking={stepTick === 1 || stepTick === 3}
-                      label={stepTick < 2 ? "1. Sign In (Free)" : "2. Swap SOL → $OWP"}
-                    />
-
-                    {/* Step 1 Card: Connect & Sign */}
-                    <div className="rounded-xl border border-white/10 bg-[#151b2b] p-4">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-text-muted)]">
-                          Step 1 · Vault Door
-                        </span>
-                        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] text-emerald-300">
-                          ✓ Connected
-                        </span>
-                      </div>
-                      <div className="mt-2 font-display text-sm font-bold">
-                        Wallet: 7xKp…9mQv
-                      </div>
-                      <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-                        Signed off-chain session message (0.00 SOL gas).
-                      </p>
-                      <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--color-neon)]/40 bg-[color:var(--color-neon)]/10 px-3 py-1.5 font-mono text-xs text-[color:var(--color-neon)]">
-                        <span>🔓</span> Vault Unlocked
-                      </div>
-                    </div>
-
-                    {/* Step 2 Card: Instant SOL -> $OWP Vending Machine */}
-                    <div className="rounded-xl border border-[color:var(--color-neon)]/40 bg-[#151b2b] p-4">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-neon)]">
-                          Step 2 · Instant Treasury Swap
-                        </span>
-                        <span className="font-mono text-[10px] text-[color:var(--color-gold)]">
-                          Live Raydium Spot
-                        </span>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between rounded-lg bg-black/40 px-3 py-2 font-mono text-xs">
-                        <span>1.00 SOL</span>
-                        <span className="text-[color:var(--color-neon)]">→</span>
-                        <span className="font-bold text-[color:var(--color-gold)]">
-                          +25,000 $OWP
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleManualSwap}
-                        className="mt-3 w-full rounded-lg bg-[color:var(--color-neon)] px-3 py-2 font-mono text-xs font-bold text-[#09090b] transition-transform active:scale-95"
-                      >
-                        ⚡ Click to Test Swap (+25,000 $OWP)
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* SCENE 1 STAGE: Provably-Fair Frog Flip */}
-                {scene === 1 && (
-                  <div className="relative grid gap-4 sm:grid-cols-2 items-center py-1">
-                    <AnimatedCursor
-                      x="70%"
-                      y="66%"
-                      clicking={stepTick === 1 || stepTick === 4}
-                      label="Click to Flip!"
-                    />
-
-                    {/* 3D Coin Showcase */}
-                    <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-[#151b2b] p-4">
-                      <div
-                        onClick={handleManualFlip}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => e.key === "Enter" && handleManualFlip()}
-                        className="cursor-pointer select-none transition-transform hover:scale-105"
-                        title="Click to flip the coin!"
-                      >
-                        <img
-                          src="/art/owp_coin_frog.png"
-                          alt="OWP Frog Coin"
-                          className={`h-24 w-24 rounded-full object-contain drop-shadow-[0_8px_20px_rgba(234,179,8,0.4)] transition-transform duration-500 ${
-                            coinFlipping ? "rotate-[720deg] scale-110" : ""
-                          }`}
-                        />
-                      </div>
-                      <div className="mt-2 font-mono text-xs font-bold text-[color:var(--color-gold)]">
-                        {coinFlipping
-                          ? "Spinning in the air…"
-                          : `WIN! +960 $OWP (1.92× · Streak ×${flipStreak})`}
-                      </div>
-                      <div className="mt-1 font-mono text-[10px] text-emerald-400">
-                        ✓ SHA-256 Seed Hash: 9f8a…4c21 (Verified Fair)
-                      </div>
-                    </div>
-
-                    {/* Interactive Controls */}
-                    <div className="rounded-xl border border-white/10 bg-[#151b2b] p-4">
-                      <div className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-neon)]">
-                        Try it right here
-                      </div>
-                      <div className="mt-1 font-display text-base font-bold">
-                        Frog Flip · Pond Dice · Blackjack
-                      </div>
-                      <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-                        Every hand locks a cryptographic server seed before you bet and
-                        reveals it right after so you can verify the math.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleManualFlip}
-                        className="mt-3 w-full rounded-lg bg-[color:var(--color-neon)] px-3 py-2 font-mono text-xs font-bold text-[#09090b] transition-transform active:scale-95"
-                      >
-                        🪙 Flip the Frog Coin (Win +960 $OWP)
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* SCENE 2 STAGE: Free Skill Arcade (Hopper / Frogris / Worm Frog) */}
-                {scene === 2 && (
-                  <div className="relative grid gap-4 sm:grid-cols-2 items-center py-1">
-                    <AnimatedCursor
-                      x="72%"
-                      y="68%"
-                      clicking={stepTick % 2 === 1}
-                      label="60 Hz Replay Verified"
-                    />
-
-                    {/* Mini Interactive Hopper Lanes */}
-                    <div className="rounded-xl border border-white/10 bg-[#0d1320] p-3">
-                      <div className="mb-2 flex items-center justify-between font-mono text-[10px]">
-                        <span className="text-emerald-400">FREE ARCADE · HOPPER</span>
-                        <span className="font-bold text-[color:var(--color-gold)]">
-                          SCORE: {arcadeScore}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        {[3, 2, 1, 0].map((lane) => (
-                          <div
-                            key={lane}
-                            className={`relative flex h-8 items-center justify-between rounded px-3 font-mono text-[10px] ${
-                              lane === 3
-                                ? "bg-emerald-950/60 border border-emerald-500/30"
-                                : lane % 2 === 1
-                                  ? "bg-slate-900/90"
-                                  : "bg-sky-950/50"
-                            }`}
-                          >
-                            <span className="text-white/40">
-                              {lane === 3
-                                ? "🏁 SAFE LILY PAD (+250)"
-                                : lane === 2
-                                  ? "🪵 Floating Log →"
-                                  : lane === 1
-                                    ? "🏎️ Turbo Sedan ←"
-                                    : "🌱 Starting Bank"}
-                            </span>
-                            {frogLane === lane && (
-                              <img
-                                src="/art/owp_hopper_frog.png"
-                                alt="Hopper Frog"
-                                className="h-6 w-6 object-contain transition-all duration-200"
-                              />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Interactive Hop Control */}
-                    <div className="rounded-xl border border-white/10 bg-[#151b2b] p-4">
-                      <div className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-neon)]">
-                        Zero Wager Required
-                      </div>
-                      <div className="mt-1 font-display text-base font-bold">
-                        Hopper, Frogris &amp; Worm Frog
-                      </div>
-                      <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-                        Play for free anytime. Our server replays your exact input stream at
-                        60 Hz to block bots and pay real players on the weekly bounty board.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleManualHop}
-                        className="mt-3 w-full rounded-lg bg-[color:var(--color-neon)] px-3 py-2 font-mono text-xs font-bold text-[#09090b] transition-transform active:scale-95"
-                      >
-                        🐸 Click to Hop Ribbit Across (+250 PTS)
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* SCENE 3 STAGE: Self-Filling Bounties & Live Auctions */}
-                {scene === 3 && (
-                  <div className="relative grid gap-4 sm:grid-cols-2 items-center py-1">
-                    <AnimatedCursor
-                      x="70%"
-                      y="68%"
-                      clicking={stepTick === 1 || stepTick === 2}
-                      label="Half of house edge → Pot!"
-                    />
-
-                    {/* Bounty Cauldron Meter */}
-                    <div className="rounded-xl border border-[color:var(--color-gold)]/40 bg-[#151b2b] p-4">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
-                        <span className="text-[color:var(--color-gold)] uppercase">
-                          🏆 Live Game Bounty Pool
-                        </span>
-                        <span className="font-bold text-[color:var(--color-neon)]">
-                          {potPct}% Unlocked
-                        </span>
-                      </div>
-
-                      <div className="mt-2 font-display text-lg font-bold text-[color:var(--color-bone)]">
-                        100,000 $OWP Prize Pool
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-black/50 p-0.5">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-[color:var(--color-neon)] to-[color:var(--color-gold)] transition-all duration-500"
-                          style={{ width: `${potPct}%` }}
-                        />
-                      </div>
-
-                      <div className="mt-2.5 rounded-lg bg-black/35 px-3 py-2 font-mono text-[11px]">
-                        {potUnlocked ? (
-                          <span className="font-bold text-[color:var(--color-gold)]">
-                            🎉 POT UNLOCKED! Auto-paying top hunters pro-rata!
-                          </span>
-                        ) : (
-                          <span className="text-[color:var(--color-text-muted)]">
-                            Every table wager sends 50% of the house edge here…
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Pump Pot + Auction Callout */}
-                    <div className="rounded-xl border border-white/10 bg-[#151b2b] p-4">
-                      <div className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-neon)]">
-                        Automatic Treasury Loop
-                      </div>
-                      <div className="mt-1 font-display text-base font-bold">
-                        Self-Filling Bounties &amp; $OWP Auctions
-                      </div>
-                      <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-                        Half the house edge fuels game bounties that pay out automatically.
-                        Or take your $OWP to the Auction House to bid on 1/1 collectibles!
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleManualPumpPot}
-                        className="mt-3 w-full rounded-lg bg-[color:var(--color-gold)] px-3 py-2 font-mono text-xs font-bold text-[#09090b] transition-transform active:scale-95"
-                      >
-                        ⚡ Pump Bounty Pot to 100% Unlock
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* SCENE 4 STAGE: Instant Automatic Withdrawals & Launchpad */}
-                {scene === 4 && (
-                  <div className="relative grid gap-4 sm:grid-cols-2 items-center py-1">
-                    <AnimatedCursor
-                      x="26%"
-                      y="68%"
-                      clicking={stepTick === 2}
-                      label="Instant On-Chain Payout"
-                    />
-
-                    {/* Auto-Withdraw Demo Card */}
-                    <div className="rounded-xl border border-[color:var(--color-neon)]/40 bg-[#151b2b] p-4">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
-                        <span className="text-[color:var(--color-neon)] uppercase">
-                          Self-Custody Treasury
-                        </span>
-                        <span className="text-emerald-400">Solana Mainnet</span>
-                      </div>
-                      <div className="mt-2 font-display text-base font-bold">
-                        {withdrawn
-                          ? "✅ Sent 25,960 $OWP to 7xKp…9mQv"
-                          : "Ready to Cash Out Anytime"}
-                      </div>
-                      <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-                        {withdrawn
-                          ? "Tx confirmed on-chain in 1.2s — signed automatically by the house wallet."
-                          : "No withdrawal queues or manual approvals. The same treasury wallet pays you automatically."}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleManualWithdraw}
-                        className="mt-3 w-full rounded-lg border border-[color:var(--color-neon)]/50 bg-[color:var(--color-neon)]/15 px-3 py-2 font-mono text-xs font-bold text-[color:var(--color-neon)] transition-transform active:scale-95"
-                      >
-                        {withdrawn ? "↺ Reset Demo Withdrawal" : "💸 Test Instant Withdrawal"}
-                      </button>
-                    </div>
-
-                    {/* Direct Launch Links into the Real Site */}
-                    <div className="rounded-xl border border-white/10 bg-[#151b2b] p-4">
-                      <div className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-gold)]">
-                        Jump Right In
-                      </div>
-                      <div className="mt-1 font-display text-base font-bold">
-                        Where do you want to start?
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <a
-                          href="#buy"
-                          onClick={() => setOpen(false)}
-                          className="rounded-lg bg-[color:var(--color-neon)] px-3 py-2 text-center font-mono text-xs font-bold text-[#09090b] hover:opacity-90"
-                        >
-                          Buy $OWP
-                        </a>
-                        <Link
-                          href="/games/flip"
-                          onClick={() => setOpen(false)}
-                          className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center font-mono text-xs font-semibold text-[color:var(--color-bone)] hover:border-[color:var(--color-neon)]/50"
-                        >
-                          Play Frog Flip
-                        </Link>
-                        <Link
-                          href="/games/hopper"
-                          onClick={() => setOpen(false)}
-                          className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center font-mono text-xs font-semibold text-[color:var(--color-bone)] hover:border-[color:var(--color-neon)]/50"
-                        >
-                          Free Hopper
-                        </Link>
-                        <Link
-                          href="/bounties"
-                          onClick={() => setOpen(false)}
-                          className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center font-mono text-xs font-semibold text-[color:var(--color-bone)] hover:border-[color:var(--color-neon)]/50"
-                        >
-                          Bounty Board
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Scene Caption & 3 Fact Pills */}
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {currentScene.highlights.map((h) => (
-                  <div
-                    key={h.label}
-                    className="rounded-xl border border-[color:var(--hairline)] bg-[#121622] px-3.5 py-2.5"
-                  >
-                    <div className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-text-dim)]">
-                      {h.label}
-                    </div>
-                    <div className="mt-0.5 font-display text-sm font-bold text-[color:var(--color-bone)]">
-                      {h.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-[color:var(--color-text-muted)]">
-                {currentScene.caption}
-              </p>
-            </div>
-
-            {/* Bottom Navigation Footer */}
-            <div className="flex items-center justify-between border-t border-[color:var(--hairline)] bg-[#111520] px-4 py-3 sm:px-6">
-              <button
-                type="button"
-                onClick={() => selectScene(((scene + 4) % 5) as SceneId, false)}
-                className="rounded-lg border border-[color:var(--border-solid)] bg-[#171c29] px-3 py-1.5 font-mono text-xs text-[color:var(--color-bone)] hover:border-[color:var(--color-neon)]/50"
-              >
-                ← Prev
-              </button>
-
-              <div className="flex items-center gap-1.5">
-                {SCENES.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    aria-label={`Go to scene ${s.code}`}
-                    onClick={() => selectScene(s.id, false)}
-                    className={`h-2 rounded-full transition-all ${
-                      s.id === scene
-                        ? "w-6 bg-[color:var(--color-neon)]"
-                        : "w-2 bg-white/20 hover:bg-white/40"
-                    }`}
-                  />
-                ))}
-              </div>
-
-              {scene < 4 ? (
-                <button
-                  type="button"
-                  onClick={() => selectScene(((scene + 1) % 5) as SceneId, false)}
-                  className="rounded-lg bg-[color:var(--color-neon)] px-3.5 py-1.5 font-mono text-xs font-bold text-[#09090b] hover:opacity-90"
-                >
-                  Next Act →
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="rounded-lg bg-[color:var(--color-neon)] px-3.5 py-1.5 font-mono text-xs font-bold text-[#09090b] hover:opacity-90"
-                >
-                  Start Playing ✦
-                </button>
-              )}
-            </div>
           </div>
         </div>
-      )}
+      </aside>
     </>
   );
 }
