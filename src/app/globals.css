@@ -1466,3 +1466,21 @@ button:focus-visible,
   vertical-align: middle;
   line-height: 1.4;
 }
+
+/* ══ Enter the Other World — live stage illumination ══
+   Applied directly onto the active DOM panel so the highlight rides the
+   compositor thread natively with zero scroll lag or bounding-box jitter. */
+[data-owp-spotlight="active"] {
+  position: relative;
+  z-index: 44 !important;
+  box-shadow:
+    0 0 0 1px oklch(0.78 0.11 150 / 0.5),
+    0 28px 80px oklch(0 0 0 / 0.82),
+    0 0 64px -16px oklch(0.78 0.11 150 / 0.24) !important;
+  transition: box-shadow 0.55s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+[data-owp-clicked="1"] {
+  box-shadow:
+    0 0 0 2px oklch(0.82 0.11 150 / 0.8),
+    0 0 26px oklch(0.78 0.11 150 / 0.45) !important;
+}
