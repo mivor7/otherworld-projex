@@ -1486,7 +1486,7 @@ export function OtherWorldDirector() {
         if (!(await hold(140))) return;
         const parkOnWings = () => {
           if (!wingsEl || !wingsEl.isConnected) return;
-          const top = wingsEl.getBoundingClientRect().top + window.scrollY - 84;
+          const top = wingsEl.getBoundingClientRect().top + window.scrollY - 124;
           window.scrollTo({ top: Math.max(0, top), behavior: "instant" as ScrollBehavior });
         };
         parkOnWings();
