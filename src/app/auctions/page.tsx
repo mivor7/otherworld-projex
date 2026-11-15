@@ -10,6 +10,7 @@ import { LotCardSkeleton } from "@/components/skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { MatteMedia } from "@/components/matte-media";
 import { fmtRibbit } from "@/lib/client-config";
+import { simWithdrawAll, useTourSim, simRaw } from "@/components/tour-sim";
 
 type AuctionRow = {
   id: string;
@@ -29,7 +30,7 @@ function LotCard({ a, now }: { a: AuctionRow; now: number }) {
   const msLeft = new Date(a.endsAt).getTime() - now;
   const urgent = a.status === "live" && msLeft > 0 && msLeft < 60 * 60 * 1000;
   return (
-    <Link href={`/auctions/${a.id}`} className="lot-card group">
+    <Link href={`/auctions/${a.id}`} data-owp-lot={a.id} className="lot-card group">
       <div className="card-media">
         {a.imageUrl ? (
           <MatteMedia src={a.imageUrl} alt={a.title} />
@@ -85,6 +86,7 @@ function LotCard({ a, now }: { a: AuctionRow; now: number }) {
 export default function AuctionsPage() {
   const { me, refresh } = useSession();
   const { depositForBidding } = useChain();
+  const tourSim = useTourSim();
   const [live, setLive] = useState<AuctionRow[]>([]);
   const [past, setPast] = useState<AuctionRow[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -123,6 +125,10 @@ export default function AuctionsPage() {
 
   const doDeposit = async () => {
     if (!depositValid) return;
+    if (tourSim.active) {
+      setMsg({ kind: "ok", text: "Deposit verified — your simulated app balance is ready." });
+      return;
+    }
     setBusy(true);
     setMsg(null);
     const res = await depositForBidding(amount);
@@ -136,6 +142,15 @@ export default function AuctionsPage() {
   };
 
   const doWithdraw = async () => {
+    if (tourSim.active) {
+      const res = simWithdrawAll();
+      setMsg(
+        res.ok
+          ? { kind: "ok", text: `Withdrawal queued — ${res.amount.toLocaleString()} $OWP sent.` }
+          : { kind: "err", text: "No available balance to withdraw." }
+      );
+      return;
+    }
     setBusy(true);
     setMsg(null);
     try {
@@ -159,10 +174,30 @@ export default function AuctionsPage() {
     }
   };
 
-  const ending = live.filter(
+  const simRows: AuctionRow[] = tourSim.active
+    ? tourSim.auctions.map((a) => ({
+        id: a.id,
+        title: a.title,
+        imageUrl: a.imageUrl,
+        category: a.category,
+        currentRaw: a.currentRaw,
+        startBidRaw: a.startBidRaw,
+        endsAt: a.endsAt,
+        status: a.status,
+        sellerWallet: a.sellerWallet,
+        _count: { bids: a.bids.length },
+      }))
+    : [];
+  const effectiveLive = tourSim.active
+    ? [...simRows, ...live.filter((x) => !simRows.some((s) => s.id === x.id))]
+    : live;
+  const ending = effectiveLive.filter(
     (a) => new Date(a.endsAt).getTime() - now < 60 * 60 * 1000
   );
-  const shown = filter === "live" ? live : filter === "ending" ? ending : past;
+  const shown = filter === "live" ? effectiveLive : filter === "ending" ? ending : past;
+  const isSignedIn = me.signedIn || tourSim.active;
+  const availRaw = tourSim.active ? simRaw(tourSim.credits) : (me.ribbitAvailable ?? 0);
+  const lockedRaw = tourSim.active ? simRaw(tourSim.lockedOwp) : (me.ribbitLocked ?? 0);
 
   return (
     <div className="pt-6">
@@ -171,7 +206,7 @@ export default function AuctionsPage() {
         image="/art/hero-auction.jpg"
         imagePosition="70% 48%"
         kicker="Wing II — under the gavel"
-        badge={`${live.length} lots live`}
+        badge={`${effectiveLive.length} lots live`}
         title="The"
         titleAccent="Auction House"
         subtitle="Escrowed $OWP bids, instant refunds when outbid, two-minute anti-snipe closings. Community members consign their own lots."
@@ -196,7 +231,7 @@ export default function AuctionsPage() {
           <div className="chips mb-5">
             {(
               [
-                ["live", `Live · ${live.length}`],
+                ["live", `Live · ${effectiveLive.length}`],
                 ["ending", `Ending soon · ${ending.length}`],
                 ["past", `Past · ${past.length}`],
               ] as const
@@ -243,7 +278,7 @@ export default function AuctionsPage() {
 
         <aside className="panel panel-glow panel-etched p-5 h-fit lg:sticky lg:top-24">
           <div className="kicker mb-3">App balance</div>
-          {!me.signedIn ? (
+          {!isSignedIn ? (
             <Notice kind="info">
               Connect &amp; sign in to deposit $OWP and bid on lots.
             </Notice>
@@ -253,13 +288,13 @@ export default function AuctionsPage() {
                 <div>
                   <div className="kicker !text-[0.6rem] mb-1">Available</div>
                   <div className="stat-number text-neon text-lg">
-                    {fmtRibbit(me.ribbitAvailable ?? 0)}
+                    {fmtRibbit(availRaw)}
                   </div>
                 </div>
                 <div>
                   <div className="kicker !text-[0.6rem] mb-1">In bids</div>
                   <div className="stat-number text-lg">
-                    {fmtRibbit(me.ribbitLocked ?? 0)}
+                    {fmtRibbit(lockedRaw)}
                   </div>
                 </div>
               </div>
@@ -294,7 +329,7 @@ export default function AuctionsPage() {
               <button
                 className="btn btn-ghost w-full"
                 onClick={doWithdraw}
-                disabled={busy || BigInt(me.ribbitAvailable ?? "0") === 0n}
+                disabled={busy || BigInt(availRaw) === 0n}
               >
                 Withdraw available balance
               </button>

@@ -10,11 +10,14 @@ import { useSession } from "./session";
 import { QualifyStatus } from "./qualify-status";
 import { BountyEndedCard } from "./bounty-ended-card";
 import { useBountyLive } from "./use-bounty-live";
+import { useTourSim } from "./tour-sim";
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 export function BountyStandings({ game }: { game: string }) {
   const { me } = useSession();
+  const tourSim = useTourSim();
+  const isSignedIn = me.signedIn || tourSim.active;
   // Shared per-game poll — same subscription as the strip above the game, so
   // the page issues one request per tick instead of two. Refreshes on
   // owp:round so rank/projection move the moment a round settles.
@@ -116,14 +119,14 @@ export function BountyStandings({ game }: { game: string }) {
       )}
 
       {/* Canonical "what you need to qualify" — identical phrasing everywhere. */}
-      {me.signedIn && live?.you && (!live.you.spendEligible || live.you.volumeEligible === false) && (
+      {isSignedIn && live?.you && (!live.you.spendEligible || live.you.volumeEligible === false) && (
         <div className="mb-4">
           <QualifyStatus you={live.you} />
         </div>
       )}
 
       {/* Your live situation once you qualify — never make the player guess. */}
-      {me.signedIn && live?.you && live.you.spendEligible && live.you.volumeEligible !== false && (() => {
+      {isSignedIn && live?.you && live.you.spendEligible && live.you.volumeEligible !== false && (() => {
         const you = live.you;
         const isScore = you.unit === "best score";
         const standLine = isScore
@@ -163,7 +166,7 @@ export function BountyStandings({ game }: { game: string }) {
           </div>
         );
       })()}
-      {!me.signedIn && (
+      {!isSignedIn && (
         <p className="text-xs text-fog mb-4">
           Sign in and qualify to see your projected share of this pool.
         </p>

@@ -9,11 +9,14 @@ import { useSession } from "./session";
 import { QualifyStatus } from "./qualify-status";
 import { BountyEndedCard } from "./bounty-ended-card";
 import { useBountyLive } from "./use-bounty-live";
+import { useTourSim } from "./tour-sim";
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 export function ArcadeBountyHeader({ game }: { game: string }) {
   const { me } = useSession();
+  const tourSim = useTourSim();
+  const isSignedIn = me.signedIn || tourSim.active;
   // Shared per-game poll (also refreshes on the owp:round signal a submitted
   // score fires, so the header updates the moment a run posts).
   const live = useBountyLive(game);
@@ -29,7 +32,7 @@ export function ArcadeBountyHeader({ game }: { game: string }) {
   // Eligible players see their standing; not-eligible players get the canonical
   // "what you need to qualify" helper (rendered below the note).
   let eligibleStatus: { text: string; win: boolean } | null = null;
-  if (b && me.signedIn && you && you.spendEligible) {
+  if (b && isSignedIn && you && you.spendEligible) {
     if (you.inRunning && you.projectedRibbit > 0)
       eligibleStatus = {
         text: `You're in the running — #${myRank ?? "—"} · ~${fmt(you.projectedRibbit)} $OWP`,
@@ -71,7 +74,7 @@ export function ArcadeBountyHeader({ game }: { game: string }) {
               {eligibleStatus.text}
             </p>
           )}
-          {me.signedIn && you && !you.spendEligible && (
+          {isSignedIn && you && !you.spendEligible && (
             <div className="mt-2.5">
               <QualifyStatus you={you} />
             </div>

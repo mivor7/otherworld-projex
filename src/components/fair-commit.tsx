@@ -8,10 +8,13 @@
 import Link from "next/link";
 import { useSession } from "./session";
 import { CopyChip } from "./copy-chip";
+import { useTourSim } from "./tour-sim";
 
 export function FairCommit({ clientSeed }: { clientSeed: string }) {
   const { me } = useSession();
-  if (!me.signedIn || !me.seedHash) return null;
+  const tourSim = useTourSim();
+  const seedHash = tourSim.active ? tourSim.seedHash : me.seedHash;
+  if ((!me.signedIn && !tourSim.active) || !seedHash) return null;
   return (
     <div
       className="mt-5 pt-4 border-t text-center"
@@ -33,8 +36,8 @@ export function FairCommit({ clientSeed }: { clientSeed: string }) {
         className="flex items-center gap-2 justify-center flex-wrap text-[0.65rem]"
         style={{ color: "var(--text-dim)" }}
       >
-        <span className="mono break-all">{me.seedHash.slice(0, 16)}…</span>
-        <CopyChip text={me.seedHash} label="Copy hash" />
+        <span className="mono break-all">{seedHash.slice(0, 16)}…</span>
+        <CopyChip text={seedHash} label="Copy hash" />
         <span aria-hidden>·</span>
         <span>
           your seed <span className="mono text-frost">{clientSeed}</span>

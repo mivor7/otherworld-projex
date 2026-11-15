@@ -1592,3 +1592,10 @@ button:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .owp-vault { display: none; }
 }
+
+/* Keep homepage Wings & Bounty Board immediately visible when tour parks on them */
+html[data-owp-tour="1"] #owp-bounty-board .reveal,
+html[data-owp-tour="1"] #owp-wings .reveal {
+  opacity: 1;
+  transform: none;
+}

@@ -5,7 +5,7 @@ import { ActivityTicker } from "@/components/activity-ticker";
 import { BuyOwp } from "@/components/buy-owp";
 import { EnterOtherWorld } from "@/components/enter-other-world";
 import { CopyChip } from "@/components/copy-chip";
-import { MatteMedia } from "@/components/matte-media";
+import { HomeBountyBoard } from "@/components/home-bounty-board";
 import { prisma } from "@/lib/db";
 import { getTreasuryStats } from "@/lib/solana";
 import { fromRaw } from "@/lib/config";
@@ -95,10 +95,20 @@ export default async function Home() {
     ]);
   const houseCfg = await houseConfig(); // live, admin-tunable values
   // Richest live pool per game — powers the bounty chip on each card.
-  const poolByGame = new Map<string, bigint>();
+  const poolByGame: Record<string, number> = {};
   for (const b of gameBounties) {
-    if (b.game && !poolByGame.has(b.game)) poolByGame.set(b.game, b.prizeRibbit);
+    if (b.game && poolByGame[b.game] === undefined) {
+      poolByGame[b.game] = fromRaw(b.prizeRibbit);
+    }
   }
+  const awardRows = awards.map((a) => ({
+    id: a.id,
+    walletShort: shortWallet(a.user.wallet),
+    title: a.bounty.title,
+    game: a.bounty.game,
+    amountRibbit: fromRaw(a.amountRaw),
+    ago: ago(a.createdAt),
+  }));
   const deposited = fromRaw(depositAgg._sum.amountRaw ?? 0n);
   const paidOut = fromRaw(paidAgg._sum.amountRaw ?? 0n);
   const openPrize = fromRaw(openPrizeAgg._sum.prizeRibbit ?? 0n);
@@ -215,148 +225,13 @@ export default async function Home() {
       </section>
 
       {/* The bounty board — active hunts per game + what the house has paid */}
-      <section className="mt-16">
-        <Reveal>
-          <div className="panel overflow-hidden">
-            {/* header band */}
-            <div className="flex items-end justify-between gap-4 flex-wrap p-6 pb-5">
-              <div>
-                <div className="kicker mb-2">The bounty board</div>
-                <h2 className="text-[1.5rem]">Active hunts</h2>
-                <p className="text-fog text-[0.85rem] mt-1.5 max-w-md leading-relaxed">
-                  Every live game carries a fixed $OWP pool that unlocks as
-                  it&apos;s played. Pick a target, fill the meter, split the pool.
-                </p>
-              </div>
-              <div className="flex items-baseline gap-6 text-right">
-                <div>
-                  <div className="stat-number text-neon text-[1.35rem]">
-                    {openPrize.toLocaleString(undefined, { maximumFractionDigits: 0 })} $OWP
-                  </div>
-                  <div className="kicker !text-[0.6rem]">on the board now</div>
-                </div>
-                <div>
-                  <div className="stat-number text-gold text-[1.35rem]">
-                    {paidOut.toLocaleString(undefined, { maximumFractionDigits: 0 })} $OWP
-                  </div>
-                  <div className="kicker !text-[0.6rem]">paid to hunters, all time</div>
-                </div>
-              </div>
-            </div>
-
-            {/* the games, each with its live bounty pool */}
-            {/* 4-up only when there's room — at tablet widths 4 columns clipped card titles */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 sm:px-6">
-              {GAME_SLATE.map((e, i) => {
-                const poolRaw = e.game ? poolByGame.get(e.game) : undefined;
-                const live = !!e.href;
-                const card = (
-                  <div className="lot-card h-full group">
-                    <div className="card-media !aspect-square">
-                      <MatteMedia src={e.image} alt={e.title} fit="cover" />
-                      {live ? (
-                        <span className="badge badge-live absolute top-2 right-2">
-                          <span className="live-dot" /> Live
-                        </span>
-                      ) : (
-                        <span className="badge badge-urgent absolute top-2 right-2">
-                          Soon
-                        </span>
-                      )}
-                      {poolRaw !== undefined && (
-                        <span className="badge badge-gold absolute bottom-2 left-2 !text-[0.6rem]">
-                          {fromRaw(poolRaw).toLocaleString(undefined, { maximumFractionDigits: 0 })} $OWP
-                        </span>
-                      )}
-                    </div>
-                    <div className="card-body !p-3">
-                      <h3 className="!text-[0.8rem] !min-h-0">{e.title}</h3>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {live && (
-                          <span
-                            className="text-[0.55rem] font-medium px-1.5 py-0.5 rounded uppercase tracking-wide"
-                            style={
-                              e.free
-                                ? { background: "oklch(0.78 0.11 150 / 0.15)", color: "oklch(0.85 0.12 150)" }
-                                : { background: "oklch(0.78 0.12 85 / 0.15)", color: "oklch(0.85 0.13 85)" }
-                            }
-                          >
-                            {e.free ? "Free" : "Chips ⛁"}
-                          </span>
-                        )}
-                        <span className="text-[0.66rem]" style={{ color: "var(--text-dim)" }}>
-                          {poolRaw !== undefined ? "Bounty live" : live ? "Play now" : "In production"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-                return (
-                  <Reveal key={e.title} delay={i * 50}>
-                    {e.href ? <Link href={e.href}>{card}</Link> : card}
-                  </Reveal>
-                );
-              })}
-            </div>
-
-            {/* the ledger footer — proof the pools actually pay */}
-            <div
-              className="mt-6 border-t"
-              style={{ borderColor: "var(--hairline)" }}
-            >
-              {awards.length === 0 ? (
-                <div className="p-5 px-6 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-fog text-sm">
-                    <span className="kicker !text-[0.6rem] mr-2">Recent payouts</span>
-                    No pools have triggered yet — the first hunts are filling
-                    their meters now.
-                  </p>
-                  <Link href="/bounties" className="btn btn-ghost !text-xs">
-                    Watch the board →
-                  </Link>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between px-6 pt-4 pb-1">
-                    <span className="kicker !text-[0.6rem]">Recent payouts</span>
-                    <Link href="/bounties" className="text-xs text-fog hover:text-neon transition-colors">
-                      Full board →
-                    </Link>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <tbody>
-                        {awards.slice(0, 5).map((a) => (
-                          <tr key={a.id} className="table-row">
-                            <td className="py-2.5 px-6 mono text-xs whitespace-nowrap">
-                              {shortWallet(a.user.wallet)}
-                            </td>
-                            <td className="py-2.5 pr-4 min-w-0">
-                              <Link
-                                href={a.bounty.game ? `/games/${a.bounty.game}` : "/bounties"}
-                                className="hover:text-neon transition-colors"
-                              >
-                                {a.bounty.title}
-                              </Link>
-                            </td>
-                            <td className="py-2.5 pr-4 stat-number text-gold text-right whitespace-nowrap">
-                              +{fromRaw(a.amountRaw).toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
-                              $OWP
-                            </td>
-                            <td className="py-2.5 pr-6 text-xs text-right whitespace-nowrap text-fog">
-                              {ago(a.createdAt)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </Reveal>
-      </section>
+      <HomeBountyBoard
+        gameSlate={GAME_SLATE}
+        poolByGame={poolByGame}
+        openPrize={openPrize}
+        paidOut={paidOut}
+        awards={awardRows}
+      />
 
       {/* Token */}
       <section className="mt-16">

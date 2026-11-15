@@ -12,6 +12,7 @@ import { Notice, SectionTitle } from "@/components/ui";
 import { ArcadeBountyHeader } from "@/components/arcade-bounty-header";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useHouseConfig } from "@/components/use-house-config";
+import { computeRankedEntries, simArcadeScore, useTourSim } from "@/components/tour-sim";
 import { ARCADE, PIECE_COLORS } from "@/lib/arcade-palette";
 import {
   FCOLS,
@@ -76,6 +77,26 @@ export default function FrogrisPage() {
   const [board, setBoard] = useState<{ rank: number; player: string; score: number }[]>([]);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
   const house = useHouseConfig();
+  const tourSim = useTourSim();
+
+  useEffect(() => {
+    if (tourSim.active && hud.score > 0) {
+      simArcadeScore("frogris", hud.score);
+    }
+  }, [tourSim.active, hud.score]);
+
+  const displayedBoard = tourSim.active
+    ? computeRankedEntries(tourSim.bounties.frogris).entries.map((e) => ({
+        rank: e.rank,
+        player: e.isYou ? `${e.wallet} · you` : e.wallet,
+        score: e.value,
+      }))
+    : board;
+
+  const displayedSubmitMsg =
+    tourSim.active && tourSim.bounties.frogris.yourValue > 0
+      ? `Score ${tourSim.bounties.frogris.yourValue} verified (tour sim) — climbing Frogris Weekly Grid.`
+      : submitMsg;
 
   const loadBoard = useCallback(() => {
     fetch("/api/leaderboard?game=frogris")
@@ -516,9 +537,9 @@ export default function FrogrisPage() {
             <button className="btn btn-ghost" onClick={() => enqueue(2)} aria-label="Rotate">⟳</button>
             <button className="btn btn-ghost" onClick={() => enqueue(5)} aria-label="Hard drop">⤓</button>
           </div>
-          {submitMsg && (
+          {displayedSubmitMsg && (
             <div className="w-full sm:hidden order-4">
-              <Notice kind="ok">{submitMsg}</Notice>
+              <Notice kind="ok">{displayedSubmitMsg}</Notice>
             </div>
           )}
         </div>
@@ -533,13 +554,16 @@ export default function FrogrisPage() {
               All bounties →
             </Link>
           </p>
-          {board.length === 0 ? (
+          {displayedBoard.length === 0 ? (
             <p className="text-fog text-sm">No scores yet — set the first line.</p>
           ) : (
             <table className="w-full text-sm">
               <tbody>
-                {board.map((row) => (
-                  <tr key={row.rank} className="table-row">
+                {displayedBoard.map((row) => (
+                  <tr
+                    key={row.rank}
+                    className={`table-row ${row.player.includes("· you") ? "text-neon" : ""}`}
+                  >
                     <td className="py-1.5 pr-2 mono text-xs" style={{ color: "var(--text-dim)" }}>
                       {String(row.rank).padStart(2, "0")}
                     </td>
@@ -550,9 +574,9 @@ export default function FrogrisPage() {
               </tbody>
             </table>
           )}
-          {submitMsg && (
+          {displayedSubmitMsg && (
             <div className="mt-3 hidden sm:block">
-              <Notice kind="ok">{submitMsg}</Notice>
+              <Notice kind="ok">{displayedSubmitMsg}</Notice>
             </div>
           )}
           <div className="mt-5 pt-4 border-t hidden sm:block" style={{ borderColor: "var(--hairline)" }}>

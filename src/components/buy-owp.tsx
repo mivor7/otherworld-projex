@@ -8,6 +8,7 @@ import { owpRawForQuote } from "@/lib/owp-quote";
 import { Notice } from "@/components/ui";
 import { useSession } from "@/components/session";
 import { useChain } from "@/components/use-chain";
+import { simBuyOwp, useTourSim } from "@/components/tour-sim";
 
 type Price =
   | {
@@ -38,6 +39,7 @@ function fmtOwp(whole: number): string {
 export function BuyOwp() {
   const { me } = useSession();
   const { buyOwpWithSol } = useChain();
+  const tourSim = useTourSim();
   const [price, setPrice] = useState<Price | null>(null);
   const [sol, setSol] = useState(0.1);
   const [busy, setBusy] = useState(false);
@@ -71,11 +73,12 @@ export function BuyOwp() {
     quote && lamports > 0n ? Number(owpRawForQuote(lamports, quote)) / 10 ** quote.decimals : 0;
   const treasury = quote?.treasuryWallet || price?.treasuryWallet || "";
   const soldOut = quote?.houseOwp === 0;
+  const isSignedIn = me.signedIn || tourSim.active;
   const canBuy =
     !!quote &&
     !soldOut &&
     quote.houseOwp != null &&
-    me.signedIn &&
+    isSignedIn &&
     sol >= 0.01 &&
     sol <= 50 &&
     estimate > 0 &&
@@ -84,6 +87,17 @@ export function BuyOwp() {
   async function buy() {
     setBusy(true);
     setMessage(null);
+    if (tourSim.active) {
+      await new Promise((r) => setTimeout(r, 380));
+      const whole = Math.max(100, Math.round(estimate));
+      simBuyOwp(whole);
+      setBusy(false);
+      setMessage({
+        kind: "ok",
+        text: `Payment confirmed. The house wallet sent ${fmtOwp(whole)} $OWP to your wallet (tour sim).`,
+      });
+      return;
+    }
     const res = await buyOwpWithSol(sol);
     setBusy(false);
     if (!res.ok) {
@@ -210,7 +224,7 @@ export function BuyOwp() {
               Minimum 0.01 SOL, maximum 50 SOL.
             </p>
 
-            {!me.signedIn && (
+            {!isSignedIn && (
               <Notice kind="info">Connect your wallet and sign in, top right, before buying.</Notice>
             )}
           </>

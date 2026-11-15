@@ -6,6 +6,12 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/components/session";
 import { Countdown, Notice, SectionTitle, StatCard } from "@/components/ui";
 import { fmtRibbit, shortWallet } from "@/lib/client-config";
+import {
+  computeRankedEntries,
+  simRaw,
+  simWithdrawAll,
+  useTourSim,
+} from "@/components/tour-sim";
 
 const GAME_LABELS: Record<string, string> = {
   flip: "Frog Flip",
@@ -85,6 +91,7 @@ const BID_BADGE: Record<string, string> = {
 
 export default function AccountPage() {
   const { me, refresh } = useSession();
+  const tourSim = useTourSim();
   const [bids, setBids] = useState<MyBid[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [bountyWins, setBountyWins] = useState<BountyWin[]>([]);
@@ -96,7 +103,7 @@ export default function AccountPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!me.signedIn) return;
+    if (!me.signedIn || tourSim.active) return;
     // On failure return null (not []) so a transient 5xx/401 keeps the data we
     // already show instead of blanking every ledger to its empty state.
     const grab = <T,>(url: string, set: (v: T[]) => void) =>
@@ -110,12 +117,12 @@ export default function AccountPage() {
     grab<Application>("/api/listings/apply", setApplications);
     grab<Round>("/api/games/history", setRounds);
     grab<Badge>("/api/me/badges", setBadges);
-  }, [me.signedIn]);
+  }, [me.signedIn, tourSim.active]);
 
   // Watch live bounty positions in real time — a player who has stopped
   // playing still has a share riding on the pool, and can see it move here.
   useEffect(() => {
-    if (!me.signedIn) return;
+    if (!me.signedIn || tourSim.active) return;
     // On failure return null (not []) — never blank real data on a bad poll.
     const grab = <T,>(url: string, set: (v: T[]) => void) =>
       fetch(url)
@@ -142,9 +149,24 @@ export default function AccountPage() {
       clearInterval(t);
       window.removeEventListener("focus", onFocus);
     };
-  }, [me.signedIn, refresh]);
+  }, [me.signedIn, tourSim.active, refresh]);
 
   const withdrawAll = async () => {
+    if (tourSim.active) {
+      setBusy(true);
+      await new Promise((r) => setTimeout(r, 240));
+      const res = simWithdrawAll();
+      setBusy(false);
+      setMsg(
+        res.ok
+          ? {
+              kind: "ok",
+              text: `Withdrawal sent — ${res.amount.toLocaleString()} $OWP swept from the treasury to your wallet (tour sim).`,
+            }
+          : { kind: "err", text: "No available balance to withdraw." }
+      );
+      return;
+    }
     setBusy(true);
     setMsg(null);
     try {
@@ -171,7 +193,9 @@ export default function AccountPage() {
     }
   };
 
-  if (!me.signedIn) {
+  const isSignedIn = me.signedIn || tourSim.active;
+
+  if (!isSignedIn) {
     return (
       <div className="pt-24 max-w-md mx-auto">
         <Notice kind="info">
@@ -181,12 +205,66 @@ export default function AccountPage() {
     );
   }
 
-  const leading = bids.filter((b) => b.status === "active").length;
+  const effectiveWallet = tourSim.active ? tourSim.wallet : (me.wallet ?? "");
+  const effectiveCredits = tourSim.active ? tourSim.credits : (me.credits ?? 0);
+  const effectiveAvailRaw = tourSim.active ? simRaw(tourSim.credits) : (me.ribbitAvailable ?? 0);
+  const effectiveLockedRaw = tourSim.active ? simRaw(tourSim.lockedOwp) : (me.ribbitLocked ?? 0);
+  const effectiveBids = tourSim.active ? tourSim.myBids : bids;
+  const effectiveWithdrawals = tourSim.active ? tourSim.withdrawals : withdrawals;
+  const effectiveBountyWins = tourSim.active ? tourSim.bountyWins : bountyWins;
+  const effectiveRounds = tourSim.active ? tourSim.rounds : rounds;
+  const effectiveBadges: Badge[] = tourSim.active
+    ? [
+        { id: "win", icon: "🎯", name: "First Win", desc: "Won on the house tables", earned: true },
+        { id: "streak", icon: "🔥", name: "Streak Master", desc: "3× Double or Nothing", earned: true },
+        { id: "bounty", icon: "🏆", name: "Bounty Hunter", desc: "Triggered & won #1 pool", earned: true },
+        { id: "bidder", icon: "🔨", name: "High Bidder", desc: "Active escrow on a 1/1 lot", earned: tourSim.lockedOwp > 0 },
+      ]
+    : badges;
+  const effectiveLivePositions: LivePosition[] = tourSim.active
+    ? Object.entries(tourSim.bounties)
+        .filter(([, pool]) => pool.yourValue > 0)
+        .map(([game, pool]) => {
+          const { entries, yourRank, projectedRibbit } = computeRankedEntries(pool);
+          const pct =
+            pool.mode === "credit" && pool.threshold > 0
+              ? Math.min(100, Math.round((pool.spent / pool.threshold) * 100))
+              : 0;
+          return {
+            id: pool.id,
+            title: pool.title,
+            game,
+            prizeRibbit: pool.prizeRibbit,
+            value: pool.yourValue,
+            rank: yourRank ?? 1,
+            players: entries.length,
+            unit: pool.unit,
+            inRunning: true,
+            projectedRibbit,
+            spendEligible: true,
+            lifetimeEligible: true,
+            windowEligible: true,
+            progress:
+              pool.mode === "credit"
+                ? {
+                    mode: "credit" as const,
+                    spent: pool.spent,
+                    threshold: pool.threshold,
+                    pct,
+                    potRibbit: pool.spent,
+                    targetRibbit: pool.threshold,
+                  }
+                : null,
+          };
+        })
+    : livePositions;
+
+  const leading = effectiveBids.filter((b) => b.status === "active").length;
 
   return (
     <div className="pt-10">
       <SectionTitle
-        kicker={`Hunter · ${shortWallet(me.wallet ?? "")}`}
+        kicker={`Hunter · ${shortWallet(effectiveWallet)}`}
         title="My account"
         desc="Your balances, bids, consignments and rounds — the house keeps the books, you keep the receipts."
       />
@@ -194,13 +272,13 @@ export default function AccountPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <StatCard
           label="App balance"
-          value={fmtRibbit(me.ribbitAvailable ?? 0)}
-          sub={`${(me.credits ?? 0).toLocaleString()} whole $OWP the tables accept`}
+          value={fmtRibbit(effectiveAvailRaw)}
+          sub={`${effectiveCredits.toLocaleString()} whole $OWP the tables accept`}
           tone="neon"
         />
         <StatCard
           label="Locked in bids"
-          value={fmtRibbit(me.ribbitLocked ?? 0)}
+          value={fmtRibbit(effectiveLockedRaw)}
           sub={`leading ${leading} ${leading === 1 ? "lot" : "lots"}`}
           tone="portal"
         />
@@ -213,7 +291,7 @@ export default function AccountPage() {
             <button
               className="btn btn-ghost !text-xs w-full"
               onClick={withdrawAll}
-              disabled={busy || BigInt(me.ribbitAvailable ?? "0") === 0n}
+              disabled={busy || BigInt(effectiveAvailRaw) === 0n}
             >
               Withdraw available
             </button>
@@ -227,13 +305,13 @@ export default function AccountPage() {
         </div>
       )}
 
-      {badges.length > 0 && (
+      {effectiveBadges.length > 0 && (
         <div className="panel p-5 mb-4">
           <div className="kicker mb-4">
-            Badges · {badges.filter((b) => b.earned).length}/{badges.length} earned
+            Badges · {effectiveBadges.filter((b) => b.earned).length}/{effectiveBadges.length} earned
           </div>
           <div className="flex flex-wrap gap-2.5">
-            {badges.map((b) => (
+            {effectiveBadges.map((b) => (
               <div
                 key={b.id}
                 title={b.desc}
@@ -257,7 +335,7 @@ export default function AccountPage() {
         </div>
       )}
 
-      {livePositions.length > 0 && (
+      {effectiveLivePositions.length > 0 && (
         <div className="panel p-5 mb-4">
           <div className="flex items-baseline justify-between mb-4">
             <div className="kicker flex items-center gap-1.5">
@@ -268,7 +346,7 @@ export default function AccountPage() {
             </Link>
           </div>
           <div className="grid md:grid-cols-2 gap-3">
-            {livePositions.map((p) => {
+            {effectiveLivePositions.map((p) => {
               const isScore = p.unit === "best score";
               const valLine = isScore
                 ? `best ${p.value.toLocaleString()}`
@@ -349,7 +427,7 @@ export default function AccountPage() {
               );
             })}
           </div>
-          {livePositions.some((p) => p.inRunning && p.projectedRibbit > 0) && (
+          {effectiveLivePositions.some((p) => p.inRunning && p.projectedRibbit > 0) && (
             <p className="text-[0.7rem] mt-3" style={{ color: "var(--text-dim)" }}>
               Projected shares shift as others play and lock when each pool fills —
               a share you&apos;re in line for stays yours even if you stop playing.
@@ -366,14 +444,14 @@ export default function AccountPage() {
               All bounties →
             </Link>
           </div>
-          {bountyWins.length === 0 ? (
+          {effectiveBountyWins.length === 0 ? (
             <p className="text-fog text-sm">
               No bounty prizes yet — qualify and win to see them here.
             </p>
           ) : (
             <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
-                {bountyWins.slice(0, 8).map((w) => (
+                {effectiveBountyWins.slice(0, 8).map((w) => (
                   <tr key={w.id} className="table-row">
                     <td className="py-2 pr-2">
                       {w.game && <span>{gameLabel(w.game)}</span>}
@@ -418,12 +496,12 @@ export default function AccountPage() {
               Auction house →
             </Link>
           </div>
-          {bids.length === 0 ? (
+          {effectiveBids.length === 0 ? (
             <p className="text-fog text-sm">No bids yet — the lots await.</p>
           ) : (
             <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
-                {bids.slice(0, 8).map((b) => (
+                {effectiveBids.slice(0, 8).map((b) => (
                   <tr key={b.id} className="table-row">
                     <td className="py-2 pr-2">
                       <Link href={`/auctions/${b.auction.id}`} className="hover:text-neon transition-colors">
@@ -454,12 +532,12 @@ export default function AccountPage() {
           <div className="flex items-baseline justify-between mb-4">
             <div className="kicker">Balance withdrawals</div>
           </div>
-          {withdrawals.filter((w) => w.kind !== "bounty").length === 0 ? (
+          {effectiveWithdrawals.filter((w) => w.kind !== "bounty").length === 0 ? (
             <p className="text-fog text-sm">Nothing queued or paid yet.</p>
           ) : (
             <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
-                {withdrawals.filter((w) => w.kind !== "bounty").slice(0, 8).map((w) => (
+                {effectiveWithdrawals.filter((w) => w.kind !== "bounty").slice(0, 8).map((w) => (
                   <tr key={w.id} className="table-row">
                     <td className="py-2 pr-2 stat-number">{fmtRibbit(w.amountRaw)}</td>
                     <td className="py-2 pr-2 text-xs" style={{ color: "var(--text-dim)" }}>
@@ -527,12 +605,12 @@ export default function AccountPage() {
               Verify fairness →
             </Link>
           </div>
-          {rounds.length === 0 ? (
+          {effectiveRounds.length === 0 ? (
             <p className="text-fog text-sm">No rounds played yet.</p>
           ) : (
             <div className="overflow-x-auto"><table className="w-full text-sm">
               <tbody>
-                {rounds.slice(0, 8).map((r) => (
+                {effectiveRounds.slice(0, 8).map((r) => (
                   <tr key={r.id} className="table-row">
                     <td className="py-2 pr-2">{gameLabel(r.game)}</td>
                     <td className="py-2 pr-2 mono text-xs text-fog">−{r.wager}</td>

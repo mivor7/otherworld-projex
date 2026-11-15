@@ -12,6 +12,7 @@ import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
 import { FirstVisitHint } from "@/components/first-visit-hint";
+import { simCreditDelta, simRoundPlay, useTourSim } from "@/components/tour-sim";
 
 type SplitView = {
   cards: number[];
@@ -182,6 +183,8 @@ export default function BlackjackPage() {
   }, [loading, me.signedIn]);
   const house = useHouseConfig();
   const practice = usePractice();
+  const tourSim = useTourSim();
+  const effectiveSandbox = tourSim.active ? false : sandbox;
   const practiceRef = useRef<PracticeRound | null>(null);
   const [practiceRound, setPracticeRound] = useState<View | null>(null);
   const { seed: clientSeed } = useClientSeed();
@@ -249,11 +252,25 @@ export default function BlackjackPage() {
         r.payout += second.payout;
       }
       r.phase = "done";
-      if (r.payout > 0) practice.adjust(r.payout);
+      const totalStaked =
+        r.wager * (r.doubled ? 2 : 1) +
+        (r.split ? r.wager * (r.split.doubled ? 2 : 1) : 0);
+      if (tourSim.active) {
+        simRoundPlay({
+          game: "blackjack",
+          wager: totalStaked,
+          payout: r.payout,
+          creditDelta: r.payout,
+          deltaNet: r.payout - totalStaked,
+          potAdvance: 220,
+        });
+      } else if (r.payout > 0) {
+        practice.adjust(r.payout);
+      }
       if (r.result === "win" || r.split?.result === "win") celebrate();
       setPracticeRound(practiceView(r));
     },
-    [practice]
+    [practice, tourSim.active]
   );
 
   // Current hand complete — hand control to a waiting split hand (dealing its
@@ -279,13 +296,18 @@ export default function BlackjackPage() {
 
   const dealPractice = useCallback(() => {
     setError(null);
-    // Bottomless bankroll — top up first so the deal can never be blocked.
-    practice.ensure(wager);
-    practice.adjust(-wager);
+    if (tourSim.active) {
+      simCreditDelta(-wager);
+    } else {
+      // Bottomless bankroll — top up first so the deal can never be blocked.
+      practice.ensure(wager);
+      practice.adjust(-wager);
+    }
     const deck = shuffledDeck();
     const isTour =
-      typeof document !== "undefined" &&
-      document.documentElement.hasAttribute("data-owp-tour");
+      tourSim.active ||
+      (typeof document !== "undefined" &&
+        document.documentElement.hasAttribute("data-owp-tour"));
     if (isTour) {
       // Showcase shoe for the guided tour: Player gets J♠ (9) + 2♦ (26) = 12,
       // Dealer shows 6♣ (43) with 10♥ (21) in the hole = 16, next card is 9♥ (20)
@@ -321,13 +343,24 @@ export default function BlackjackPage() {
       } else {
         r.result = "lose";
       }
-      if (r.payout > 0) practice.adjust(r.payout);
+      if (tourSim.active) {
+        simRoundPlay({
+          game: "blackjack",
+          wager: r.wager,
+          payout: r.payout,
+          creditDelta: r.payout,
+          deltaNet: r.payout - r.wager,
+          potAdvance: 180,
+        });
+      } else if (r.payout > 0) {
+        practice.adjust(r.payout);
+      }
       if (r.result === "blackjack") celebrate();
       setPracticeRound(practiceView(r));
       return;
     }
     setPracticeRound(practiceView(r));
-  }, [practice, wager]);
+  }, [practice, wager, tourSim.active]);
 
   const actPractice = useCallback(
     (action: "hit" | "stand" | "double" | "split") => {
@@ -339,8 +372,12 @@ export default function BlackjackPage() {
           r.phase !== "player" || r.split || r.doubled ||
           r.player.length !== 2 || r.player[0] % 13 !== r.player[1] % 13
         ) return;
-        practice.ensure(r.wager);
-        practice.adjust(-r.wager);
+        if (tourSim.active) {
+          simCreditDelta(-r.wager);
+        } else {
+          practice.ensure(r.wager);
+          practice.adjust(-r.wager);
+        }
         const aces = r.player[0] % 13 === 12;
         r.split = { cards: [r.player[1]], doubled: false, result: null };
         r.player = [r.player[0], r.deck[r.pos++]];
@@ -357,8 +394,12 @@ export default function BlackjackPage() {
       } else if (action === "double") {
         const handDoubled = r.phase === "player" ? r.doubled : r.split!.doubled;
         if (active.length !== 2 || handDoubled) return;
-        practice.ensure(r.wager);
-        practice.adjust(-r.wager);
+        if (tourSim.active) {
+          simCreditDelta(-r.wager);
+        } else {
+          practice.ensure(r.wager);
+          practice.adjust(-r.wager);
+        }
         if (r.phase === "player") r.doubled = true;
         else r.split!.doubled = true;
         active.push(r.deck[r.pos++]);
@@ -371,26 +412,31 @@ export default function BlackjackPage() {
         advancePractice(r);
       }
     },
-    [practice, settlePractice, advancePractice]
+    [practice, tourSim.active, settlePractice, advancePractice]
   );
 
   const dealNew = () =>
-    sandbox
+    effectiveSandbox || tourSim.active
       ? dealPractice()
       : post({ action: "deal", wager, clientSeed: clientSeed || randomClientSeed() });
   const act = (action: "hit" | "stand" | "double" | "split") =>
-    sandbox
+    effectiveSandbox || tourSim.active
       ? actPractice(action)
       : post({ action, roundId: view!.roundId });
 
-  const view = sandbox ? practiceRound : round;
+  const view = effectiveSandbox || tourSim.active ? practiceRound : round;
   const inHand = view?.phase === "player" || view?.phase === "split";
   const done = view?.phase === "done";
-  const balance = sandbox ? practice.credits : (me.credits ?? 0);
-  const canPlay = sandbox || me.signedIn;
+  const isSignedIn = me.signedIn || tourSim.active;
+  const balance = effectiveSandbox
+    ? practice.credits
+    : tourSim.active
+      ? tourSim.credits
+      : (me.credits ?? 0);
+  const canPlay = effectiveSandbox || isSignedIn;
   // Doubling or splitting stakes one more base wager.
   const extraBet = view?.baseWager ?? view?.wager ?? 0;
-  const extraFundsOk = sandbox || (me.credits ?? 0) >= extraBet;
+  const extraFundsOk = effectiveSandbox || balance >= extraBet;
 
   return (
     <div className="pt-6 max-w-3xl lg:max-w-6xl mx-auto">
@@ -417,7 +463,7 @@ export default function BlackjackPage() {
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
       <div className="panel panel-glow panel-etched game-stage p-6 sm:p-8">
-        {!sandbox && house.gamesPaused && (
+        {!effectiveSandbox && house.gamesPaused && !tourSim.active && (
           <div className="mb-4">
             <Notice kind="info">Live tables are paused by the house right now — the sandbox above still works.</Notice>
           </div>
@@ -425,26 +471,26 @@ export default function BlackjackPage() {
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
             <button
-              className={`chip ${!sandbox ? "active" : ""}`}
-              aria-pressed={!sandbox}
+              className={`chip ${!effectiveSandbox ? "active" : ""}`}
+              aria-pressed={!effectiveSandbox}
               onClick={() => { setSandbox(false); setError(null); }}
             >
               Live table
             </button>
             <button
-              className={`chip ${sandbox ? "active" : ""}`}
-              aria-pressed={sandbox}
+              className={`chip ${effectiveSandbox ? "active" : ""}`}
+              aria-pressed={effectiveSandbox}
               onClick={() => { setSandbox(true); setError(null); }}
             >
               Sandbox
             </button>
           </div>
           <div className="text-right">
-            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice" : "Balance"}</div>
-            <div className="stat-number text-neon">{canPlay ? balance : "—"}</div>
+            <div className="kicker !text-[0.6rem]">{effectiveSandbox ? "Practice" : "Balance"}</div>
+            <div className="stat-number text-neon">{canPlay ? balance.toLocaleString() : "—"}</div>
           </div>
         </div>
-        {sandbox && (
+        {effectiveSandbox && (
           <div className="mb-5">
             <Notice kind="info">
               Sandbox — no wallet needed, no $OWP involved. Same single-deck
@@ -520,7 +566,7 @@ export default function BlackjackPage() {
             )}
             {!view && (
               <p className="text-fog text-sm py-4 text-center">
-                {sandbox
+                {effectiveSandbox
                   ? "Set your wager and deal in — practice balance only."
                   : "Set your wager and deal in."}
               </p>
@@ -538,7 +584,7 @@ export default function BlackjackPage() {
               ? splitResultCopy(view.result, view.split.result)
               : RESULT_COPY[view.result]}
             {view.payout !== null && view.payout > 0 &&
-              ` +${view.payout} ${sandbox ? "practice" : "$OWP"}`}
+              ` +${view.payout} ${effectiveSandbox ? "practice" : "$OWP"}`}
           </div>
         )}
 
@@ -590,14 +636,14 @@ export default function BlackjackPage() {
             <button
               className="btn btn-primary btn-lg px-10"
               onClick={dealNew}
-              disabled={busy || wager < house.minWager || (!sandbox && (house.gamesPaused || !me.signedIn || balance < wager))}
+              disabled={busy || wager < house.minWager || (!effectiveSandbox && !tourSim.active && (house.gamesPaused || !me.signedIn || balance < wager))}
             >
-              {busy ? "Dealing…" : done ? "Deal again" : sandbox ? "Deal (practice)" : "Deal"}
+              {busy ? "Dealing…" : done ? "Deal again" : effectiveSandbox ? "Deal (practice)" : "Deal"}
             </button>
           </div>
         )}
 
-        {!sandbox && !me.signedIn && (
+        {!effectiveSandbox && !isSignedIn && (
           <p className="text-fog text-sm mt-5 text-center">
             Sign in with your wallet to take a seat — or try the sandbox above.{" "}
             <Link href="/games" className="text-neon hover:underline">
@@ -605,7 +651,7 @@ export default function BlackjackPage() {
             </Link>
           </p>
         )}
-        {!sandbox && me.signedIn && !inHand && (me.credits ?? 0) < wager && (
+        {!effectiveSandbox && isSignedIn && !inHand && balance < wager && (
           <p className="text-fog text-sm mt-5 text-center">
             Not enough $OWP.{" "}
             <Link href="/games" className="text-neon hover:underline">
@@ -613,13 +659,13 @@ export default function BlackjackPage() {
             </Link>
           </p>
         )}
-        {error && !sandbox && (
+        {error && !effectiveSandbox && (
           <div className="mt-4">
             <Notice kind="err">{error}</Notice>
           </div>
         )}
 
-        {!sandbox && round && (
+        {!effectiveSandbox && round && (
           <p
             className="text-xs mt-6 text-center break-all"
             style={{ color: "var(--text-dim)" }}
@@ -631,12 +677,12 @@ export default function BlackjackPage() {
             </Link>
           </p>
         )}
-        {sandbox && practiceRound && done && (
+        {effectiveSandbox && practiceRound && done && (
           <p className="text-xs mt-6 text-center" style={{ color: "var(--text-dim)" }}>
             practice round — nothing wagered, nothing won
           </p>
         )}
-        {!sandbox && <FairCommit clientSeed={clientSeed} />}
+        {!effectiveSandbox && <FairCommit clientSeed={clientSeed} />}
       </div>
         <BountyStandings game="blackjack" />
       </div>

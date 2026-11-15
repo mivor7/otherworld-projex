@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SealMark } from "./seal";
+import { startTourSim, stopTourSim } from "./tour-sim";
 
 type Mood = "welcome" | "focused" | "excited" | "impressed";
 type VaultPhase = "idle" | "closing" | "locked" | "opening";
@@ -23,13 +24,13 @@ const CHAPTERS: ChapterMeta[] = [
   {
     index: 0,
     code: "01",
-    shortLabel: "Treasury & Wings",
+    shortLabel: "Buy & Wings",
     wing: "House Foundation · Solana Mainnet",
-    title: "One Treasury · Three Wings",
+    title: "One Treasury · Buy $OWP & Three Wings",
     route: "/",
     stageSelector: "#buy",
     initialLine:
-      "Welcome to Other World Projex. Every game table, auction lot, and bounty pool runs through one transparent Solana treasury.",
+      "Welcome to Other World Projex. Watch me pick up 0.5 SOL of $OWP in simulation mode — one balance powers every game, bid, and bounty.",
     initialMood: "welcome",
   },
   {
@@ -37,11 +38,11 @@ const CHAPTERS: ChapterMeta[] = [
     code: "02",
     shortLabel: "Frog Flip",
     wing: "Wing I · Table 01",
-    title: "Frog Flip · 3× Streak & Cash Out",
+    title: "Frog Flip · 3× Streak & Bounty Win",
     route: "/games/flip",
     stageSelector: ".game-stage",
     initialLine:
-      "Every table includes a zero-risk Sandbox. Watch me call Frog, press a 3× Double-or-Nothing streak, and bank the pot.",
+      "Step onto Wing I at Frog Flip. Watch me stake real-style $OWP, press a 3× Double-or-Nothing streak, fill the pool, and claim the bounty!",
     initialMood: "focused",
   },
   {
@@ -107,25 +108,25 @@ const CHAPTERS: ChapterMeta[] = [
   {
     index: 7,
     code: "08",
-    shortLabel: "Bounties & Lots",
-    wing: "Wings II & III · Prizes & Gavel",
-    title: "Bounty Board & The Auction House",
-    route: "/bounties",
-    stageSelector: "main",
+    shortLabel: "Board & Bid",
+    wing: "Wings II & III · Board & Gavel",
+    title: "Homepage Bounty Board & Auction Bid",
+    route: "/",
+    stageSelector: "#owp-bounty-board",
     initialLine:
-      "Every round played across the House unlocks fixed $OWP bounty pools — and Wing II puts collectibles and 1/1s under the gavel.",
+      "Our 3× Frog Flip streak just filled the weekly Flip pot on the Homepage Bounty Board — next, we'll place an escrowed bid in Wing II.",
     initialMood: "impressed",
   },
   {
     index: 8,
     code: "09",
-    shortLabel: "Fairness & Vault",
-    wing: "Cryptographic Proof · Live Ledger",
-    title: "Provable Fairness & Live Treasury",
-    route: "/fairness",
+    shortLabel: "Withdraw & Vault",
+    wing: "Ledger · Proof · Treasury",
+    title: "Payout Withdrawal, Fairness & Vault",
+    route: "/account",
     stageSelector: "main",
     initialLine:
-      "Don't trust — verify. Watch me recompute a roll and derive a full 52-card Blackjack deck via HMAC-SHA256 right in your browser.",
+      "Everything settles inside the Account Ledger — bounties, bids, and table winnings. Let's withdraw our available $OWP, verify proofs, and unlock the Vault.",
     initialMood: "impressed",
   },
 ];
@@ -364,19 +365,19 @@ export function EnterOtherWorld() {
             </h2>
 
             <p className="text-fog text-sm sm:text-base leading-relaxed max-w-2xl mb-5">
-              Let the House Croupier take the wheel for a full live walkthrough
-              across the real website — inspecting the Solana treasury desk,
-              building a 3× streak on{" "}
-              <span className="text-frost">Frog Flip</span>, sniping a{" "}
-              <span className="text-gold">4.00×</span> roll on{" "}
+              Let the House Croupier take the wheel for a complete live-house
+              simulation — funding an in-memory{" "}
+              <span className="text-frost">$OWP balance</span>, filling a{" "}
+              <span className="text-gold">bounty pool to payout</span> on{" "}
+              <span className="text-frost">Frog Flip</span>, sniping{" "}
+              <span className="text-gold">4.00×</span> on{" "}
               <span className="text-frost">Pond Dice</span>, doubling to 21 in{" "}
               <span className="text-frost">Blackjack</span>, playing{" "}
               <span className="text-frost">Hopper</span>,{" "}
               <span className="text-frost">Frogris</span> &amp;{" "}
-              <span className="text-frost">Worm Frog</span>, exploring{" "}
-              <span className="text-frost">Bounties &amp; Auctions</span>, and
-              verifying rolls via{" "}
-              <span className="text-frost">HMAC-SHA256</span>.
+              <span className="text-frost">Worm Frog</span>, bidding on a live
+              auction lot, withdrawing winnings, and opening the{" "}
+              <span className="text-frost">Vault Doors</span> onto all three wings.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -694,6 +695,7 @@ export function OtherWorldDirector() {
 
   const stopTour = useCallback(() => {
     runIdRef.current += 1;
+    stopTourSim();
     setActive(false);
     setCompleted(false);
     setPaused(false);
@@ -707,6 +709,7 @@ export function OtherWorldDirector() {
 
   const finishTourToFinale = useCallback(() => {
     runIdRef.current += 1;
+    stopTourSim();
     cursorTargetElRef.current = null;
     if (typeof document !== "undefined") {
       document.documentElement.removeAttribute("data-owp-tour");
@@ -716,7 +719,7 @@ export function OtherWorldDirector() {
     setStepProgress(1);
     setMood("excited");
     setLine(
-      "The vault is open — three wings, one treasury. You've played all six games and verified the proof. Where would you like to start?"
+      "The vault is open — three wings, one treasury. You've funded a wallet, swept a bounty pot, bid on a lot, withdrawn winnings, and verified the proof. Where would you like to start?"
     );
     setCompleted(true);
   }, [cleanupStageAttributes]);
@@ -724,6 +727,7 @@ export function OtherWorldDirector() {
   const startTour = useCallback((startChapter = 0) => {
     const idx = Math.max(0, Math.min(CHAPTERS.length - 1, startChapter));
     runIdRef.current += 1;
+    startTourSim(idx);
     if (typeof window !== "undefined") {
       cursorPosRef.current = {
         x: window.innerWidth * 0.5,
@@ -1021,13 +1025,15 @@ export function OtherWorldDirector() {
       const candidates = root.querySelectorAll<HTMLElement>(
         "button, a.btn, a.chip, [role='button']"
       );
+      let partialMatch: HTMLElement | null = null;
       for (const el of candidates) {
         if (el.closest("[data-owp-dock]")) continue;
         if (el.hasAttribute("data-owp-trigger")) continue;
         const label = (el.textContent || "").trim().toLowerCase();
-        if (label.includes(needle)) return el;
+        if (label === needle) return el;
+        if (!partialMatch && label.includes(needle)) partialMatch = el;
       }
-      return null;
+      return partialMatch;
     };
 
     const waitForButtonByText = async (
@@ -1091,14 +1097,6 @@ export function OtherWorldDirector() {
       return document.querySelector<HTMLElement>("main");
     };
 
-    const ensureSandboxActive = async (stageEl: HTMLElement) => {
-      const sandboxBtn = await waitForButtonByText("sandbox", stageEl, 2500);
-      if (sandboxBtn && !sandboxBtn.classList.contains("active")) {
-        await aimAndClick(sandboxBtn, 400, true);
-        await sleep(180);
-      }
-    };
-
     const runChapter = async () => {
       const meta = CHAPTERS[chapter] ?? CHAPTERS[0];
       cleanupStageAttributes();
@@ -1116,45 +1114,47 @@ export function OtherWorldDirector() {
       if (!(await sleep(550))) return;
 
       if (chapter === 0) {
-        // CHAPTER 01: Treasury Desk + Three Wings + 8-Game Slate (/)
-        setStepProgress(0.28);
-        const preset100k = findButtonByText("100k", stageEl);
-        const raydiumBtn = findButtonByText("raydium", stageEl);
-        if (preset100k) {
+        // CHAPTER 01: Buy $OWP Desk + Three Wings (/)
+        setStepProgress(0.26);
+        const presetHalfSol =
+          findButtonByText("0.5 sol", stageEl) || findButtonByText("0.1 sol", stageEl);
+        if (presetHalfSol) {
           setLine(
-            "Pick a quick $OWP preset on the live swap desk — quotes stream straight from Solana liquidity."
+            "Select 0.5 SOL on the Buy $OWP desk — watch our simulated wallet & house ledger right up in the navbar."
           );
           setMood("focused");
-          await aimAndClick(preset100k, 600, true);
-        } else if (raydiumBtn) {
-          setLine(
-            "The House Desk connects directly to Solana & Raydium liquidity — one wallet backs every table and bounty."
-          );
-          setMood("focused");
-          await aimAndClick(raydiumBtn, 650, false);
+          await aimAndClick(presetHalfSol, 520, true);
         }
-        if (!(await sleep(1100))) return;
+        if (!(await sleep(520))) return;
 
-        // Scroll to the Three Wings & Game Slate
-        setStepProgress(0.65);
-        const bountyLink =
-          findButtonByText("open board", document) ||
+        setStepProgress(0.5);
+        const buyBtn = await waitForButtonByText("buy", stageEl, 2200);
+        if (buyBtn) {
+          setLine("Filling the order — instant $OWP added directly to our simulated balance!");
+          setMood("excited");
+          await aimAndClick(buyBtn, 560, true);
+        }
+        if (!(await sleep(1050))) return;
+
+        // Scroll to the Three Wings grid
+        setStepProgress(0.78);
+        const wingsGrid = document.getElementById("owp-wings");
+        const firstWingLink =
+          wingsGrid?.querySelector<HTMLElement>("a.lot-card") ||
           findButtonByText("view lots", document);
-        if (bountyLink) {
-          const wingCard = bountyLink.closest<HTMLElement>(".panel, article, div") || bountyLink;
-          scrollElementIntoComfortZone(wingCard);
+        if (firstWingLink) {
+          scrollElementIntoComfortZone(wingsGrid || firstWingLink);
           if (!(await sleep(480))) return;
           setLine(
-            "Three interconnected wings — The Arcade, The Auction House, and The Bounty Board — all settle from your in-app balance."
+            "Three interconnected wings — The Arcade, The Auction House, and The Bounty Board — all settle from one balance."
           );
           setMood("impressed");
-          await aimAndClick(bountyLink, 680, false);
+          await aimAndClick(firstWingLink, 680, false);
         }
-        if (!(await sleep(1350))) return;
+        if (!(await sleep(1200))) return;
       } else if (chapter === 1) {
-        // CHAPTER 02: Frog Flip (/games/flip) — 3x Streak + Cash Out
+        // CHAPTER 02: Frog Flip (/games/flip) — Live 3x Streak, Bounty Pot Fill & Cash Out
         setStepProgress(0.2);
-        await ensureSandboxActive(stageEl);
 
         const frogSideBtn = await waitForButtonByText("frog", stageEl, 2000);
         if (frogSideBtn) {
@@ -1162,51 +1162,50 @@ export function OtherWorldDirector() {
         }
 
         setStepProgress(0.38);
-        const flipBtn =
-          (await waitForButtonByText("flip (practice)", stageEl, 2500)) ||
-          findButtonByText("flip it", stageEl);
+        const flipBtn = await waitForButtonByText("flip it", stageEl, 2500);
         if (flipBtn) {
-          setLine("Calling 🐸 Frog on the practice table — let's send the first coin spinning!");
+          setLine("Calling 🐸 Frog with 500 $OWP — watch both the navbar balance and bounty meter move!");
           setMood("focused");
           await aimAndClick(flipBtn, 560, true);
         }
 
         // Wait for Double or Nothing button after Win #1
         const doubleBtn1 = await waitForButtonByText("double or nothing", stageEl, 3500);
-        setStepProgress(0.62);
+        setStepProgress(0.6);
         if (doubleBtn1) {
-          setLine("First flip landed Frog! Let's press the pot with Double or Nothing for a 2× streak.");
+          setLine("First flip landed Frog! Pressing the pot with Double or Nothing for a 2× streak.");
           setMood("excited");
           await aimAndClick(doubleBtn1, 640, true);
         }
 
-        // Wait for Double or Nothing button after Win #2 -> press for 3x streak!
+        // Wait for Double or Nothing button after Win #2 -> Win #3 fills 100% of the Flip bounty pot!
         const doubleBtn2 = await waitForButtonByText("double or nothing", stageEl, 3500);
-        setStepProgress(0.82);
+        setStepProgress(0.8);
         if (doubleBtn2) {
-          setLine("🔥 2 in a row! Let's press it one more time for a 3× streak!");
+          setLine("🔥 2 in a row! One more press completes the weekly Frog Flip bounty pool!");
           setMood("excited");
           await aimAndClick(doubleBtn2, 640, true);
         }
 
-        // Wait for Cash Out button after Win #3 and bank the pot!
+        // Wait for Cash Out button after Win #3 and bank the pot + bounty payout!
         const cashOutBtn = await waitForButtonByText("cash out", stageEl, 3500);
-        setStepProgress(0.95);
+        setStepProgress(0.94);
         if (cashOutBtn) {
-          setLine("🔥 3× streak! Now watch me click Cash Out to lock the winnings into our balance.");
+          setLine(
+            "🎯 3× streak AND the Flip Bounty Pool hit 100% — Cashing Out locks the table win + +1,850 $OWP prize!"
+          );
           setMood("impressed");
           await aimAndClick(cashOutBtn, 720, true);
         }
-        if (!(await sleep(1100))) return;
+        if (!(await sleep(1550))) return;
       } else if (chapter === 2) {
         // CHAPTER 03: Pond Dice (/games/dice) — 65% Safe Roll + 24% 4.00x Sniper Roll
         setStepProgress(0.2);
-        await ensureSandboxActive(stageEl);
 
         const slider = stageEl.querySelector<HTMLInputElement>("input[type='range']");
         if (slider) {
           cursorTargetElRef.current = slider;
-          setLine("First, let's set a wide 65% win zone (1.48× multiplier) for a high-probability roll.");
+          setLine("First, let's set a wide 65% win zone (1.48× multiplier) for a warm-up live roll.");
           setMood("focused");
           for (const val of [55, 60, 65]) {
             if (!(await sleep(160))) return;
@@ -1215,9 +1214,7 @@ export function OtherWorldDirector() {
           spawnClickBurst(slider);
         }
 
-        const rollBtn1 =
-          (await waitForButtonByText("roll (practice)", stageEl, 2500)) ||
-          findButtonByText("roll", stageEl);
+        const rollBtn1 = await waitForButtonByText("roll", stageEl, 2500);
         setStepProgress(0.45);
         if (rollBtn1) {
           await aimAndClick(rollBtn1, 520, true);
@@ -1228,7 +1225,7 @@ export function OtherWorldDirector() {
         setStepProgress(0.68);
         if (slider) {
           cursorTargetElRef.current = slider;
-          setLine("Easy win! Now watch me tighten the target line to 24% for a 4.00× payout multiplier.");
+          setLine("Clean win! Now watch me tighten the target line to 24% for a 4.00× payout multiplier.");
           setMood("excited");
           for (const val of [48, 34, 24]) {
             if (!(await sleep(170))) return;
@@ -1237,28 +1234,23 @@ export function OtherWorldDirector() {
           spawnClickBurst(slider);
         }
 
-        const rollBtn2 =
-          (await waitForButtonByText("roll (practice)", stageEl, 2500)) ||
-          findButtonByText("roll", stageEl);
+        const rollBtn2 = await waitForButtonByText("roll", stageEl, 2500);
         setStepProgress(0.88);
         if (rollBtn2) {
           setLine("Rolling under 24 for a 4.00× hit…");
           await aimAndClick(rollBtn2, 560, true);
         }
         if (!(await sleep(1250))) return;
-        setLine("Boom — 4.00× landed right inside the green zone! Every roll is SHA-256 verifiable.");
+        setLine("Boom — 4.00× landed inside the green zone and fed the Dice bounty pool!");
         setMood("excited");
         if (!(await sleep(1100))) return;
       } else if (chapter === 3) {
         // CHAPTER 04: Single-Deck Blackjack (/games/blackjack) — Deal + Double to 21!
         setStepProgress(0.25);
-        await ensureSandboxActive(stageEl);
 
-        const dealBtn =
-          (await waitForButtonByText("deal (practice)", stageEl, 2500)) ||
-          findButtonByText("deal", stageEl);
+        const dealBtn = await waitForButtonByText("deal", stageEl, 2500);
         if (dealBtn) {
-          setLine("Dealing a hand of single-deck Blackjack on the etched emerald felt…");
+          setLine("Dealing a live hand of single-deck Blackjack on the etched emerald felt…");
           setMood("focused");
           await aimAndClick(dealBtn, 580, true);
         }
@@ -1360,82 +1352,147 @@ export function OtherWorldDirector() {
         setMood("excited");
         if (!(await sleep(2500))) return;
       } else if (chapter === 7) {
-        // CHAPTER 08: Bounty Board (/bounties) -> Auction House (/auctions)
-        setStepProgress(0.25);
-        const flipTab = findButtonByText("frog flip", stageEl);
-        if (flipTab) {
+        // CHAPTER 08: Homepage Bounty Board (/#owp-bounty-board) -> Auction House Bid
+        setStepProgress(0.18);
+        const boardLedger =
+          document.getElementById("owp-bounty-board-ledger") || stageEl;
+        scrollElementIntoComfortZone(boardLedger);
+        const awardRow = stageEl.querySelector<HTMLElement>(
+          "[data-owp-sim-award='1']"
+        );
+        if (awardRow) {
+          cursorTargetElRef.current = awardRow;
           setLine(
-            "On the Bounty Board, every game has its own rolling 7-day leaderboard and automatic $OWP prize pot."
+            "Right here on the Homepage Bounty Board — the Frog Flip pool hit 100%, settled to 1st place, and +1,850 $OWP landed in our balance!"
+          );
+          setMood("excited");
+          if (!(await sleep(750))) return;
+          spawnClickBurst(awardRow);
+        } else {
+          setLine(
+            "Every wagered game and arcade run feeds the Homepage Bounty Board live, filling fixed $OWP prize pots automatically."
           );
           setMood("focused");
-          await aimAndClick(flipTab, 560, true);
         }
-        if (!(await sleep(900))) return;
+        if (!(await sleep(1300))) return;
 
-        const bjTab = findButtonByText("blackjack", stageEl);
-        if (bjTab) {
-          await aimAndClick(bjTab, 480, true);
-        }
-        if (!(await sleep(900))) return;
-
-        // Now visit Wing II: The Auction House (/auctions)
-        setStepProgress(0.65);
+        // Now visit Wing II: The Auction House (/auctions) and place a real-art simulated bid!
+        setStepProgress(0.45);
         setLine(
-          "Now visiting Wing II — The Auction House, where escrowed $OWP bids and two-minute anti-snipe rules protect every lot."
+          "Now crossing into Wing II — The Auction House, where escrowed $OWP bids and two-minute anti-snipe rules protect every lot."
         );
         setMood("impressed");
         const auctionStage = await waitForRouteAndStage("/auctions", "main");
         if (!auctionStage || isCancelled()) return;
+        auctionStage.setAttribute("data-owp-stage", "active");
+        if (!(await sleep(650))) return;
 
-        const endingChip = findButtonByText("ending soon", auctionStage);
-        if (endingChip) {
-          await aimAndClick(endingChip, 560, true);
+        const targetLotCard =
+          auctionStage.querySelector<HTMLElement>(
+            "a[data-owp-lot='sim-lot-croupier-plush']"
+          ) || auctionStage.querySelector<HTMLElement>("a.lot-card");
+        setStepProgress(0.62);
+        if (targetLotCard) {
+          scrollElementIntoComfortZone(targetLotCard);
+          setLine(
+            "Let's open the Croupier Frog Desk Plushie lot and put down a competitive live bid."
+          );
+          setMood("focused");
+          await aimAndClick(targetLotCard, 620, true);
         }
-        if (!(await sleep(800))) return;
-        const liveChip = findButtonByText("live ·", auctionStage);
-        if (liveChip) {
-          await aimAndClick(liveChip, 480, true);
+
+        const lotDetailStage = await waitForRouteAndStage(
+          "/auctions/sim-lot-croupier-plush",
+          "main"
+        );
+        if (lotDetailStage && !isCancelled()) {
+          lotDetailStage.setAttribute("data-owp-stage", "active");
+          const plus10Btn = await waitForButtonByText("+10%", lotDetailStage, 2600);
+          if (plus10Btn) {
+            scrollElementIntoComfortZone(plus10Btn);
+            setLine("Bump our opening offer by +10% above the current high bid…");
+            await aimAndClick(plus10Btn, 560, true);
+          }
+          if (!(await sleep(420))) return;
+
+          setStepProgress(0.86);
+          const bidBtn = await waitForButtonByText("place bid", lotDetailStage, 2600);
+          if (bidBtn) {
+            setLine("Locking 1,320 $OWP into escrow — bid placed and leading the lot!");
+            setMood("excited");
+            await aimAndClick(bidBtn, 600, true);
+          }
+          if (!(await sleep(1300))) return;
         }
-        if (!(await sleep(1100))) return;
       } else if (chapter === 8) {
-        // CHAPTER 09: Provable Fairness (/fairness) -> Live Treasury (/treasury)
-        setStepProgress(0.22);
-        const randomizeBtn = findButtonByText("randomize", stageEl);
+        // CHAPTER 09: Account Ledger Withdrawal (/account) -> Fairness (/fairness) -> Treasury -> Vault Finale
+        setStepProgress(0.14);
+        stageEl.setAttribute("data-owp-stage", "active");
+        setLine(
+          "Your Account Ledger tracks available balance, locked escrow bids, bounty winnings, and payout withdrawals together."
+        );
+        setMood("focused");
+        if (!(await sleep(1050))) return;
+
+        const withdrawBtn = await waitForButtonByText("withdraw available", stageEl, 3000);
+        if (withdrawBtn) {
+          scrollElementIntoComfortZone(withdrawBtn);
+          setStepProgress(0.28);
+          setLine(
+            "Clicking Withdraw Available settles your free in-app $OWP straight back into your wallet."
+          );
+          setMood("excited");
+          await aimAndClick(withdrawBtn, 650, true);
+          if (!(await sleep(1300))) return;
+        }
+
+        // Visit /fairness and run the independent HMAC-SHA256 verifier
+        setStepProgress(0.42);
+        setLine(
+          "Next — Provable Fairness. Every table hand and dice roll can be independently verified in your browser."
+        );
+        setMood("impressed");
+        const fairnessStage = await waitForRouteAndStage("/fairness", "main");
+        if (!fairnessStage || isCancelled()) return;
+        fairnessStage.setAttribute("data-owp-stage", "active");
+        if (!(await sleep(450))) return;
+
+        const randomizeBtn = findButtonByText("randomize", fairnessStage);
         if (randomizeBtn) {
           setLine(
             "Half of every roll is your browser's Client Seed — click Randomize anytime after the House commits."
           );
           setMood("focused");
-          await aimAndClick(randomizeBtn, 560, true);
+          await aimAndClick(randomizeBtn, 520, true);
         }
-        if (!(await sleep(800))) return;
+        if (!(await sleep(750))) return;
 
         const verifierEl = document.getElementById("verifier");
         if (verifierEl) {
           verifierEl.setAttribute("data-owp-stage", "active");
           scrollElementIntoComfortZone(verifierEl);
           window.dispatchEvent(new Event("owp:fairness-demo"));
-          if (!(await sleep(500))) return;
+          if (!(await sleep(450))) return;
 
-          setStepProgress(0.52);
+          setStepProgress(0.56);
           const recomputeBtn = findButtonByText("recompute roll", verifierEl);
           if (recomputeBtn) {
             setLine(
-              "Running the Independent Verifier in your browser — computing HMAC-SHA256(serverSeed, clientSeed:nonce)…"
+              "Running the Independent Verifier — computing HMAC-SHA256(serverSeed, clientSeed:nonce)…"
             );
             setMood("excited");
-            await aimAndClick(recomputeBtn, 560, true);
+            await aimAndClick(recomputeBtn, 520, true);
           }
-          if (!(await sleep(900))) return;
+          if (!(await sleep(800))) return;
 
           const deriveBtn = findButtonByText("derive blackjack deck", verifierEl);
           if (deriveBtn) {
             setLine(
               "And re-deriving all 52 cards of the committed Blackjack shoe right here in the browser!"
             );
-            await aimAndClick(deriveBtn, 540, true);
+            await aimAndClick(deriveBtn, 520, true);
           }
-          if (!(await sleep(1300))) return;
+          if (!(await sleep(1100))) return;
         }
 
         // Visit /treasury — the vault that backs the whole house
@@ -1447,7 +1504,7 @@ export function OtherWorldDirector() {
         const treasuryStage = await waitForRouteAndStage("/treasury", "main");
         if (!treasuryStage || isCancelled()) return;
         window.scrollTo({ top: 0, behavior: "smooth" });
-        if (!(await sleep(2200))) return;
+        if (!(await sleep(2100))) return;
 
         // GRAND FINALE: vault doors seal over the Treasury, the wheel turns,
         // and they part onto the homepage's Three Wings.
@@ -1676,6 +1733,8 @@ export function OtherWorldDirector() {
                     if (completed) {
                       startTour(ch.index);
                     } else {
+                      startTourSim(ch.index);
+                      setPaused(false);
                       setChapter(ch.index);
                     }
                   }}

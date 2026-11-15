@@ -10,6 +10,7 @@ import { CopyChip } from "./copy-chip";
 import { useRibbitBalance } from "./use-ribbit-balance";
 import { useHouseConfig } from "./use-house-config";
 import { fmtRibbit, shortWallet } from "@/lib/client-config";
+import { useTourSim, simRaw } from "./tour-sim";
 
 /** 263,289 → "263.3k" — the navbar chip stays narrow at any balance. */
 function abbrev(n: number): string {
@@ -24,6 +25,7 @@ export function WalletButton() {
   const { me, signIn, signOut, signingIn, signInError, needsInvite } = useSession();
   const ribbit = useRibbitBalance();
   const house = useHouseConfig();
+  const tourSim = useTourSim();
   const [open, setOpen] = useState(false);
   const [invite, setInvite] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -41,6 +43,72 @@ export function WalletButton() {
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  if (tourSim.active) {
+    return (
+      <div className="relative" ref={menuRef}>
+        <button
+          className="btn btn-ghost !text-xs gap-2.5"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          title="Live tour simulation balances"
+        >
+          <span
+            className="px-1.5 py-0.5 rounded text-[0.58rem] mono uppercase tracking-wider"
+            style={{
+              background: "oklch(0.78 0.11 150 / 0.14)",
+              color: "var(--color-neon)",
+              border: "1px solid oklch(0.78 0.11 150 / 0.35)",
+            }}
+          >
+            sim
+          </span>
+          <span className="mono text-gold hidden sm:inline" title="$OWP in simulated wallet">
+            {abbrev(tourSim.walletOwp)} $OWP
+          </span>
+          <span className="mono text-neon" title="Simulated in-app balance">
+            {abbrev(tourSim.credits)} app
+          </span>
+          {tourSim.lockedOwp > 0 && (
+            <span className="mono text-portal hidden md:inline" title="Locked in auction bids">
+              {abbrev(tourSim.lockedOwp)} bid
+            </span>
+          )}
+        </button>
+
+        {open && (
+          <div className="wallet-menu" role="menu">
+            <div className="kicker !text-[0.6rem] mb-1">Tour simulation hunter</div>
+            <div className="mono text-xs break-all mb-3">{shortWallet(tourSim.wallet)}</div>
+            <div className="space-y-2 text-sm mb-3">
+              <div className="flex justify-between">
+                <span className="text-fog">$OWP in wallet</span>
+                <span className="stat-number text-gold">
+                  {tourSim.walletOwp.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-fog">App balance</span>
+                <span className="stat-number text-neon">
+                  {fmtRibbit(simRaw(tourSim.credits))}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-fog">Locked in bids</span>
+                <span className="stat-number">
+                  {fmtRibbit(simRaw(tourSim.lockedOwp))}
+                </span>
+              </div>
+            </div>
+            <p className="text-[0.65rem] leading-snug" style={{ color: "var(--text-dim)" }}>
+              Simulated hunter account running during the guided tour. Restores cleanly on exit.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (!publicKey) {
     // Clean bar until someone actually starts connecting — the invite field

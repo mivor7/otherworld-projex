@@ -8,6 +8,7 @@
 // "owp:round" signal the games fire when a round/score lands.
 import { useEffect, useState } from "react";
 import type { JustEnded } from "./bounty-ended-card";
+import { toBountyLiveSnapshot, useTourSim } from "./tour-sim";
 
 export type BountyLiveProgress =
   | {
@@ -88,8 +89,10 @@ function load(game: string, slot: Slot) {
 
 export function useBountyLive(game: string): BountyLive | null {
   const [live, setLive] = useState<BountyLive | null>(null);
+  const tourSim = useTourSim();
 
   useEffect(() => {
+    if (tourSim.active) return;
     let slot = slots.get(game);
     if (!slot) {
       slot = { data: null, subs: new Set(), timer: null, onRound: null };
@@ -120,7 +123,10 @@ export function useBountyLive(game: string): BountyLive | null {
         s.data = null;
       }
     };
-  }, [game]);
+  }, [game, tourSim.active]);
 
+  if (tourSim.active) {
+    return toBountyLiveSnapshot(game, tourSim);
+  }
   return live;
 }

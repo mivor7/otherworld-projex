@@ -11,6 +11,7 @@ import { Notice, SectionTitle } from "@/components/ui";
 import { ArcadeBountyHeader } from "@/components/arcade-bounty-header";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useHouseConfig } from "@/components/use-house-config";
+import { computeRankedEntries, simArcadeScore, useTourSim } from "@/components/tour-sim";
 import { ARCADE } from "@/lib/arcade-palette";
 import {
   DIRS,
@@ -75,6 +76,26 @@ export default function WormPage() {
   const [board, setBoard] = useState<{ rank: number; player: string; score: number }[]>([]);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
   const house = useHouseConfig();
+  const tourSim = useTourSim();
+
+  useEffect(() => {
+    if (tourSim.active && hud.score > 0) {
+      simArcadeScore("worm", hud.score);
+    }
+  }, [tourSim.active, hud.score]);
+
+  const displayedBoard = tourSim.active
+    ? computeRankedEntries(tourSim.bounties.worm).entries.map((e) => ({
+        rank: e.rank,
+        player: e.isYou ? `${e.wallet} · you` : e.wallet,
+        score: e.value,
+      }))
+    : board;
+
+  const displayedSubmitMsg =
+    tourSim.active && tourSim.bounties.worm.yourValue > 0
+      ? `Score ${tourSim.bounties.worm.yourValue} verified (tour sim) — ranked #1 in Worm Frog Serpent Race.`
+      : submitMsg;
 
   const loadBoard = useCallback(() => {
     fetch("/api/leaderboard?game=worm")
@@ -546,7 +567,7 @@ export default function WormPage() {
                 <button className="btn btn-primary btn-lg px-9" onClick={start}>
                   {hud.started ? "Slither again" : "Start slithering"}
                 </button>
-                {!me.signedIn && (
+                {!me.signedIn && !tourSim.active && (
                   <p className="text-fog text-xs mt-3 px-8 text-center">
                     Practice run — sign in and deposit $OWP to compete for prizes.
                   </p>
@@ -562,9 +583,9 @@ export default function WormPage() {
             <button className="btn btn-ghost" onClick={() => turn(0, 1)}>↓</button>
             <button className="btn btn-ghost" onClick={() => turn(1, 0)}>→</button>
           </div>
-          {submitMsg && (
+          {displayedSubmitMsg && (
             <div className="mt-3 w-full">
-              <Notice kind="ok">{submitMsg}</Notice>
+              <Notice kind="ok">{displayedSubmitMsg}</Notice>
             </div>
           )}
         </div>
@@ -579,13 +600,16 @@ export default function WormPage() {
               All bounties →
             </Link>
           </p>
-          {board.length === 0 ? (
+          {displayedBoard.length === 0 ? (
             <p className="text-fog text-sm">No scores yet — the serpent waits.</p>
           ) : (
             <table className="w-full text-sm">
               <tbody>
-                {board.map((row) => (
-                  <tr key={row.rank} className="table-row">
+                {displayedBoard.map((row) => (
+                  <tr
+                    key={row.rank}
+                    className={`table-row ${row.player.includes("· you") ? "text-neon" : ""}`}
+                  >
                     <td className="py-1.5 pr-2 mono text-xs" style={{ color: "var(--text-dim)" }}>
                       {String(row.rank).padStart(2, "0")}
                     </td>

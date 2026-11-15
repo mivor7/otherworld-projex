@@ -13,6 +13,7 @@ import { Notice, SectionTitle } from "@/components/ui";
 import { ArcadeBountyHeader } from "@/components/arcade-bounty-header";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useHouseConfig } from "@/components/use-house-config";
+import { computeRankedEntries, simArcadeScore, useTourSim } from "@/components/tour-sim";
 import { ARCADE, CAR_COLORS } from "@/lib/arcade-palette";
 import {
   HCOLS,
@@ -58,6 +59,26 @@ export default function HopperPage() {
   }, []);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
   const house = useHouseConfig();
+  const tourSim = useTourSim();
+
+  useEffect(() => {
+    if (tourSim.active && hud.score > 0) {
+      simArcadeScore("hopper", hud.score);
+    }
+  }, [tourSim.active, hud.score]);
+
+  const displayedBoard = tourSim.active
+    ? computeRankedEntries(tourSim.bounties.hopper).entries.map((e) => ({
+        rank: e.rank,
+        player: e.isYou ? `${e.wallet} · you` : e.wallet,
+        score: e.value,
+      }))
+    : board;
+
+  const displayedSubmitMsg =
+    tourSim.active && tourSim.bounties.hopper.yourValue > 0
+      ? `Score ${tourSim.bounties.hopper.yourValue} verified (tour sim) — leading #1 for Hopper Weekly Crossing.`
+      : submitMsg;
 
   const loadBoard = useCallback(() => {
     fetch("/api/leaderboard?game=hopper")
@@ -492,7 +513,7 @@ export default function HopperPage() {
                 <button className="btn btn-primary text-lg px-10 py-3" onClick={start}>
                   {hud.started && hud.score > 0 ? "Hop again" : "Start hopping"}
                 </button>
-                {!me.signedIn && (
+                {!me.signedIn && !tourSim.active && (
                   <p className="text-fog text-xs mt-3 px-6 text-center">
                     Practice run — sign in and deposit $OWP to compete for prizes.
                   </p>
@@ -509,9 +530,9 @@ export default function HopperPage() {
             <button className="btn btn-ghost" onClick={() => enqueue(1)}>↓</button>
             <button className="btn btn-ghost" onClick={() => enqueue(3)}>→</button>
           </div>
-          {submitMsg && (
+          {displayedSubmitMsg && (
             <div className="mt-3 w-full">
-              <Notice kind="ok">{submitMsg}</Notice>
+              <Notice kind="ok">{displayedSubmitMsg}</Notice>
             </div>
           )}
         </div>
@@ -526,13 +547,16 @@ export default function HopperPage() {
               All bounties →
             </Link>
           </p>
-          {board.length === 0 ? (
+          {displayedBoard.length === 0 ? (
             <p className="text-fog text-sm">No scores yet — be the first frog in.</p>
           ) : (
             <table className="w-full text-sm">
               <tbody>
-                {board.map((row) => (
-                  <tr key={row.rank} className="table-row">
+                {displayedBoard.map((row) => (
+                  <tr
+                    key={row.rank}
+                    className={`table-row ${row.player.includes("· you") ? "text-neon" : ""}`}
+                  >
                     <td className="py-1.5 pr-2 mono text-xs" style={{ color: "var(--text-dim)" }}>
                       {String(row.rank).padStart(2, "0")}
                     </td>

@@ -13,11 +13,14 @@ import { useSession } from "./session";
 import { QualifyStatus } from "./qualify-status";
 import { BountyEndedCard } from "./bounty-ended-card";
 import { useBountyLive } from "./use-bounty-live";
+import { useTourSim } from "./tour-sim";
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 export function GameBountyStrip({ game }: { game: string }) {
   const { me } = useSession();
+  const tourSim = useTourSim();
+  const isSignedIn = me.signedIn || tourSim.active;
   // Shared per-game poll — the standings panel on the same page consumes the
   // identical subscription instead of double-fetching.
   const live = useBountyLive(game);
@@ -49,7 +52,7 @@ export function GameBountyStrip({ game }: { game: string }) {
   // The glanceable one-liner about the player's own state — the canonical
   // qualify helper (compact) when they still need spend, else their standing.
   let statusNode: ReactNode = null;
-  if (b && me.signedIn && you) {
+  if (b && isSignedIn && you) {
     if (you.inRunning && you.projectedRibbit > 0) {
       statusNode = (
         <span className="text-neon">

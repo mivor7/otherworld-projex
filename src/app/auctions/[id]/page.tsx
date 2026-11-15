@@ -6,6 +6,7 @@ import { useSession } from "@/components/session";
 import { Countdown, Notice } from "@/components/ui";
 import { LightboxImage } from "@/components/lightbox";
 import { fmtRibbit, fromRawClient, toRawClient } from "@/lib/client-config";
+import { simPlaceBid, simRaw, useTourSim } from "@/components/tour-sim";
 
 type BidRow = {
   id: string;
@@ -38,13 +39,17 @@ export default function AuctionDetailPage({
 }) {
   const { id } = use(params);
   const { me, refresh } = useSession();
+  const tourSim = useTourSim();
   const [auction, setAuction] = useState<AuctionDetail | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [bid, setBid] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
+  const isSimLot = id.startsWith("sim-lot-");
+
   const load = useCallback(() => {
+    if (isSimLot) return;
     fetch(`/api/auctions/${id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -56,14 +61,20 @@ export default function AuctionDetailPage({
         }
       })
       .catch(() => setLoadError(true));
-  }, [id]);
+  }, [id, isSimLot]);
   useEffect(() => {
+    if (isSimLot) return;
     load();
     const t = setInterval(load, 5_000);
     return () => clearInterval(t);
-  }, [load]);
+  }, [load, isSimLot]);
 
-  if (!auction && loadError) {
+  const simAuction = tourSim.active
+    ? tourSim.auctions.find((a) => a.id === id) ?? null
+    : null;
+  const effectiveAuction = simAuction ?? auction;
+
+  if (!effectiveAuction && (loadError || (isSimLot && !tourSim.active))) {
     return (
       <div className="pt-24 text-center">
         <p className="text-fog mb-4">This lot could not be found.</p>
@@ -74,23 +85,37 @@ export default function AuctionDetailPage({
     );
   }
 
-  if (!auction) {
+  if (!effectiveAuction) {
     return <div className="pt-24 text-center text-fog">Retrieving the lot…</div>;
   }
 
+  const isSignedIn = me.signedIn || tourSim.active;
+  const availRaw = tourSim.active ? simRaw(tourSim.credits) : (me.ribbitAvailable ?? 0);
   const minNext =
-    BigInt(auction.currentRaw) > 0n
-      ? BigInt(auction.currentRaw) + BigInt(auction.minIncrement)
-      : BigInt(auction.startBidRaw);
+    BigInt(effectiveAuction.currentRaw) > 0n
+      ? BigInt(effectiveAuction.currentRaw) + BigInt(effectiveAuction.minIncrement)
+      : BigInt(effectiveAuction.startBidRaw);
   const suggested =
     bid !== null && Number.isFinite(bid) ? bid : Math.ceil(fromRawClient(minNext));
   const bidValid = Number.isFinite(suggested) && suggested > 0;
   const needsDeposit =
-    me.signedIn && bidValid && suggested > fromRawClient(me.ribbitAvailable ?? 0);
-  const youAreHigh = auction.bids.some((b) => b.status === "active" && b.isYou);
+    isSignedIn && bidValid && suggested > fromRawClient(availRaw);
+  const youAreHigh = effectiveAuction.bids.some((b) => b.status === "active" && b.isYou);
 
   const placeBid = async () => {
     if (!bidValid) return;
+    if (tourSim.active) {
+      setBusy(true);
+      await new Promise((r) => setTimeout(r, 260));
+      const res = simPlaceBid(effectiveAuction.id, suggested);
+      setBusy(false);
+      if (res.ok) {
+        setMsg({ kind: "ok", text: "You hold the high bid." });
+      } else {
+        setMsg({ kind: "err", text: res.error ?? "Bid failed" });
+      }
+      return;
+    }
     setBusy(true);
     setMsg(null);
     try {
@@ -121,7 +146,7 @@ export default function AuctionDetailPage({
           Auction House
         </Link>
         <span style={{ color: "var(--text-dim)" }}>/</span>
-        <span className="kicker !normal-case !tracking-normal">{auction.title}</span>
+        <span className="kicker !normal-case !tracking-normal">{effectiveAuction.title}</span>
       </div>
 
       <div className="grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-6 items-start">
@@ -133,14 +158,14 @@ export default function AuctionDetailPage({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={auction.imageUrl ?? "/art/art-empty-chest.jpg"}
+              src={effectiveAuction.imageUrl ?? "/art/art-empty-chest.jpg"}
               alt=""
               aria-hidden
               className="media-matte-bg"
             />
             <LightboxImage
-              src={auction.imageUrl ?? "/art/art-empty-chest.jpg"}
-              alt={auction.title}
+              src={effectiveAuction.imageUrl ?? "/art/art-empty-chest.jpg"}
+              alt={effectiveAuction.title}
               className="media-matte-fg"
             />
             <div
@@ -150,17 +175,17 @@ export default function AuctionDetailPage({
           </div>
           <div className="p-6">
             <div className="flex gap-1.5 mb-3 flex-wrap">
-              <span className="badge">{auction.category}</span>
-              {auction.sellerWallet ? (
+              <span className="badge">{effectiveAuction.category}</span>
+              {effectiveAuction.sellerWallet ? (
                 <span className="badge badge-portal">
-                  consigned · {auction.sellerWallet.slice(0, 4)}…
+                  consigned · {effectiveAuction.sellerWallet.slice(0, 4)}…
                 </span>
               ) : (
                 <span className="badge">house lot</span>
               )}
             </div>
-            <h1 className="text-[1.4rem] mb-3">{auction.title}</h1>
-            <p className="text-fog text-[0.9rem] leading-relaxed">{auction.description}</p>
+            <h1 className="text-[1.4rem] mb-3">{effectiveAuction.title}</h1>
+            <p className="text-fog text-[0.9rem] leading-relaxed">{effectiveAuction.description}</p>
           </div>
         </div>
 
@@ -170,11 +195,13 @@ export default function AuctionDetailPage({
             <div className="flex justify-between items-start gap-3 mb-5">
               <div className="min-w-0">
                 <div className="kicker mb-1.5">
-                  {BigInt(auction.currentRaw) > 0n ? "Current bid" : "Opening bid"}
+                  {BigInt(effectiveAuction.currentRaw) > 0n ? "Current bid" : "Opening bid"}
                 </div>
                 <div className="stat-number text-[1.6rem] sm:text-[2rem] text-neon leading-none">
                   {fmtRibbit(
-                    BigInt(auction.currentRaw) > 0n ? auction.currentRaw : auction.startBidRaw
+                    BigInt(effectiveAuction.currentRaw) > 0n
+                      ? effectiveAuction.currentRaw
+                      : effectiveAuction.startBidRaw
                   )}
                 </div>
                 <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
@@ -183,17 +210,17 @@ export default function AuctionDetailPage({
               </div>
               <div className="text-right">
                 <div className="kicker mb-1.5">
-                  {auction.status === "live" ? "Hammer in" : "Status"}
+                  {effectiveAuction.status === "live" ? "Hammer in" : "Status"}
                 </div>
-                {auction.status === "live" ? (
-                  <Countdown to={auction.endsAt} />
+                {effectiveAuction.status === "live" ? (
+                  <Countdown to={effectiveAuction.endsAt} />
                 ) : (
-                  <span className="badge">{auction.status}</span>
+                  <span className="badge">{effectiveAuction.status}</span>
                 )}
               </div>
             </div>
 
-            {auction.status === "live" && (
+            {effectiveAuction.status === "live" && (
               <>
                 {youAreHigh && (
                   <div className="mb-3">
@@ -213,7 +240,7 @@ export default function AuctionDetailPage({
                   <button
                     className="btn btn-primary"
                     onClick={placeBid}
-                    disabled={busy || !me.signedIn || youAreHigh || !bidValid || needsDeposit}
+                    disabled={busy || !isSignedIn || youAreHigh || !bidValid || needsDeposit}
                   >
                     {busy ? "…" : needsDeposit ? "Deposit to bid" : "Place bid"}
                   </button>
@@ -244,10 +271,10 @@ export default function AuctionDetailPage({
                     <Link href="/auctions" className="text-neon hover:underline">
                       app balance
                     </Link>{" "}
-                    ({fmtRibbit(me.ribbitAvailable ?? 0)} available)
+                    ({fmtRibbit(availRaw)} available)
                   </p>
                   <p>Bids in the final 2 minutes extend the hammer by 2 minutes.</p>
-                  {me.signedIn && needsDeposit && (
+                  {isSignedIn && needsDeposit && (
                     <p className="text-gold">
                       Not enough app balance —{" "}
                       <Link href="/auctions" className="text-neon hover:underline">
@@ -256,7 +283,7 @@ export default function AuctionDetailPage({
                       to place this bid.
                     </p>
                   )}
-                  {!me.signedIn && (
+                  {!isSignedIn && (
                     <p className="text-gold">Sign in with your wallet (top right) to bid.</p>
                   )}
                 </div>
@@ -271,12 +298,12 @@ export default function AuctionDetailPage({
 
           <div className="panel p-5">
             <div className="kicker mb-3">Bid record</div>
-            {auction.bids.length === 0 ? (
+            {effectiveAuction.bids.length === 0 ? (
               <p className="text-fog text-sm">No bids yet — open the lot.</p>
             ) : (
               <table className="w-full text-sm">
                 <tbody>
-                  {auction.bids.map((b) => (
+                  {effectiveAuction.bids.map((b) => (
                     <tr key={b.id} className="table-row">
                       <td className="py-2 pr-2 mono text-xs">
                         {b.bidder}

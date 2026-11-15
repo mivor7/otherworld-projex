@@ -13,6 +13,7 @@ import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
 import { FirstVisitHint } from "@/components/first-visit-hint";
+import { simCreditDelta, simRoundPlay, useTourSim } from "@/components/tour-sim";
 
 type DiceResult = {
   outcome: { rolled: number; target: number; multiplier: number };
@@ -60,6 +61,8 @@ export default function DicePage() {
   }, []);
 
   const practice = usePractice();
+  const tourSim = useTourSim();
+  const effectiveSandbox = tourSim.active ? false : sandbox;
   const { seed: clientSeed } = useClientSeed();
   const house = useHouseConfig();
 
@@ -68,23 +71,49 @@ export default function DicePage() {
   const maxTarget = maxDiceTarget(house.houseEdge);
   const target = Math.min(chosenTarget, maxTarget);
   const multiplier = diceMultiplier(target, house.houseEdge);
-  const balance = sandbox ? practice.credits : (me.credits ?? 0);
-  const canPlay = sandbox || me.signedIn;
+  const isSignedIn = me.signedIn || tourSim.active;
+  const balance = effectiveSandbox
+    ? practice.credits
+    : tourSim.active
+      ? tourSim.credits
+      : (me.credits ?? 0);
+  const canPlay = effectiveSandbox || isSignedIn;
 
   const play = async () => {
     setRolling(true);
     setError(null);
 
-    if (sandbox) {
+    if (tourSim.active) {
+      simCreditDelta(-wager);
+      const rolled = Math.max(1.2, Math.round(target * 0.42 * 100) / 100);
+      const payout = Math.floor(wager * multiplier);
+      await new Promise((r) => setTimeout(r, 620));
+      simRoundPlay({
+        game: "dice",
+        wager,
+        payout,
+        creditDelta: payout,
+        deltaNet: payout - wager,
+        potAdvance: 170,
+      });
+      setResult({
+        outcome: { rolled, target, multiplier },
+        payout,
+        win: true,
+        credits: tourSim.credits,
+        nonce: tourSim.nonce + 1,
+        seedHash: tourSim.seedHash,
+      });
+      celebrate();
+      setRolling(false);
+      return;
+    }
+
+    if (effectiveSandbox) {
       // Practice table: same odds, local roll, zero $OWP. Bottomless
       // bankroll — top up first so the roll can never be blocked.
       practice.ensure(wager);
-      const isTour =
-        typeof document !== "undefined" &&
-        document.documentElement.hasAttribute("data-owp-tour");
-      const rolled = isTour
-        ? Math.max(1.2, Math.round(target * 0.42 * 100) / 100)
-        : practiceRoll();
+      const rolled = practiceRoll();
       const win = rolled < target;
       const payout = win ? Math.floor(wager * multiplier) : 0;
       practice.adjust(-wager + payout);
@@ -154,26 +183,26 @@ export default function DicePage() {
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
       <div className="panel panel-glow game-stage p-5 sm:p-6">
-        {!sandbox && house.gamesPaused && (
+        {!effectiveSandbox && house.gamesPaused && !tourSim.active && (
           <div className="mb-4">
             <Notice kind="info">Live tables are paused by the house right now — the sandbox above still works.</Notice>
           </div>
         )}
         <div className="flex items-center justify-between mb-6">
           <div className="chips">
-            <button className={`chip ${!sandbox ? "active" : ""}`} aria-pressed={!sandbox} onClick={() => setSandbox(false)}>
+            <button className={`chip ${!effectiveSandbox ? "active" : ""}`} aria-pressed={!effectiveSandbox} onClick={() => setSandbox(false)}>
               Live table
             </button>
-            <button className={`chip ${sandbox ? "active" : ""}`} aria-pressed={sandbox} onClick={() => setSandbox(true)}>
+            <button className={`chip ${effectiveSandbox ? "active" : ""}`} aria-pressed={effectiveSandbox} onClick={() => setSandbox(true)}>
               Sandbox
             </button>
           </div>
           <div className="text-right">
-            <div className="kicker !text-[0.6rem]">{sandbox ? "Practice" : "Balance"}</div>
-            <div className="stat-number text-neon">{canPlay ? balance : "—"}</div>
+            <div className="kicker !text-[0.6rem]">{effectiveSandbox ? "Practice" : "Balance"}</div>
+            <div className="stat-number text-neon">{canPlay ? balance.toLocaleString() : "—"}</div>
           </div>
         </div>
-        {sandbox && (
+        {effectiveSandbox && (
           <div className="mb-5">
             <Notice kind="info">
               Sandbox — no wallet needed, no $OWP involved. Same odds,
@@ -299,13 +328,13 @@ export default function DicePage() {
           <button
             className="btn btn-primary text-lg px-12 py-3"
             onClick={play}
-            disabled={rolling || !canPlay || wager < house.minWager || (!sandbox && (house.gamesPaused || balance < wager))}
+            disabled={rolling || !canPlay || wager < house.minWager || (!effectiveSandbox && !tourSim.active && (house.gamesPaused || balance < wager))}
           >
-            {rolling ? "Rolling…" : sandbox ? "Roll (practice)" : "Roll"}
+            {rolling ? "Rolling…" : effectiveSandbox ? "Roll (practice)" : "Roll"}
           </button>
         </div>
 
-        {!sandbox && !me.signedIn && (
+        {!effectiveSandbox && !isSignedIn && (
           <p className="text-fog text-sm mt-4 text-center">
             Sign in with your wallet to play — or try the sandbox above.{" "}
             <Link href="/games" className="text-neon hover:underline">
@@ -313,7 +342,7 @@ export default function DicePage() {
             </Link>
           </p>
         )}
-        {!sandbox && me.signedIn && balance < wager && (
+        {!effectiveSandbox && isSignedIn && balance < wager && (
           <p className="text-fog text-sm mt-4 text-center">
             Not enough $OWP.{" "}
             <Link href="/games" className="text-neon hover:underline">
@@ -326,7 +355,7 @@ export default function DicePage() {
             <Notice kind="err">{error}</Notice>
           </div>
         )}
-        {result && !sandbox && result.seedHash && (
+        {result && !effectiveSandbox && result.seedHash && (
           <p className="text-xs text-fog/70 mt-6 text-center break-all">
             nonce {result.nonce} · seed hash {result.seedHash.slice(0, 16)}… ·{" "}
             <Link href="/fairness" className="text-neon hover:underline">
@@ -334,12 +363,12 @@ export default function DicePage() {
             </Link>
           </p>
         )}
-        {result && sandbox && (
+        {result && effectiveSandbox && (
           <p className="text-xs mt-6 text-center" style={{ color: "var(--text-dim)" }}>
             practice round — nothing wagered, nothing won
           </p>
         )}
-        {!sandbox && <FairCommit clientSeed={clientSeed} />}
+        {!effectiveSandbox && <FairCommit clientSeed={clientSeed} />}
       </div>
         <BountyStandings game="dice" />
       </div>

@@ -12,6 +12,7 @@ import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
 import { FirstVisitHint } from "@/components/first-visit-hint";
+import { simCreditDelta, simRoundPlay, useTourSim } from "@/components/tour-sim";
 
 type FlipResult = {
   outcome: { landed: "frog" | "fly" };
@@ -49,11 +50,14 @@ export default function FlipPage() {
   const [pot, setPot] = useState(0); // winnings riding, after a win
   const [pendingWin, setPendingWin] = useState(false); // awaiting cash-out / continue
   const practice = usePractice();
+  const tourSim = useTourSim();
+  const effectiveSandbox = tourSim.active ? false : sandbox;
+  const lastWagerRef = useRef(wager);
   const { seed: clientSeed } = useClientSeed();
   const house = useHouseConfig();
   const flipMult = 2 * (1 - house.houseEdge); // live house edge
 
-  const land = (data: FlipResult) => {
+  const land = (data: FlipResult, tourSimMode = false) => {
     setSpinning(false);
     setLanding(true);
     turnsRef.current += 4;
@@ -61,6 +65,17 @@ export default function FlipPage() {
     setTimeout(async () => {
       setResult(data);
       setLanding(false);
+      if (tourSimMode) {
+        const stake = lastWagerRef.current;
+        simRoundPlay({
+          game: "flip",
+          wager: stake,
+          payout: data.payout,
+          creditDelta: data.payout,
+          deltaNet: data.payout - stake,
+          potAdvance: 130,
+        });
+      }
       if (data.win) {
         celebrate();
         setStreak((s) => s + 1);
@@ -71,7 +86,7 @@ export default function FlipPage() {
         setPot(0);
         setPendingWin(false);
       }
-      if (!sandbox) {
+      if (!effectiveSandbox && !tourSimMode) {
         // The round response carried the fresh balance — paint it instantly;
         // only fall back to a refetch if it's somehow missing.
         if (typeof data.credits === "number") setCredits(data.credits);
@@ -83,17 +98,37 @@ export default function FlipPage() {
 
   const play = async (amount: number) => {
     if (amount < house.minWager) return;
+    lastWagerRef.current = amount;
     setSpinning(true);
     setError(null);
     setResult(null);
     setPendingWin(false);
 
-    if (sandbox) {
+    if (tourSim.active) {
+      simCreditDelta(-amount);
+      const landed = side;
+      const payout = Math.floor(amount * flipMult);
+      setTimeout(
+        () =>
+          land(
+            {
+              outcome: { landed },
+              payout,
+              win: true,
+              credits: tourSim.credits,
+              nonce: tourSim.nonce + 1,
+              seedHash: tourSim.seedHash,
+            },
+            true
+          ),
+        520
+      );
+      return;
+    }
+
+    if (effectiveSandbox) {
       practice.ensure(amount);
-      const isTour =
-        typeof document !== "undefined" &&
-        document.documentElement.hasAttribute("data-owp-tour");
-      const landed = isTour ? side : Math.random() < 0.5 ? "frog" : "fly";
+      const landed = Math.random() < 0.5 ? "frog" : "fly";
       const win = landed === side;
       const payout = win ? Math.floor(amount * flipMult) : 0;
       practice.adjust(-amount + payout);
@@ -129,13 +164,18 @@ export default function FlipPage() {
   };
 
   const busy = spinning || landing;
-  const balance = sandbox ? practice.credits : me.credits ?? 0;
-  const canPlay = sandbox || me.signedIn;
+  const isSignedIn = me.signedIn || tourSim.active;
+  const balance = effectiveSandbox
+    ? practice.credits
+    : tourSim.active
+      ? tourSim.credits
+      : me.credits ?? 0;
+  const canPlay = effectiveSandbox || isSignedIn;
   const potNext = Math.floor(pot * flipMult);
   const canDouble =
     pot >= house.minWager &&
     pot <= house.maxWager &&
-    (sandbox || (balance >= pot && !house.gamesPaused));
+    (effectiveSandbox || (balance >= pot && (!house.gamesPaused || tourSim.active)));
 
   return (
     <div className="pt-6 max-w-2xl lg:max-w-5xl mx-auto">
@@ -160,27 +200,27 @@ export default function FlipPage() {
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
         <div className="panel panel-glow game-stage p-5 sm:p-6 text-center">
-          {!sandbox && house.gamesPaused && (
+          {!effectiveSandbox && house.gamesPaused && !tourSim.active && (
             <div className="mb-4">
               <Notice kind="info">Live tables are paused by the house right now — the sandbox above still works.</Notice>
             </div>
           )}
           <div className="flex items-center justify-between mb-6">
             <div className="chips">
-              <button className={`chip ${!sandbox ? "active" : ""}`} aria-pressed={!sandbox} onClick={() => setSandbox(false)}>
+              <button className={`chip ${!effectiveSandbox ? "active" : ""}`} aria-pressed={!effectiveSandbox} onClick={() => setSandbox(false)}>
                 Live table
               </button>
-              <button className={`chip ${sandbox ? "active" : ""}`} aria-pressed={sandbox} onClick={() => setSandbox(true)}>
+              <button className={`chip ${effectiveSandbox ? "active" : ""}`} aria-pressed={effectiveSandbox} onClick={() => setSandbox(true)}>
                 Sandbox
               </button>
             </div>
             <div className="text-right">
-              <div className="kicker !text-[0.6rem]">{sandbox ? "Practice" : "Balance"}</div>
-              <div className="stat-number text-neon">{canPlay ? balance : "—"}</div>
+              <div className="kicker !text-[0.6rem]">{effectiveSandbox ? "Practice" : "Balance"}</div>
+              <div className="stat-number text-neon">{canPlay ? balance.toLocaleString() : "—"}</div>
             </div>
           </div>
 
-          {sandbox && (
+          {effectiveSandbox && (
             <div className="mb-5 text-left">
               <Notice kind="info">
                 Sandbox — no wallet needed, no $OWP involved. Same odds,
@@ -309,14 +349,14 @@ export default function FlipPage() {
               <button
                 className="btn btn-primary text-lg px-12 py-3"
                 onClick={() => play(wager)}
-                disabled={busy || !canPlay || wager < house.minWager || (!sandbox && (house.gamesPaused || balance < wager))}
+                disabled={busy || !canPlay || wager < house.minWager || (!effectiveSandbox && !tourSim.active && (house.gamesPaused || balance < wager))}
               >
-                {busy ? "Flipping…" : sandbox ? "Flip (practice)" : "Flip it"}
+                {busy ? "Flipping…" : effectiveSandbox ? "Flip (practice)" : "Flip it"}
               </button>
             </>
           )}
 
-          {!sandbox && !me.signedIn && (
+          {!effectiveSandbox && !isSignedIn && (
             <p className="text-fog text-sm mt-4">
               Sign in with your wallet to play — or try the sandbox above.{" "}
               <Link href="/games" className="text-neon hover:underline">
@@ -324,7 +364,7 @@ export default function FlipPage() {
               </Link>
             </p>
           )}
-          {!sandbox && me.signedIn && !pendingWin && (me.credits ?? 0) < wager && (
+          {!effectiveSandbox && isSignedIn && !pendingWin && balance < wager && (
             <p className="text-fog text-sm mt-4">
               Not enough $OWP.{" "}
               <Link href="/games" className="text-neon hover:underline">
@@ -338,7 +378,7 @@ export default function FlipPage() {
             </div>
           )}
 
-          {result && !sandbox && result.seedHash && (
+          {result && !effectiveSandbox && result.seedHash && (
             <p className="text-xs text-fog/70 mt-6 break-all">
               round nonce {result.nonce} · seed hash {result.seedHash.slice(0, 16)}… ·{" "}
               <Link href="/fairness" className="text-neon hover:underline">
@@ -346,12 +386,12 @@ export default function FlipPage() {
               </Link>
             </p>
           )}
-          {result && sandbox && (
+          {result && effectiveSandbox && (
             <p className="text-xs mt-6" style={{ color: "var(--text-dim)" }}>
               practice round — nothing wagered, nothing won
             </p>
           )}
-          {!sandbox && <FairCommit clientSeed={clientSeed} />}
+          {!effectiveSandbox && <FairCommit clientSeed={clientSeed} />}
         </div>
 
         <BountyStandings game="flip" />
