@@ -1,376 +1,222 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @next/next/no-img-element, react-hooks/set-state-in-effect */
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { SealMark } from "@/components/seal";
+import { celebrate } from "@/components/confetti";
+import { ARCADE, CAR_COLORS } from "@/lib/arcade-palette";
+import {
+  HCOLS,
+  HROWS,
+  HCELL,
+  HW,
+  HFRAME_MS,
+  type HopperState,
+  createHopper,
+  hopperHop,
+  hopperFrame,
+} from "@/lib/hopper-sim";
 
-export type TourStepIndex = 0 | 1 | 2 | 3 | 4 | 5;
+export type ActIndex = 0 | 1 | 2 | 3 | 4;
 
-interface TourStop {
-  id: TourStepIndex;
+interface ActMeta {
+  id: ActIndex;
+  roman: string;
   code: string;
   chipLabel: string;
   kicker: string;
   title: string;
-  summary: string;
-  route: string;
-  targetSelector: string;
-  targetTag: string;
-  art: string;
-  metrics: { label: string; value: string }[];
+  subtitle: string;
+  liveHref: string;
+  liveCta: string;
 }
 
-export const TOUR_STOPS: TourStop[] = [
+const ACTS: ActMeta[] = [
   {
     id: 0,
+    roman: "ACT I",
     code: "01",
-    chipLabel: "Treasury Desk",
-    kicker: "Stop 01 / 06 · Instant $OWP Desk",
-    title: "Gasless wallet sign-in & live Raydium treasury swaps",
-    summary:
-      "Connect with a free message signature — no email or password. Pay SOL on the homepage desk and the house wallet sends $OWP at the live Raydium spot price, or deposit $OWP 1:1 into your balance.",
-    route: "/",
-    targetSelector: "#buy .panel",
-    targetTag: "LIVE TARGET · TREASURY SWAP DESK",
-    art: "/art/hero-flagship.jpg",
-    metrics: [
-      { label: "Auth", value: "0 SOL message sig" },
-      { label: "Pricing", value: "Live Raydium spot" },
-      { label: "Deposits", value: "1 : 1 $OWP credit" },
-    ],
+    chipLabel: "The Gate & $OWP",
+    kicker: "Act I · Cryptographic Gate & Treasury Desk",
+    title: "One free signature opens the vault. Instant $OWP from the house.",
+    subtitle:
+      "Connect Phantom or Solflare with a gasless message signature — no email, no password. Swap SOL on the homepage desk at the live Raydium spot price or deposit $OWP 1:1 into your balance.",
+    liveHref: "#buy",
+    liveCta: "Open Buy $OWP Desk →",
   },
   {
     id: 1,
+    roman: "ACT II",
     code: "02",
-    chipLabel: "Frog Flip",
-    kicker: "Stop 02 / 06 · Wing I — Table 01",
-    title: "Frog Flip — 1.92× payouts & SHA-256 commit-reveal",
-    summary:
-      "Watch the co-pilot switch to the live practice table, call a side, and flip the 3D coin. Every round locks a SHA-256 server seed hash upfront at a published 4% house edge.",
-    route: "/games/flip",
-    targetSelector: ".game-stage",
-    targetTag: "LIVE DEMO · FROG FLIP TABLE",
-    art: "/art/owp_pump.png",
-    metrics: [
-      { label: "Win multiplier", value: "1.92× even odds" },
-      { label: "House edge", value: "Published 4%" },
-      { label: "Verification", value: "SHA-256 seed hash" },
-    ],
+    chipLabel: "Velvet Tables",
+    kicker: "Act II · Wing I — Provably-Fair Tables (4% Edge)",
+    title: "3D Frog Flip & Pond Dice — every hand verified by SHA-256.",
+    subtitle:
+      "Wager $OWP from your balance at a published 4% house edge. Every round locks a cryptographic server seed hash before you bet and reveals the preimage after so anyone can verify the outcome.",
+    liveHref: "/games/flip",
+    liveCta: "Play Frog Flip Live →",
   },
   {
     id: 2,
+    roman: "ACT III",
     code: "03",
-    chipLabel: "Pond Dice",
-    kicker: "Stop 03 / 06 · Wing I — Table 02",
-    title: "Pond Dice — dial your own risk line & roll live",
-    summary:
-      "Watch the co-pilot sweep the win-zone line across the track and trigger live rolls. Lower targets multiply payouts up to 96× under the same cryptographic fairness protocol.",
-    route: "/games/dice",
-    targetSelector: ".game-stage",
-    targetTag: "LIVE DEMO · POND DICE TRACK",
-    art: "/art/art-dice.jpg",
-    metrics: [
-      { label: "Win zone", value: "2% – 94% custom" },
-      { label: "Max multiplier", value: "Up to 96.00×" },
-      { label: "Bounty feed", value: "50% of house edge" },
-    ],
+    chipLabel: "60 Hz Arcade",
+    kicker: "Act III · Wing I — Free Replay-Verified Arcade",
+    title: "Free-to-play classics protected by 60 Hz deterministic server replay.",
+    subtitle:
+      "Hopper, Frogris, and Worm Frog cost nothing to enter. Every keystroke is recorded with its frame index and re-simulated at 60 Hz on the server so bots can never fake a leaderboard run.",
+    liveHref: "/games/hopper",
+    liveCta: "Play Free Hopper →",
   },
   {
     id: 3,
+    roman: "ACT IV",
     code: "04",
-    chipLabel: "Free Hopper",
-    kicker: "Stop 04 / 06 · Wing I — Free Skill Arcade",
-    title: "Hopper — free-to-play with 60 Hz deterministic server replay",
-    summary:
-      "Watch the co-pilot start a live Hopper run and hop across traffic. Every arcade run (Hopper, Frogris, Worm Frog) is free to play and re-simulated at 60 Hz on the server so bots can never fake a score.",
-    route: "/games/hopper",
-    targetSelector: ".game-stage",
-    targetTag: "LIVE DEMO · 60 HZ HOPPER CANVAS",
-    art: "/art/owp_frogger.png",
-    metrics: [
-      { label: "Entry cost", value: "Free to play" },
-      { label: "Anti-cheat", value: "60 Hz server replay" },
-      { label: "Prizes", value: "Weekly $OWP pools" },
-    ],
+    chipLabel: "Bounty Loop",
+    kicker: "Act IV · Wing III — Self-Filling Bounty Pools",
+    title: "50% of the house edge feeds live bounties that pay out automatically.",
+    subtitle:
+      "Every table wager grows that game's active bounty pool. The moment the unlock meter hits 100%, the treasury credits every eligible hunter pro-rata — automatically, with zero claim gas.",
+    liveHref: "/bounties",
+    liveCta: "Explore Bounty Board →",
   },
   {
     id: 4,
+    roman: "ACT V",
     code: "05",
-    chipLabel: "Bounty Board",
-    kicker: "Stop 05 / 06 · Wing III — The Bounty Board",
-    title: "Self-filling $OWP pools that pay out automatically",
-    summary:
-      "Half of the house edge from every table bet feeds that game's live bounty pool. When the activity meter reaches 100%, the treasury credits every eligible hunter pro-rata, automatically.",
-    route: "/bounties",
-    targetSelector: "main",
-    targetTag: "LIVE TARGET · ACTIVE BOUNTY POOLS",
-    art: "/art/art-bounty.jpg",
-    metrics: [
-      { label: "Pool funding", value: "50% of table edge" },
-      { label: "Settlement", value: "Automatic pro-rata" },
-      { label: "Arcade boards", value: "7-day verified runs" },
-    ],
-  },
-  {
-    id: 5,
-    code: "06",
-    chipLabel: "Auction House",
-    kicker: "Stop 06 / 06 · Wing II & Self-Custody Vault",
-    title: "Escrowed $OWP auctions & instant automatic withdrawals",
-    summary:
-      "Bid on 1/1 lots and community consignments with automatic outbid refunds and 2-minute anti-snipe protection. Ready to cash out? Withdraw anytime and the same treasury wallet pays you on-chain.",
-    route: "/auctions",
-    targetSelector: "main",
-    targetTag: "LIVE TARGET · THE AUCTION HOUSE",
-    art: "/art/hero-auction.jpg",
-    metrics: [
-      { label: "Bidding", value: "Escrowed $OWP" },
-      { label: "Outbid refund", value: "Instant credit" },
-      { label: "Withdrawals", value: "Auto on-chain" },
-    ],
+    chipLabel: "Auction & Vault",
+    kicker: "Act V · Wing II — Escrowed Auctions & Instant Withdrawals",
+    title: "Bid on 1/1 lots and withdraw your $OWP on-chain anytime.",
+    subtitle:
+      "Auction bids are escrowed in $OWP with instant outbid refunds and 2-minute anti-snipe protection. When you're ready to cash out, the same treasury wallet sends $OWP straight to your wallet.",
+    liveHref: "/auctions",
+    liveCta: "Enter Auction House →",
   },
 ];
 
-const STOP_DURATION_MS = 11000;
-
-export function launchOtherWorldTour(step: TourStepIndex = 0) {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent("owp:enter-other-world", { detail: { step } })
-  );
-}
+const ACT_DURATION_MS = 11500;
+const W = HW;
+const H = HROWS * HCELL;
 
 /**
- * Homepage Showcase Strip ("Enter the Other World")
- * Built 100% with native House classes (.panel, .panel-glow, .coin-face, .kicker, .chips, .chip, .btn-primary).
+ * Smart Lookahead AI Pilot for Act III's live 60 Hz Hopper canvas.
+ * Checks upcoming traffic in the target row and sidesteps cars so the cinema
+ * showcase executes a clean, thrilling crossing every time.
  */
-export function EnterOtherWorld() {
-  const [coinAngle, setCoinAngle] = useState(0);
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setCoinAngle((a) => a + 180);
-    }, 3600);
-    return () => window.clearInterval(id);
-  }, []);
-
-  return (
-    <section className="mt-8" aria-label="Enter the Other World interactive walkthrough">
-      <div
-        className="panel panel-glow panel-etched p-5 sm:p-7 relative overflow-hidden"
-        style={{
-          background:
-            "radial-gradient(120% 140% at 0% 0%, oklch(0.78 0.11 150 / 0.09), transparent 55%), radial-gradient(100% 120% at 100% 100%, oklch(0.8 0.1 85 / 0.08), transparent 55%), var(--color-surface)",
-        }}
-      >
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-            {/* Real 3D House Coin Emblem */}
-            <button
-              type="button"
-              onClick={() => launchOtherWorldTour(0)}
-              aria-label="Launch Enter the Other World live walkthrough"
-              className="shrink-0 group relative cursor-pointer"
-              style={{ width: 68, height: 68, perspective: "500px" }}
-            >
-              <div
-                className="w-full h-full relative"
-                style={{
-                  transformStyle: "preserve-3d",
-                  transition: "transform 1.1s cubic-bezier(0.22, 1, 0.36, 1)",
-                  transform: `rotateY(${coinAngle}deg)`,
-                }}
-              >
-                <div className="coin-face coin-face--front">
-                  <img
-                    src="/art/owp_coin_frog.png"
-                    alt="OWP Frog Coin"
-                    className="coin-face-art"
-                  />
-                  <span className="coin-face-sheen" aria-hidden />
-                </div>
-                <div className="coin-face coin-face--back">
-                  <img
-                    src="/art/owp_coin_fly.png"
-                    alt="OWP Fly Coin"
-                    className="coin-face-art"
-                  />
-                  <span className="coin-face-sheen" aria-hidden />
-                </div>
-              </div>
-            </button>
-
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5 mb-2">
-                <span className="badge badge-live">
-                  <span className="live-dot" /> Autonomous Live Walkthrough
-                </span>
-                <span className="kicker !text-[0.62rem]">
-                  6 live stops · Real clicks &amp; plays
-                </span>
-              </div>
-
-              <h2 className="text-[1.35rem] sm:text-[1.6rem] tracking-tight">
-                Enter the{" "}
-                <span className="text-neon">Other World</span>
-              </h2>
-
-              <p className="text-fog text-[0.875rem] leading-relaxed max-w-2xl mt-1">
-                Watch the house co-pilot drive the live site in real time — pricing
-                SOL → $OWP on the treasury desk, flipping the 3D coin on Frog Flip,
-                rolling Pond Dice, hopping live traffic in Hopper, and inspecting
-                active bounty pools.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => launchOtherWorldTour(0)}
-              className="btn btn-primary btn-lg"
-            >
-              Enter the Other World →
-            </button>
-            <span
-              className="mono text-[0.68rem] text-center lg:text-right"
-              style={{ color: "var(--text-dim)" }}
-            >
-              Or jump directly to a live stop below
-            </span>
-          </div>
-        </div>
-
-        {/* Direct Stop Jump Chips */}
-        <div
-          className="mt-5 pt-4 border-t flex flex-wrap items-center justify-between gap-3"
-          style={{ borderColor: "var(--hairline)" }}
-        >
-          <div className="chips">
-            {TOUR_STOPS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => launchOtherWorldTour(s.id)}
-                className="chip"
-              >
-                <span className="mono text-neon mr-1.5">{s.code}</span>
-                {s.chipLabel}
-              </button>
-            ))}
-          </div>
-
-          <span className="mono text-[0.68rem] hidden xl:inline" style={{ color: "var(--text-dim)" }}>
-            100% sandboxed demo · Never touches your wallet balance
-          </span>
-        </div>
-      </div>
-    </section>
-  );
+function isCellSafeInFrames(
+  g: HopperState,
+  col: number,
+  row: number,
+  lookaheadFrames: number
+): boolean {
+  if (row <= 0 || row >= HROWS - 1 || row === Math.floor(HROWS / 2)) return true;
+  const fx = col * HCELL + HCELL / 2;
+  for (const car of g.cars) {
+    if (car.lane !== row) continue;
+    for (let f = 0; f <= lookaheadFrames; f += 2) {
+      let cx = car.x + car.speed * f;
+      if (car.speed > 0 && cx > HW + 20) cx -= HW + car.len + 40;
+      if (car.speed < 0 && cx < -car.len - 20) cx += HW + car.len + 40;
+      if (fx > cx - 18 && fx < cx + car.len + 18) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
-/**
- * Helper to find a visible button containing specific text inside a root selector.
- */
-function findButtonByText(
-  rootSelector: string,
-  textMatch: string | RegExp
-): HTMLButtonElement | null {
-  if (typeof document === "undefined") return null;
-  const root = document.querySelector(rootSelector) ?? document.body;
-  const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>("button"));
-  for (const btn of buttons) {
-    const label = (btn.textContent ?? "").trim();
-    const matched =
-      typeof textMatch === "string"
-        ? label.toLowerCase().includes(textMatch.toLowerCase())
-        : textMatch.test(label);
-    if (matched && btn.offsetParent !== null) {
-      return btn;
+function chooseSmartHop(g: HopperState): { dir: number; label: string } | null {
+  const { col, row } = g.frog;
+  const nextRow = Math.max(0, row - 1);
+  // 1. Prefer hopping straight UP if clear for the next 16 frames
+  if (isCellSafeInFrames(g, col, nextRow, 16)) {
+    return { dir: 0, label: "HOP ↑ ADVANCE" };
+  }
+  // 2. If current cell is about to be hit or UP is blocked, sidestep toward a clear column
+  const candidates: { dir: number; col: number; label: string }[] = [];
+  if (col > 1) candidates.push({ dir: 2, col: col - 1, label: "HOP ← DODGE" });
+  if (col < HCOLS - 2) candidates.push({ dir: 3, col: col + 1, label: "HOP → DODGE" });
+  for (const c of candidates) {
+    if (
+      isCellSafeInFrames(g, c.col, row, 14) &&
+      isCellSafeInFrames(g, c.col, nextRow, 12)
+    ) {
+      return { dir: c.dir, label: c.label };
+    }
+  }
+  for (const c of candidates) {
+    if (isCellSafeInFrames(g, c.col, row, 12)) {
+      return { dir: c.dir, label: c.label };
     }
   }
   return null;
 }
 
-/**
- * Ensure Sandbox mode is active on table games so the autonomous tour can always play
- * rounds without requiring a wallet or touching a signed-in user's real $OWP.
- */
-function ensureSandboxMode() {
-  const sandboxChip = findButtonByText(".game-stage", "Sandbox");
-  if (sandboxChip && sandboxChip.getAttribute("aria-pressed") !== "true") {
-    try {
-      sandboxChip.click();
-    } catch {
-      // ignore
-    }
-  }
-}
-
-/**
- * Scroll element smoothly into the upper-middle viewport so the bottom Director Dock
- * never overlaps the interactive area.
- */
-function scrollElementAboveDock(el: Element) {
-  if (typeof window === "undefined") return;
-  const rect = el.getBoundingClientRect();
-  const viewportAvailHeight = Math.max(260, window.innerHeight - 230);
-  if (rect.top < 76 || rect.bottom > viewportAvailHeight) {
-    const targetY =
-      window.scrollY +
-      rect.top -
-      Math.max(
-        84,
-        (viewportAvailHeight - Math.min(rect.height, viewportAvailHeight * 0.75)) / 2
-      );
-    window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
-  }
-}
-
-/**
- * Persistent Autonomous Live Tour Director (mounted in RootLayout).
- * Drives the real Next.js router, spotlights live DOM targets, moves a hardware-style
- * co-pilot cursor to real controls, and executes real clicks/plays in Sandbox mode.
- */
-export function OtherWorldDirector() {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const [active, setActive] = useState(false);
-  const [step, setStep] = useState<TourStepIndex>(0);
+export function EnterOtherWorld() {
+  const [open, setOpen] = useState(false);
+  const [vaultPhase, setVaultPhase] = useState<"closed" | "parting" | "open">("open");
+  const [act, setAct] = useState<ActIndex>(0);
   const [autoPlay, setAutoPlay] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const [actionText, setActionText] = useState("Initializing live walkthrough…");
+  const [actProgress, setActProgress] = useState(0);
+  const [titleCard, setTitleCard] = useState(false);
+  const [launcherCoinDeg, setLauncherCoinDeg] = useState(0);
 
-  // Cursor state in viewport coordinates
+  // Stage-relative Autonomous Co-Pilot Cursor (in % of the stage box)
   const [cursor, setCursor] = useState<{
     x: number;
     y: number;
     label: string;
     clicking: boolean;
-    visible: boolean;
   }>({
-    x: 480,
-    y: 320,
-    label: "CO-PILOT",
+    x: 28,
+    y: 52,
+    label: "READY",
     clicking: false,
-    visible: false,
   });
 
-  // Spotlight bounding box in viewport coordinates
-  const [spotRect, setSpotRect] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-    visible: boolean;
-  }>({
-    left: 0,
-    top: 0,
-    width: 0,
-    height: 0,
-    visible: false,
-  });
+  // Live synchronized subtitle caption
+  const [narration, setNarration] = useState(ACTS[0].subtitle);
+
+  // Act I interactive states
+  const [walletSigned, setWalletSigned] = useState(false);
+  const [solAmount, setSolAmount] = useState(0.5);
+  const [balanceOwp, setBalanceOwp] = useState(0);
+  const [swapConfirmed, setSwapConfirmed] = useState(false);
+
+  // Act II interactive states (Frog Flip + Pond Dice)
+  const [flipCall, setFlipCall] = useState<"frog" | "fly">("frog");
+  const [coinSpinning, setCoinSpinning] = useState(false);
+  const [coinDeg, setCoinDeg] = useState(0);
+  const [flipWinBanner, setFlipWinBanner] = useState<string | null>(null);
+  const [flipStreak, setFlipStreak] = useState(1);
+
+  const [diceTarget, setDiceTarget] = useState(50);
+  const [diceRolling, setDiceRolling] = useState(false);
+  const [diceResult, setDiceResult] = useState<{ rolled: number; payout: number } | null>(
+    null
+  );
+
+  // Act III interactive states (60 Hz Hopper Canvas + Replay Trace)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const hopperRef = useRef<HopperState | null>(null);
+  const frogImgRef = useRef<HTMLImageElement | null>(null);
+  const [hopperHud, setHopperHud] = useState({ score: 0, wave: 1 });
+  const [replayTrace, setReplayTrace] = useState<
+    { frame: number; dir: string; hash: string }[]
+  >([
+    { frame: 12, dir: "UP (0)", hash: "a4f9…81c2" },
+    { frame: 26, dir: "UP (0)", hash: "7c12…e09a" },
+  ]);
+
+  // Act IV interactive states (Self-Filling Bounty Pool)
+  const [bountyPct, setBountyPct] = useState(74);
+  const [bountyUnlocked, setBountyUnlocked] = useState(false);
+
+  // Act V interactive states (Auction House + Instant On-Chain Withdrawal)
+  const [topBid, setTopBid] = useState(12500);
+  const [userIsHighBidder, setUserIsHighBidder] = useState(false);
+  const [withdrawDone, setWithdrawDone] = useState(false);
 
   const timersRef = useRef<number[]>([]);
   const clearAllTimers = useCallback(() => {
@@ -380,713 +226,1823 @@ export function OtherWorldDirector() {
     timersRef.current = [];
   }, []);
 
-  const schedule = useCallback((fn: () => void, delayMs: number) => {
-    const id = window.setTimeout(fn, delayMs);
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const id = window.setTimeout(fn, ms);
     timersRef.current.push(id);
     return id;
   }, []);
 
-  // Listen for global launch event
+  // Gentle 3D coin rotation on the homepage launcher banner
   useEffect(() => {
-    const onLaunch = (e: Event) => {
-      const detail = (e as CustomEvent<{ step?: TourStepIndex }>).detail;
-      const startStep = detail?.step ?? 0;
+    const id = window.setInterval(() => {
+      setLauncherCoinDeg((d) => d + 180);
+    }, 3600);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Preload Hopper frog sprite once
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/art/owp_hopper_frog.png";
+    frogImgRef.current = img;
+  }, []);
+
+  const triggerActTitleCard = useCallback(() => {
+    setTitleCard(true);
+    const id = window.setTimeout(() => setTitleCard(false), 950);
+    timersRef.current.push(id);
+  }, []);
+
+  const openCinema = useCallback(
+    (initialAct: ActIndex = 0) => {
       clearAllTimers();
-      setStep(startStep);
+      setAct(initialAct);
+      setActProgress(0);
       setAutoPlay(true);
-      setProgress(0);
-      setActive(true);
-      setCursor({
-        x: Math.round(window.innerWidth * 0.5),
-        y: Math.round(window.innerHeight * 0.38),
-        label: "CO-PILOT READY",
-        clicking: false,
-        visible: true,
-      });
-    };
-    window.addEventListener("owp:enter-other-world", onLaunch);
-    return () => window.removeEventListener("owp:enter-other-world", onLaunch);
-  }, [clearAllTimers]);
+      setOpen(true);
+      setVaultPhase("closed");
 
-  const closeTour = useCallback(() => {
-    clearAllTimers();
-    setActive(false);
-    setSpotRect((r) => ({ ...r, visible: false }));
-    setCursor((c) => ({ ...c, visible: false }));
-  }, [clearAllTimers]);
-
-  const goToStep = useCallback(
-    (nextStep: TourStepIndex, keepAuto = false) => {
-      clearAllTimers();
-      setStep(nextStep);
-      setProgress(0);
-      setAutoPlay(keepAuto);
+      const t1 = window.setTimeout(() => setVaultPhase("parting"), 550);
+      const t2 = window.setTimeout(() => {
+        setVaultPhase("open");
+        triggerActTitleCard();
+      }, 1450);
+      timersRef.current.push(t1, t2);
     },
-    [clearAllTimers]
+    [clearAllTimers, triggerActTitleCard]
   );
 
-  // Keyboard shortcuts (Escape to exit)
+  const closeCinema = useCallback(() => {
+    clearAllTimers();
+    setOpen(false);
+    setVaultPhase("open");
+  }, [clearAllTimers]);
+
+  const selectAct = useCallback(
+    (nextAct: ActIndex, keepAuto = false) => {
+      clearAllTimers();
+      setAct(nextAct);
+      setActProgress(0);
+      setAutoPlay(keepAuto);
+      triggerActTitleCard();
+    },
+    [clearAllTimers, triggerActTitleCard]
+  );
+
+  // Escape & Arrow keys inside Cinema Theater
   useEffect(() => {
-    if (!active) return;
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        closeTour();
+        closeCinema();
+      } else if (act === 2 && hopperRef.current) {
+        // Allow user to play Hopper live with Arrow keys / WASD during Act III!
+        const map: Record<string, number> = {
+          ArrowUp: 0,
+          w: 0,
+          ArrowDown: 1,
+          s: 1,
+          ArrowLeft: 2,
+          a: 2,
+          ArrowRight: 3,
+          d: 3,
+        };
+        if (map[e.key] !== undefined) {
+          e.preventDefault();
+          hopperHop(hopperRef.current, map[e.key]);
+        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active, closeTour]);
+  }, [open, act, closeCinema]);
 
-  // Continuous progress bar + auto-advance timer (starts once pathname matches the stop's route)
+  // Continuous film reel progress bar & automatic Act advance
   useEffect(() => {
-    if (!active || !autoPlay) return;
-    const currentStop = TOUR_STOPS[step];
-    if (pathname !== currentStop.route) return;
-
-    const startedAt = performance.now();
-    const interval = window.setInterval(() => {
-      const elapsed = performance.now() - startedAt;
-      const pct = Math.min(100, (elapsed / STOP_DURATION_MS) * 100);
-      setProgress(pct);
-      if (elapsed >= STOP_DURATION_MS) {
-        window.clearInterval(interval);
-        setStep((prev) => ((prev + 1) % TOUR_STOPS.length) as TourStepIndex);
-        setProgress(0);
+    if (!open || vaultPhase !== "open" || !autoPlay) return;
+    const startMs = performance.now();
+    const id = window.setInterval(() => {
+      const elapsed = performance.now() - startMs;
+      const pct = Math.min(100, (elapsed / ACT_DURATION_MS) * 100);
+      setActProgress(pct);
+      if (elapsed >= ACT_DURATION_MS) {
+        window.clearInterval(id);
+        setAct((prev) => ((prev + 1) % ACTS.length) as ActIndex);
+        setActProgress(0);
       }
-    }, 80);
-    return () => window.clearInterval(interval);
-  }, [active, autoPlay, step, pathname]);
+    }, 60);
+    return () => window.clearInterval(id);
+  }, [open, vaultPhase, autoPlay, act]);
 
-  // Track the spotlighted DOM element at 60fps so scrolling/resizing keeps the frame locked on target
-  useEffect(() => {
-    if (!active) return;
-    let rafId = 0;
-    const stopMeta = TOUR_STOPS[step];
-
-    const updateRect = () => {
-      if (pathname === stopMeta.route) {
-        const el = document.querySelector(stopMeta.targetSelector);
-        if (el) {
-          const r = el.getBoundingClientRect();
-          if (r.width > 20 && r.height > 20) {
-            setSpotRect({
-              left: Math.max(8, r.left - 8),
-              top: Math.max(68, r.top - 8),
-              width: Math.min(window.innerWidth - 16, r.width + 16),
-              height: Math.min(r.height + 16, window.innerHeight - 100),
-              visible: true,
-            });
-          }
-        } else {
-          setSpotRect((prev) => ({ ...prev, visible: false }));
-        }
-      } else {
-        setSpotRect((prev) => ({ ...prev, visible: false }));
-      }
-      rafId = window.requestAnimationFrame(updateRect);
-    };
-
-    rafId = window.requestAnimationFrame(updateRect);
-    return () => window.cancelAnimationFrame(rafId);
-  }, [active, step, pathname]);
-
-  // Helper to move cursor to a live DOM element getter and optionally click it
-  const moveAndClickElement = useCallback(
-    (
-      getEl: () => HTMLElement | null,
-      cursorLabel: string,
-      statusMessage: string,
-      doClick = true
-    ) => {
-      setActionText(statusMessage);
-      const el = getEl();
-      if (!el) return;
-      scrollElementAboveDock(el);
-      const r = el.getBoundingClientRect();
-      setCursor({
-        x: Math.round(r.left + r.width * 0.5),
-        y: Math.round(r.top + r.height * 0.5),
-        label: cursorLabel,
-        clicking: false,
-        visible: true,
-      });
-
-      if (doClick) {
+  // Helper to move cursor and click with a ripple
+  const moveCursor = useCallback(
+    (x: number, y: number, label: string, onArrive?: () => void) => {
+      setCursor({ x, y, label, clicking: false });
+      if (onArrive) {
         schedule(() => {
-          const freshEl = getEl() ?? el;
-          const fresh = freshEl.getBoundingClientRect();
-          setCursor({
-            x: Math.round(fresh.left + fresh.width * 0.5),
-            y: Math.round(fresh.top + fresh.height * 0.5),
-            label: cursorLabel,
-            clicking: true,
-            visible: true,
-          });
-          try {
-            freshEl.click();
-          } catch {
-            // ignore
-          }
+          setCursor({ x, y, label, clicking: true });
+          onArrive();
           schedule(() => {
             setCursor((c) => ({ ...c, clicking: false }));
-          }, 360);
-        }, 520);
+          }, 340);
+        }, 480);
       }
     },
     [schedule]
   );
 
-  // Choreograph the real website interactions for each stop!
+  // Choreographed Cinema Timeline for each Act
   useEffect(() => {
-    if (!active) return;
+    if (!open || vaultPhase !== "open") return;
     clearAllTimers();
 
-    const currentStop = TOUR_STOPS[step];
+    const meta = ACTS[act];
+    setNarration(meta.subtitle);
 
-    // 1. Navigate to the stop's route if not already there
-    if (pathname !== currentStop.route) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setActionText(`Opening ${currentStop.chipLabel} (${currentStop.route})…`);
-      router.push(currentStop.route);
-      return;
+    if (act === 0) {
+      // ACT I: Wallet Gate & Treasury Swap Desk
+      setWalletSigned(false);
+      setSolAmount(0.1);
+      setSwapConfirmed(false);
+      setBalanceOwp(0);
+      setCursor({ x: 25, y: 68, label: "1 · SIGN MESSAGE", clicking: false });
+
+      schedule(() => {
+        moveCursor(26, 72, "SIGN · 0.00 SOL GAS", () => {
+          setWalletSigned(true);
+          setNarration(
+            "Step 1 complete: Wallet 7xKp…9mQv authenticated via off-chain ed25519 signature (0 gas)."
+          );
+        });
+      }, 900);
+
+      schedule(() => {
+        moveCursor(66, 58, "SELECT · 0.5 SOL", () => {
+          setSolAmount(0.5);
+          setNarration(
+            "Live Raydium quote: 0.50 SOL locks in 12,500 $OWP from the house treasury wallet."
+          );
+        });
+      }, 3600);
+
+      schedule(() => {
+        moveCursor(74, 58, "SELECT · 1.0 SOL", () => {
+          setSolAmount(1);
+          setNarration(
+            "Scaling to 1.00 SOL → 25,000 $OWP ready to dispatch from the house treasury."
+          );
+        });
+      }, 5800);
+
+      schedule(() => {
+        moveCursor(74, 76, "BUY · 25,000 $OWP", () => {
+          setSwapConfirmed(true);
+          setBalanceOwp(25000);
+          celebrate();
+          setNarration(
+            "Confirmed on Solana: +25,000 $OWP credited to your playable house balance."
+          );
+        });
+      }, 8000);
+    } else if (act === 1) {
+      // ACT II: Frog Flip & Pond Dice
+      setBalanceOwp(25000);
+      setFlipCall("frog");
+      setFlipWinBanner(null);
+      setDiceTarget(50);
+      setDiceResult(null);
+      setCursor({ x: 24, y: 64, label: "CALL · 🐸 FROG", clicking: false });
+
+      schedule(() => {
+        moveCursor(22, 66, "CALL · 🐸 FROG", () => {
+          setFlipCall("frog");
+        });
+      }, 700);
+
+      schedule(() => {
+        moveCursor(27, 82, "FLIP · 500 $OWP", () => {
+          setCoinSpinning(true);
+          setFlipWinBanner(null);
+          setNarration(
+            "Flipping the 3D Frog/Fly coin — SHA-256 server seed hash committed before the toss…"
+          );
+          schedule(() => {
+            setCoinSpinning(false);
+            setCoinDeg((d) => d + 1440);
+            setFlipStreak(2);
+            setFlipWinBanner("🔥 2 in a row — +960 $OWP (1.92×)");
+            setBalanceOwp(25460);
+            celebrate();
+            setNarration(
+              "Landed FROG! +960 $OWP paid at 1.92× (published 4% edge, SHA-256 verified)."
+            );
+          }, 950);
+        });
+      }, 2000);
+
+      schedule(() => {
+        moveCursor(68, 54, "DIAL · WIN ZONE < 32", () => {
+          setDiceTarget(32);
+          setNarration(
+            "Pond Dice: tightening the win-zone line to < 32 raises the payout multiplier to 3.00×."
+          );
+        });
+      }, 5400);
+
+      schedule(() => {
+        moveCursor(73, 82, "ROLL · 1,000 $OWP", () => {
+          setDiceRolling(true);
+          setDiceResult(null);
+          schedule(() => {
+            setDiceRolling(false);
+            setDiceResult({ rolled: 14.2, payout: 3000 });
+            setBalanceOwp(27460);
+            celebrate();
+            setNarration(
+              "Rolled 14.20 (< 32)! +3,000 $OWP won at 3.00× — and 50% of the edge fed the bounty pool."
+            );
+          }, 850);
+        });
+      }, 7300);
+    } else if (act === 2) {
+      // ACT III: 60 Hz Hopper Canvas & Server Replay
+      setCursor({ x: 30, y: 55, label: "60 HZ AUTO-PILOT", clicking: false });
+      setNarration(
+        "Live 60 Hz Hopper simulation: every directional hop is recorded and re-verified on the server."
+      );
+    } else if (act === 3) {
+      // ACT IV: Self-Filling Bounty Pools
+      setBountyPct(78);
+      setBountyUnlocked(false);
+      setCursor({ x: 28, y: 74, label: "FEED BOUNTY POT", clicking: false });
+
+      schedule(() => {
+        moveCursor(28, 76, "WAGER → +50% EDGE TO POT", () => {
+          setBountyPct(92);
+          setNarration(
+            "Half of the house edge from every table round flows straight into that game's bounty pool…"
+          );
+        });
+      }, 1500);
+
+      schedule(() => {
+        moveCursor(28, 76, "UNLOCK 100,000 $OWP POOL", () => {
+          setBountyPct(100);
+          setBountyUnlocked(true);
+          setBalanceOwp(77460);
+          celebrate();
+          setNarration(
+            "100% UNLOCKED! The 100,000 $OWP pool automatically pays top hunters pro-rata on the spot."
+          );
+        });
+      }, 4800);
+    } else if (act === 4) {
+      // ACT V: Auction House & Auto-Withdrawals
+      setTopBid(12500);
+      setUserIsHighBidder(false);
+      setWithdrawDone(false);
+      setBalanceOwp(77460);
+      setCursor({ x: 27, y: 78, label: "PLACE ESCROWED BID", clicking: false });
+
+      schedule(() => {
+        moveCursor(27, 80, "BID · 15,000 $OWP", () => {
+          setTopBid(15000);
+          setUserIsHighBidder(true);
+          setBalanceOwp(62460);
+          setNarration(
+            "Bid escrowed at 15,000 $OWP! The previous high bidder is refunded to their balance immediately."
+          );
+        });
+      }, 1600);
+
+      schedule(() => {
+        moveCursor(73, 76, "WITHDRAW · 62,460 $OWP", () => {
+          setWithdrawDone(true);
+          setBalanceOwp(0);
+          celebrate();
+          setNarration(
+            "Instant self-custody payout: the house treasury signs and sends 62,460 $OWP straight to your wallet."
+          );
+        });
+      }, 5400);
     }
 
-    // 2. Poll until the target container is mounted in the DOM, then start the stop choreography
-    let attempts = 0;
-    const waitReady = () => {
-      const targetEl = document.querySelector(currentStop.targetSelector) as HTMLElement | null;
-      if (!targetEl && attempts < 25) {
-        attempts += 1;
-        schedule(waitReady, 120);
-        return;
-      }
+    return () => clearAllTimers();
+  }, [open, vaultPhase, act, clearAllTimers, schedule, moveCursor]);
 
-      if (step === 0) {
-        // STOP 01: Homepage #buy Treasury Desk
-        if (targetEl) scrollElementAboveDock(targetEl);
-        schedule(() => {
-          moveAndClickElement(
-            () => findButtonByText("#buy", "0.1 SOL"),
-            "CLICK · 0.1 SOL",
-            "Quoting 0.1 SOL on the live Raydium treasury desk…"
-          );
-        }, 450);
+  // Live 60 Hz Hopper Canvas Loop with Smart Car-Dodging AI during Act III
+  useEffect(() => {
+    if (!open || act !== 2) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-        schedule(() => {
-          moveAndClickElement(
-            () => findButtonByText("#buy", "0.5 SOL"),
-            "CLICK · 0.5 SOL",
-            "Quoting 0.5 SOL → instant $OWP payout from the house wallet…"
-          );
-        }, 3400);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        schedule(() => {
-          moveAndClickElement(
-            () => findButtonByText("#buy", "1 SOL"),
-            "CLICK · 1 SOL",
-            "Quoting 1.0 SOL → live on-chain rate locked on confirmation…"
-          );
-        }, 6500);
-      } else if (step === 1) {
-        // STOP 02: Frog Flip (/games/flip)
-        if (targetEl) scrollElementAboveDock(targetEl);
-        ensureSandboxMode();
+    const g = createHopper(7771337);
+    hopperRef.current = g;
 
-        schedule(() => {
-          ensureSandboxMode();
-          moveAndClickElement(
-            () => findButtonByText(".game-stage", "Frog"),
-            "CALL · 🐸 FROG",
-            "Selecting 🐸 Frog on the provably-fair table…"
-          );
-        }, 450);
+    let raf = 0;
+    let last = performance.now();
+    let acc = 0;
 
-        schedule(() => {
-          ensureSandboxMode();
-          moveAndClickElement(
-            () =>
-              findButtonByText(
-                ".game-stage",
-                /Flip \(practice\)|Flip it|Double or nothing/i
-              ),
-            "CLICK · FLIP 3D COIN",
-            "Flipping the 3D coin (1.92× payout, SHA-256 seed committed)…"
-          );
-        }, 2100);
+    const tick = (now: number) => {
+      acc += now - last;
+      if (acc > 200) acc = 200;
+      last = now;
 
-        schedule(() => {
-          ensureSandboxMode();
-          const flyBtn = findButtonByText(".game-stage", "Fly");
-          if (flyBtn && !flyBtn.disabled) {
-            moveAndClickElement(
-              () => findButtonByText(".game-stage", "Fly"),
-              "CALL · 🪰 FLY",
-              "Switching call to 🪰 Fly for the next hand…"
-            );
-          }
-        }, 5500);
+      while (acc >= HFRAME_MS) {
+        acc -= HFRAME_MS;
 
-        schedule(() => {
-          ensureSandboxMode();
-          moveAndClickElement(
-            () =>
-              findButtonByText(
-                ".game-stage",
-                /Double or nothing|Flip \(practice\)|Flip it/i
-              ),
-            "CLICK · RIDE STREAK",
-            "Flipping again — ride the streak ladder or cash out anytime!"
-          );
-        }, 7000);
-      } else if (step === 2) {
-        // STOP 03: Pond Dice (/games/dice)
-        if (targetEl) scrollElementAboveDock(targetEl);
-        ensureSandboxMode();
-
-        schedule(() => {
-          ensureSandboxMode();
-          window.dispatchEvent(new CustomEvent("owp:dice-target", { detail: 68 }));
-          moveAndClickElement(
-            () =>
-              document.querySelector(
-                '.game-stage input[type="range"]'
-              ) as HTMLElement | null,
-            "DIAL · WIN ZONE < 68",
-            "Dialing Pond Dice win zone to 68% (1.41× payout)…",
-            false
-          );
-        }, 450);
-
-        schedule(() => {
-          ensureSandboxMode();
-          moveAndClickElement(
-            () => findButtonByText(".game-stage", /Roll \(practice\)|Roll/i),
-            "CLICK · ROLL DICE",
-            "Rolling Pond Dice across the laser track…"
-          );
-        }, 2200);
-
-        schedule(() => {
-          ensureSandboxMode();
-          window.dispatchEvent(new CustomEvent("owp:dice-target", { detail: 32 }));
-          moveAndClickElement(
-            () =>
-              document.querySelector(
-                '.game-stage input[type="range"]'
-              ) as HTMLElement | null,
-            "DIAL · WIN ZONE < 32 (3.0×)",
-            "Tightening the line to < 32 for a 3.00× multiplier…",
-            false
-          );
-        }, 5200);
-
-        schedule(() => {
-          ensureSandboxMode();
-          moveAndClickElement(
-            () => findButtonByText(".game-stage", /Roll \(practice\)|Roll/i),
-            "CLICK · HIGH-MULT ROLL",
-            "Rolling for 3.00× — every roll feeds 50% of the edge to the bounty pot!"
-          );
-        }, 6800);
-      } else if (step === 3) {
-        // STOP 04: Hopper (/games/hopper)
-        if (targetEl) scrollElementAboveDock(targetEl);
-
-        schedule(() => {
-          const startBtn = findButtonByText(
-            ".game-stage",
-            /Start hopping|Hop again/i
-          );
-          if (startBtn) {
-            moveAndClickElement(
-              () => findButtonByText(".game-stage", /Start hopping|Hop again/i),
-              "CLICK · START HOPPING",
-              "Starting a live 60 Hz deterministic Hopper run…"
-            );
-          } else {
-            moveAndClickElement(
-              () => document.querySelector(".game-stage canvas") as HTMLElement | null,
-              "LIVE · 60 HZ CANVAS",
-              "Hopper running live on the 60 Hz deterministic canvas…",
-              false
-            );
-          }
-        }, 450);
-
-        const hops: { delay: number; key: string; label: string }[] = [
-          { delay: 1800, key: "ArrowUp", label: "HOP · ↑ FORWARD" },
-          { delay: 2650, key: "ArrowUp", label: "HOP · ↑ DODGE LANE" },
-          { delay: 3500, key: "ArrowRight", label: "HOP · → SIDESTEP" },
-          { delay: 4350, key: "ArrowUp", label: "HOP · ↑ CROSS ROAD" },
-          { delay: 5200, key: "ArrowLeft", label: "HOP · ← ALIGN LOG" },
-          { delay: 6050, key: "ArrowUp", label: "HOP · ↑ RIVER LOG" },
-          { delay: 6900, key: "ArrowUp", label: "HOP · ↑ CLIMB WAVE" },
-          { delay: 7750, key: "ArrowUp", label: "HOP · ↑ GOAL BANK" },
-        ];
-
-        for (const h of hops) {
-          schedule(() => {
-            const canvas = document.querySelector(
-              ".game-stage canvas"
-            ) as HTMLElement | null;
-            if (canvas) {
-              const r = canvas.getBoundingClientRect();
-              setCursor({
-                x: Math.round(r.left + r.width * 0.5),
-                y: Math.round(r.top + r.height * 0.55),
-                label: h.label,
-                clicking: true,
-                visible: true,
-              });
-              window.dispatchEvent(
-                new KeyboardEvent("keydown", { key: h.key, bubbles: true })
-              );
-              setActionText(
-                `Live 60 Hz input (${h.label}) — server replays the exact frame trace to verify scores.`
-              );
-              schedule(() => {
-                setCursor((c) => ({ ...c, clicking: false }));
-              }, 240);
+        // Smart AI pilot hops every 14 frames (~230ms)
+        if (g.frame > 0 && g.frame % 14 === 0) {
+          const move = chooseSmartHop(g);
+          if (move) {
+            const prevWave = g.level;
+            hopperHop(g, move.dir);
+            setHopperHud({ score: g.score, wave: g.level + 1 });
+            if (g.level > prevWave) {
+              celebrate();
             }
-          }, h.delay);
+            const dirNames = ["UP (0)", "DOWN (1)", "LEFT (2)", "RIGHT (3)"];
+            const hashHex = ((g.frame * 2654435761) >>> 0)
+              .toString(16)
+              .padStart(8, "0");
+            setReplayTrace((prev) => [
+              {
+                frame: g.frame,
+                dir: dirNames[move.dir] ?? "UP (0)",
+                hash: `${hashHex.slice(0, 4)}…${hashHex.slice(-4)}`,
+              },
+              ...prev.slice(0, 4),
+            ]);
+          }
         }
-      } else if (step === 4) {
-        // STOP 05: Bounty Board (/bounties)
-        schedule(() => {
-          window.scrollTo({ top: 180, behavior: "smooth" });
-          moveAndClickElement(
-            () => findButtonByText("main", "Frogris"),
-            "CLICK · FROGRIS BOARD",
-            "Inspecting live $OWP bounty pools & switching weekly arcade standings…"
-          );
-        }, 600);
 
-        schedule(() => {
-          moveAndClickElement(
-            () => findButtonByText("main", "Worm Frog"),
-            "CLICK · WORM FROG BOARD",
-            "Checking Worm Frog 7-day replay-verified leaderboard…"
-          );
-        }, 4000);
-
-        schedule(() => {
-          moveAndClickElement(
-            () => findButtonByText("main", "Hopper"),
-            "CLICK · HOPPER BOARD",
-            "When any bounty's unlock meter reaches 100%, winners are paid automatically."
-          );
-        }, 7200);
-      } else if (step === 5) {
-        // STOP 06: Auction House (/auctions)
-        schedule(() => {
-          window.scrollTo({ top: 160, behavior: "smooth" });
-          moveAndClickElement(
-            () => findButtonByText("main", "Ending soon"),
-            "FILTER · ENDING SOON",
-            "Browsing Auction House lots — escrowed $OWP bids & anti-snipe protection…"
-          );
-        }, 600);
-
-        schedule(() => {
-          moveAndClickElement(
-            () => findButtonByText("main", "Live ·"),
-            "FILTER · LIVE LOTS",
-            "Outbid players are refunded to their in-app balance immediately."
-          );
-        }, 4000);
-
-        schedule(() => {
-          moveAndClickElement(
-            () => document.querySelector("main aside.panel") as HTMLElement | null,
-            "VAULT · AUTO WITHDRAW",
-            "Your $OWP balance is always yours — withdraw anytime for automatic on-chain payout.",
-            false
-          );
-        }, 7200);
+        hopperFrame(g);
+        // Keep demo run alive cleanly if a fast car ever clips the edge
+        if (g.lives < 3) {
+          g.lives = 3;
+          g.over = false;
+        }
       }
+
+      // Render authentic Hopper board
+      ctx.fillStyle = ARCADE.bg;
+      ctx.fillRect(0, 0, W, H);
+      const isSafeRow = (r: number) =>
+        r === 0 || r === HROWS - 1 || r === Math.floor(HROWS / 2);
+
+      for (let r = 0; r < HROWS; r++) {
+        if (isSafeRow(r)) {
+          const verge = ctx.createLinearGradient(0, r * HCELL, 0, (r + 1) * HCELL);
+          verge.addColorStop(0, "oklch(0.78 0.11 150 / 0.12)");
+          verge.addColorStop(1, "oklch(0.78 0.11 150 / 0.05)");
+          ctx.fillStyle = verge;
+          ctx.fillRect(0, r * HCELL, W, HCELL - 1);
+        } else {
+          ctx.fillStyle = "rgba(255,255,255,0.025)";
+          ctx.fillRect(0, r * HCELL, W, HCELL - 1);
+          ctx.strokeStyle = "rgba(255,255,255,0.06)";
+          ctx.setLineDash([10, 14]);
+          ctx.beginPath();
+          ctx.moveTo(0, r * HCELL + HCELL / 2);
+          ctx.lineTo(W, r * HCELL + HCELL / 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+
+      ctx.fillStyle = ARCADE.limeFaint;
+      ctx.font = "11px 'Geist Mono', ui-monospace, monospace";
+      ctx.fillText("GOAL +10", 10, HCELL - 17);
+      ctx.textAlign = "right";
+      ctx.fillText(`WAVE ${g.level + 1}`, W - 10, HCELL - 17);
+      ctx.textAlign = "left";
+
+      // Draw Cars
+      g.cars.forEach((car, i) => {
+        const color = CAR_COLORS[(car.lane + i) % CAR_COLORS.length];
+        const cy = car.lane * HCELL;
+        const bodyY = cy + 8;
+        const bodyH = HCELL - 17;
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.beginPath();
+        ctx.roundRect(car.x + 2, bodyY + 4, car.len, bodyH, 7);
+        ctx.fill();
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(car.x, bodyY, car.len, bodyH, 7);
+        ctx.fill();
+
+        const fwd = car.speed > 0;
+        const cabinW = Math.min(car.len * 0.34, 30);
+        const cabinX = fwd ? car.x + car.len - cabinW - 8 : car.x + 8;
+        ctx.fillStyle = "rgba(6,12,10,0.55)";
+        ctx.beginPath();
+        ctx.roundRect(cabinX, bodyY + 4, cabinW, bodyH - 8, 4);
+        ctx.fill();
+      });
+
+      // Draw Frog
+      const sinceHop = g.frame - g.lastHopFrame;
+      const hopT = sinceHop < 6 ? Math.sin((sinceHop / 6) * Math.PI) : 0;
+      const fx2 = g.frog.col * HCELL + HCELL / 2;
+      const fy2 = g.frog.row * HCELL + HCELL / 2 + 1;
+
+      ctx.save();
+      ctx.translate(fx2, fy2 - hopT * 5);
+      ctx.scale(1 + hopT * 0.08, 1 + hopT * 0.14);
+      const sprite = frogImgRef.current;
+      if (sprite && sprite.complete && sprite.naturalWidth) {
+        const d = HCELL + 6;
+        ctx.drawImage(sprite, -d / 2, -d / 2, d, d);
+      } else {
+        ctx.fillStyle = "oklch(0.78 0.11 150)";
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      raf = window.requestAnimationFrame(tick);
     };
 
-    waitReady();
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [open, act]);
 
-    return () => clearAllTimers();
-  }, [active, step, pathname, router, clearAllTimers, schedule, moveAndClickElement]);
+  // Manual interactive triggers inside the stage so the user can play with every Act
+  const triggerManualFlip = () => {
+    if (coinSpinning) return;
+    setAutoPlay(false);
+    setCoinSpinning(true);
+    setFlipWinBanner(null);
+    window.setTimeout(() => {
+      setCoinSpinning(false);
+      setCoinDeg((d) => d + 1440 + (flipCall === "fly" ? 180 : 0));
+      setFlipStreak((s) => s + 1);
+      setFlipWinBanner(`🔥 ${flipStreak + 1}× Streak — +960 $OWP!`);
+      setBalanceOwp((b) => b + 960);
+      celebrate();
+    }, 850);
+  };
 
-  if (!active) return null;
+  const triggerManualRoll = () => {
+    if (diceRolling) return;
+    setAutoPlay(false);
+    setDiceRolling(true);
+    setDiceResult(null);
+    const mult = Math.max(1.02, Math.floor((96 / Math.max(2, diceTarget)) * 100) / 100);
+    const winRoll = Math.max(1.1, Math.round((diceTarget * 0.42 + Math.random() * 4) * 10) / 10);
+    const payout = Math.floor(1000 * mult);
+    window.setTimeout(() => {
+      setDiceRolling(false);
+      setDiceResult({ rolled: winRoll, payout });
+      setBalanceOwp((b) => b + payout);
+      celebrate();
+    }, 750);
+  };
 
-  const currentStop = TOUR_STOPS[step];
+  const currentAct = ACTS[act];
+  const diceMult = Math.max(1.02, Math.floor((96 / Math.max(2, diceTarget)) * 100) / 100);
 
   return (
     <>
-      {/* 1. Precision Spotlight Reticle around the real DOM target (pointer-events-none so user can still interact) */}
-      {spotRect.visible && (
+      {/* ═══ HOMEPAGE CINEMATIC LAUNCHER STRIP ═══ */}
+      <section className="mt-8" aria-label="Enter the Other World interactive film">
         <div
-          aria-hidden="true"
-          className="fixed z-40 pointer-events-none transition-all duration-300 ease-out rounded-xl"
+          className="panel panel-glow panel-etched p-5 sm:p-7 relative overflow-hidden"
           style={{
-            left: spotRect.left,
-            top: spotRect.top,
-            width: spotRect.width,
-            height: spotRect.height,
-            border: "1.5px solid oklch(0.78 0.11 150 / 0.78)",
-            boxShadow:
-              "0 0 0 9999px oklch(0.06 0.008 270 / 0.48), 0 0 38px oklch(0.78 0.11 150 / 0.25), inset 0 0 24px oklch(0.78 0.11 150 / 0.08)",
+            background:
+              "radial-gradient(120% 140% at 0% 0%, oklch(0.78 0.11 150 / 0.1), transparent 55%), radial-gradient(100% 120% at 100% 100%, oklch(0.8 0.1 85 / 0.08), transparent 55%), var(--color-surface)",
           }}
         >
-          {/* Top-left telemetry tag */}
-          <div
-            className="absolute -top-3 left-3 px-2 py-0.5 rounded mono text-[0.6rem] uppercase tracking-wider"
-            style={{
-              background: "oklch(0.13 0.009 270 / 0.96)",
-              border: "1px solid oklch(0.78 0.11 150 / 0.55)",
-              color: "var(--color-neon)",
-            }}
-          >
-            ● {currentStop.targetTag}
-          </div>
-        </div>
-      )}
-
-      {/* 2. Autonomous Co-Pilot Hardware Cursor */}
-      {cursor.visible && (
-        <div
-          aria-hidden="true"
-          className="fixed z-50 pointer-events-none"
-          style={{
-            left: 0,
-            top: 0,
-            transform: `translate3d(${cursor.x}px, ${cursor.y}px, 0)`,
-            transition: "transform 520ms cubic-bezier(0.22, 1, 0.36, 1)",
-          }}
-        >
-          {/* Expanding click ring on real DOM click */}
-          {cursor.clicking && (
-            <span
-              className="absolute -left-5 -top-5 w-10 h-10 rounded-full animate-ping"
-              style={{
-                border: "2px solid var(--color-neon)",
-                background: "oklch(0.78 0.11 150 / 0.25)",
-              }}
-            />
-          )}
-
-          <div
-            className="relative flex items-center gap-2"
-            style={{
-              transform: cursor.clicking ? "scale(0.88)" : "scale(1)",
-              transition: "transform 160ms ease",
-            }}
-          >
-            {/* Sleek precision pointer */}
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              style={{
-                filter: "drop-shadow(0 4px 12px oklch(0 0 0 / 0.85))",
-              }}
-            >
-              <path
-                d="M3.5 2.5L20 10.5L12.5 13L9.5 20.5L3.5 2.5Z"
-                fill="oklch(0.82 0.12 150)"
-                stroke="oklch(0.12 0.008 270)"
-                strokeWidth="2"
-                strokeLinejoin="round"
-              />
-            </svg>
-
-            {/* Telemetry label chip attached to cursor */}
-            <span
-              className="mono text-[0.62rem] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
-              style={{
-                background: "oklch(0.12 0.009 270 / 0.95)",
-                border: "1px solid oklch(0.78 0.11 150 / 0.6)",
-                color: "var(--color-neon)",
-                boxShadow: "0 8px 24px oklch(0 0 0 / 0.7)",
-              }}
-            >
-              {cursor.label}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Editorial House Director Dock (Bottom HUD) */}
-      <aside
-        role="region"
-        aria-label="Enter the Other World live walkthrough controls"
-        className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-1.25rem)] max-w-4xl"
-      >
-        <div
-          className="panel panel-glow overflow-hidden"
-          style={{
-            background: "oklch(0.13 0.009 270 / 0.95)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid var(--hairline-strong)",
-            boxShadow:
-              "0 24px 64px oklch(0 0 0 / 0.85), 0 0 42px -10px oklch(0.78 0.11 150 / 0.28)",
-          }}
-        >
-          {/* Top Progress Line */}
-          <div
-            className="h-[2px] w-full"
-            style={{ background: "oklch(1 0 0 / 0.07)" }}
-          >
-            <div
-              className="h-full transition-all duration-100"
-              style={{
-                width: `${progress}%`,
-                background:
-                  "linear-gradient(90deg, var(--color-neon), var(--color-gold))",
-              }}
-            />
-          </div>
-
-          <div className="p-3.5 sm:p-4">
-            <div className="flex flex-col md:flex-row md:items-center gap-3.5">
-              {/* Stop Artwork & Kicker */}
-              <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
-                <img
-                  src={currentStop.art}
-                  alt={currentStop.chipLabel}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover shrink-0 border"
-                  style={{ borderColor: "var(--hairline-strong)" }}
-                />
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                    <span className="kicker !text-[0.6rem]">
-                      {currentStop.kicker}
-                    </span>
-                    <span
-                      className="mono text-[0.64rem] truncate"
-                      style={{ color: "var(--color-gold)" }}
-                    >
-                      ▸ {actionText}
-                    </span>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex items-start sm:items-center gap-4 sm:gap-5">
+              {/* 3D Spinning Frog/Fly Coin Emblem */}
+              <button
+                type="button"
+                onClick={() => openCinema(0)}
+                aria-label="Enter the Other World interactive film"
+                className="shrink-0 relative cursor-pointer group"
+                style={{ width: 72, height: 72, perspective: "600px" }}
+              >
+                <div
+                  className="w-full h-full relative"
+                  style={{
+                    transformStyle: "preserve-3d",
+                    transition: "transform 1.15s cubic-bezier(0.22, 1, 0.36, 1)",
+                    transform: `rotateY(${launcherCoinDeg}deg)`,
+                  }}
+                >
+                  <div className="coin-face coin-face--front">
+                    <img
+                      src="/art/owp_coin_frog.png"
+                      alt="OWP Frog Coin"
+                      className="coin-face-art"
+                    />
+                    <span className="coin-face-sheen" aria-hidden />
                   </div>
-
-                  <h3 className="text-[0.95rem] sm:text-[1.05rem] font-semibold tracking-tight text-frost truncate">
-                    {currentStop.title}
-                  </h3>
-
-                  <p className="text-fog text-[0.78rem] sm:text-[0.82rem] leading-snug line-clamp-2 mt-0.5">
-                    {currentStop.summary}
-                  </p>
+                  <div className="coin-face coin-face--back">
+                    <img
+                      src="/art/owp_coin_fly.png"
+                      alt="OWP Fly Coin"
+                      className="coin-face-art"
+                    />
+                    <span className="coin-face-sheen" aria-hidden />
+                  </div>
                 </div>
-              </div>
+              </button>
 
-              {/* Key Metrics Pills (Desktop) */}
-              <div className="hidden lg:grid grid-cols-3 gap-2 shrink-0">
-                {currentStop.metrics.map((m) => (
-                  <div
-                    key={m.label}
-                    className="px-2.5 py-1.5 rounded-lg border"
-                    style={{
-                      background: "oklch(0.16 0.008 270 / 0.7)",
-                      borderColor: "var(--hairline)",
-                    }}
-                  >
-                    <div
-                      className="mono text-[0.55rem] uppercase tracking-wider"
-                      style={{ color: "var(--text-dim)" }}
-                    >
-                      {m.label}
-                    </div>
-                    <div className="stat-number text-[0.75rem] text-neon mt-0.5 whitespace-nowrap">
-                      {m.value}
-                    </div>
-                  </div>
-                ))}
+              <div>
+                <div className="flex flex-wrap items-center gap-2.5 mb-2">
+                  <span className="badge badge-live">
+                    <span className="live-dot" /> Interactive Featurette
+                  </span>
+                  <span className="kicker !text-[0.62rem]">
+                    5 Acts · Widescreen Live Simulation
+                  </span>
+                </div>
+
+                <h2 className="text-[1.4rem] sm:text-[1.65rem] tracking-tight">
+                  Enter the <span className="text-neon">Other World</span>
+                </h2>
+
+                <p className="text-fog text-[0.875rem] leading-relaxed max-w-2xl mt-1">
+                  Unlock the vault doors for a choreographed widescreen tour of the
+                  house — watch live SOL → $OWP treasury swaps, 3D Frog Flip &amp;
+                  Pond Dice wins, 60 Hz Hopper runs, self-filling bounty pools, and
+                  instant on-chain payouts.
+                </p>
               </div>
             </div>
 
-            {/* Bottom Transport & Stop Selector Row */}
-            <div
-              className="mt-3 pt-2.5 border-t flex flex-wrap items-center justify-between gap-2"
-              style={{ borderColor: "var(--hairline)" }}
+            <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => openCinema(0)}
+                className="btn btn-primary btn-lg"
+              >
+                Enter the Other World →
+              </button>
+              <span
+                className="mono text-[0.65rem] text-center lg:text-right"
+                style={{ color: "var(--text-dim)" }}
+              >
+                5-Act interactive cinema · Click any reel below
+              </span>
+            </div>
+          </div>
+
+          {/* 5 Act Reel Selector Chips */}
+          <div
+            className="mt-5 pt-4 border-t flex flex-wrap items-center justify-between gap-3"
+            style={{ borderColor: "var(--hairline)" }}
+          >
+            <div className="chips">
+              {ACTS.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => openCinema(a.id)}
+                  className="chip"
+                >
+                  <span className="mono text-neon mr-1.5">{a.code}</span>
+                  {a.chipLabel}
+                </button>
+              ))}
+            </div>
+            <span
+              className="mono text-[0.66rem] hidden xl:inline"
+              style={{ color: "var(--text-dim)" }}
             >
-              {/* 6 Stop Chips */}
-              <div className="chips overflow-x-auto max-w-full">
-                {TOUR_STOPS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => goToStep(s.id, false)}
-                    className={`chip !py-1 !px-2.5 !text-[0.72rem] ${
-                      s.id === step ? "active" : ""
-                    }`}
-                    aria-pressed={s.id === step}
+              Interactive stage · Play along at every stop
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ FULL-SCREEN WIDESCREEN CINEMA THEATER ═══ */}
+      {open && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Enter the Other World interactive cinema"
+          className="fixed inset-0 z-[85] flex flex-col justify-between overflow-hidden select-none"
+          style={{
+            background:
+              "radial-gradient(90% 60% at 50% 0%, oklch(0.78 0.11 150 / 0.11), transparent 65%), radial-gradient(85% 55% at 50% 100%, oklch(0.8 0.1 85 / 0.08), transparent 65%), oklch(0.075 0.008 270)",
+          }}
+        >
+          {/* Subtle atmospheric circuit-mesh backdrop */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: 'url("/art/bg-mesh.jpg")',
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              opacity: 0.09,
+            }}
+          />
+
+          {/* ── MACHINED METAL VAULT DOORS OPENING SEQUENCE ── */}
+          {vaultPhase !== "open" && (
+            <div
+              onClick={() => {
+                setVaultPhase("open");
+                triggerActTitleCard();
+              }}
+              className="fixed inset-0 z-[95] cursor-pointer overflow-hidden"
+              style={{ perspective: "1400px" }}
+            >
+              <div
+                className="vault-door vault-door--left"
+                style={{
+                  transition: "transform 0.9s cubic-bezier(0.76, 0, 0.18, 1)",
+                  transform:
+                    vaultPhase === "parting"
+                      ? "translateX(-104%) rotateY(7deg)"
+                      : "translateX(0) rotateY(0deg)",
+                }}
+              />
+              <div
+                className="vault-door vault-door--right"
+                style={{
+                  transition: "transform 0.9s cubic-bezier(0.76, 0, 0.18, 1)",
+                  transform:
+                    vaultPhase === "parting"
+                      ? "translateX(104%) rotateY(-7deg)"
+                      : "translateX(0) rotateY(0deg)",
+                }}
+              />
+              <div
+                className="vault-seam"
+                style={{
+                  opacity: vaultPhase === "parting" ? 0 : 0.9,
+                  width: vaultPhase === "parting" ? 32 : 4,
+                  transition: "all 0.55s ease-out",
+                }}
+              />
+              <div
+                className="vault-center"
+                style={{
+                  opacity: vaultPhase === "parting" ? 0 : 1,
+                  transform:
+                    vaultPhase === "parting"
+                      ? "translate(-50%, -50%) scale(1.35)"
+                      : "translate(-50%, -50%) scale(1)",
+                  transition: "all 0.55s cubic-bezier(0.6, 0, 0.8, 1)",
+                }}
+              >
+                <div className="vault-wheel">
+                  <span
+                    className="vault-wheel-ticks"
+                    style={{
+                      transform:
+                        vaultPhase === "parting" ? "rotate(-90deg)" : "rotate(45deg)",
+                      transition: "transform 0.8s cubic-bezier(0.34, 0.05, 0.14, 1.18)",
+                    }}
+                  />
+                  <span className="vault-wheel-ring" />
+                  <div className="vault-seal">
+                    <SealMark size={92} />
+                  </div>
+                </div>
+                <div className="vault-word">
+                  <span className="vault-word-main">Enter the Other World</span>
+                  <span
+                    className="mono text-[0.65rem] uppercase tracking-[0.25em]"
+                    style={{ color: "var(--color-neon)" }}
                   >
-                    <span className="mono mr-1">{s.code}</span>
-                    <span className="hidden sm:inline">{s.chipLabel}</span>
-                  </button>
-                ))}
+                    Unlocking the House Vault…
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TOP CINEMA LETTERBOX & FILM REEL SCRUBBER BAR ── */}
+          <header
+            className="relative z-20 border-b px-4 sm:px-8 py-3"
+            style={{
+              background: "oklch(0.09 0.008 270 / 0.92)",
+              backdropFilter: "blur(16px)",
+              borderColor: "var(--hairline-strong)",
+            }}
+          >
+            <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+              {/* Brand Lockup */}
+              <div className="flex items-center gap-3">
+                <SealMark size={32} />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-xs font-semibold tracking-wider uppercase"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      Enter the Other World
+                    </span>
+                    <span className="badge badge-gold !text-[0.58rem]">
+                      Balance: {balanceOwp.toLocaleString()} $OWP
+                    </span>
+                  </div>
+                  <div
+                    className="mono text-[0.62rem]"
+                    style={{ color: "var(--text-dim)" }}
+                  >
+                    {currentAct.kicker}
+                  </div>
+                </div>
               </div>
 
-              {/* Transport Controls */}
-              <div className="flex items-center gap-1.5 ml-auto">
+              {/* 5 Film Reel Progress Bars */}
+              <div className="flex items-center gap-1.5 flex-1 max-w-md mx-2">
+                {ACTS.map((a) => {
+                  const isCurrent = a.id === act;
+                  const isPast = a.id < act;
+                  const fillPct = isPast ? 100 : isCurrent ? actProgress : 0;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => selectAct(a.id, false)}
+                      className="group flex-1 text-left cursor-pointer"
+                      title={`${a.roman}: ${a.chipLabel}`}
+                    >
+                      <div className="flex items-center justify-between mono text-[0.58rem] mb-1">
+                        <span
+                          className={
+                            isCurrent
+                              ? "text-neon font-semibold"
+                              : "text-fog group-hover:text-frost"
+                          }
+                        >
+                          {a.code}
+                        </span>
+                        <span className="hidden sm:inline truncate text-[0.56rem] text-fog/80 ml-1">
+                          {a.chipLabel}
+                        </span>
+                      </div>
+                      <div
+                        className="h-1.5 w-full rounded-full overflow-hidden"
+                        style={{ background: "oklch(1 0 0 / 0.1)" }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all duration-75"
+                          style={{
+                            width: `${fillPct}%`,
+                            background:
+                              "linear-gradient(90deg, var(--color-neon), var(--color-gold))",
+                          }}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Auto-Play & Exit Controls */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAutoPlay((p) => !p)}
+                  className="btn btn-ghost !py-1.5 !px-3 !text-xs mono"
+                >
+                  {autoPlay ? "⏸ Pause" : "▶ Auto-Play"}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeCinema}
+                  aria-label="Exit Enter the Other World"
+                  className="btn btn-ghost !py-1.5 !px-3 !text-xs"
+                >
+                  Exit ✕
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* ── CENTER WIDESCREEN STAGE ── */}
+          <div className="relative z-10 flex-1 overflow-y-auto flex items-center justify-center px-4 sm:px-8 py-4">
+            <div className="relative w-full max-w-5xl">
+              {/* Brief Cinematic Chapter Title Overlay on Act Switch */}
+              {titleCard && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center rounded-2xl"
+                  style={{
+                    background: "oklch(0.08 0.008 270 / 0.84)",
+                    backdropFilter: "blur(10px)",
+                    animation: "lightbox-in 0.25s ease",
+                  }}
+                >
+                  <span className="kicker mb-2">{currentAct.roman}</span>
+                  <h3
+                    className="text-2xl sm:text-4xl font-semibold tracking-tight text-center px-6"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    {currentAct.chipLabel}
+                  </h3>
+                </div>
+              )}
+
+              {/* Stage-Relative Autonomous Co-Pilot Cursor */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute z-30"
+                style={{
+                  left: `${cursor.x}%`,
+                  top: `${cursor.y}%`,
+                  transition:
+                    "left 560ms cubic-bezier(0.22, 1, 0.36, 1), top 560ms cubic-bezier(0.22, 1, 0.36, 1)",
+                }}
+              >
+                {cursor.clicking && (
+                  <span
+                    className="absolute -left-5 -top-5 w-10 h-10 rounded-full animate-ping"
+                    style={{
+                      border: "2px solid var(--color-neon)",
+                      background: "oklch(0.78 0.11 150 / 0.28)",
+                    }}
+                  />
+                )}
+                <div
+                  className="relative flex items-center gap-2"
+                  style={{
+                    transform: cursor.clicking ? "scale(0.86)" : "scale(1)",
+                    transition: "transform 150ms ease",
+                  }}
+                >
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style={{
+                      filter: "drop-shadow(0 6px 14px oklch(0 0 0 / 0.85))",
+                    }}
+                  >
+                    <path
+                      d="M3.5 2.5L20 10.5L12.5 13L9.5 20.5L3.5 2.5Z"
+                      fill="oklch(0.82 0.12 150)"
+                      stroke="oklch(0.1 0.008 270)"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span
+                    className="mono text-[0.62rem] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
+                    style={{
+                      background: "oklch(0.11 0.009 270 / 0.96)",
+                      border: "1px solid oklch(0.78 0.11 150 / 0.65)",
+                      color: "var(--color-neon)",
+                      boxShadow: "0 10px 28px oklch(0 0 0 / 0.75)",
+                    }}
+                  >
+                    {cursor.label}
+                  </span>
+                </div>
+              </div>
+
+              {/* ── ACT I STAGE: THE GATE & TREASURY SWAP DESK ── */}
+              {act === 0 && (
+                <div className="grid md:grid-cols-2 gap-5 items-stretch page-enter">
+                  {/* Left: Cryptographic Wallet Gate */}
+                  <div className="panel panel-glow panel-etched p-6 flex flex-col justify-between relative overflow-hidden">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="kicker">Step 01 · The Gate</span>
+                        <span
+                          className={`badge ${
+                            walletSigned ? "badge-live" : "badge-portal"
+                          }`}
+                        >
+                          {walletSigned ? (
+                            <>
+                              <span className="live-dot" /> Session Verified
+                            </>
+                          ) : (
+                            "Awaiting Signature"
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3.5 mb-4">
+                        <SealMark size={48} />
+                        <div>
+                          <div className="text-base font-semibold">
+                            Solana Wallet Authentication
+                          </div>
+                          <div className="mono text-xs text-fog">
+                            Wallet: 7xKp…9mQv · Phantom / Solflare
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-fog text-sm leading-relaxed mb-5">
+                        Other World Projex never asks for an email or password. A
+                        single off-chain message signature proves ownership of your
+                        Solana wallet at 0.00 SOL gas.
+                      </p>
+
+                      <div
+                        className="rounded-lg p-3.5 mono text-xs mb-5 border"
+                        style={{
+                          background: "oklch(0.11 0.008 270)",
+                          borderColor: "var(--hairline-strong)",
+                        }}
+                      >
+                        <div style={{ color: "var(--text-dim)" }}>
+                          MESSAGE TO SIGN
+                        </div>
+                        <div className="text-frost mt-1">
+                          Sign in to Other World Projex · Nonce #849201
+                        </div>
+                        <div className="text-neon mt-1">
+                          {walletSigned
+                            ? "✓ ed25519 signature verified — session cookie issued"
+                            : "▸ Click below to test wallet sign-in"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoPlay(false);
+                        setWalletSigned(true);
+                      }}
+                      className={`btn w-full py-3 ${
+                        walletSigned ? "btn-ghost" : "btn-primary"
+                      }`}
+                    >
+                      {walletSigned
+                        ? "✓ Connected as 7xKp…9mQv (0 Gas)"
+                        : "Connect & Sign Message (Free)"}
+                    </button>
+                  </div>
+
+                  {/* Right: Authentic Buy $OWP Treasury Desk */}
+                  <div className="panel panel-glow p-6 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="kicker">Step 02 · Buy $OWP</span>
+                        <span className="badge badge-gold">Live Raydium Spot</span>
+                      </div>
+
+                      <h3 className="text-xl font-semibold mb-1.5">
+                        Buy from the house wallet
+                      </h3>
+                      <p className="text-fog text-sm leading-relaxed mb-5">
+                        Pay SOL from your wallet and the house treasury sends $OWP at
+                        the live Raydium spot price — or deposit existing $OWP 1:1 into
+                        your in-app balance.
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="panel p-3">
+                          <div className="kicker !text-[0.58rem] mb-1">You Pay</div>
+                          <div className="stat-number text-lg text-frost">
+                            {solAmount.toFixed(2)} SOL
+                          </div>
+                        </div>
+                        <div className="panel p-3">
+                          <div className="kicker !text-[0.58rem] mb-1">
+                            You Receive
+                          </div>
+                          <div className="stat-number text-lg text-neon">
+                            {(solAmount * 25000).toLocaleString()} $OWP
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 mb-5">
+                        {[0.1, 0.5, 1, 2].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => {
+                              setAutoPlay(false);
+                              setSolAmount(n);
+                            }}
+                            className={`chip ${solAmount === n ? "active" : ""}`}
+                          >
+                            {n} SOL
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      {swapConfirmed && (
+                        <div className="mb-3 rounded-lg px-3.5 py-2 text-xs mono text-neon border border-neon/40 bg-neon/10">
+                          ✓ Payment confirmed! +{(solAmount * 25000).toLocaleString()}{" "}
+                          $OWP credited to your playable balance.
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAutoPlay(false);
+                          setSwapConfirmed(true);
+                          setBalanceOwp((b) => b + solAmount * 25000);
+                          celebrate();
+                        }}
+                        className="btn btn-primary w-full py-3"
+                      >
+                        Buy {(solAmount * 25000).toLocaleString()} $OWP with{" "}
+                        {solAmount} SOL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── ACT II STAGE: FROG FLIP & POND DICE (AUTHENTIC TABLE UI) ── */}
+              {act === 1 && (
+                <div className="grid md:grid-cols-2 gap-5 items-stretch page-enter">
+                  {/* Left: Authentic Frog Flip 3D Stage */}
+                  <div className="panel panel-glow game-stage p-5 sm:p-6 text-center flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="kicker">Table 01 · Frog Flip</span>
+                        <span className="badge badge-gold">
+                          🔥 Streak {flipStreak}×
+                        </span>
+                      </div>
+
+                      <div className="coin-stage my-2">
+                        <div className="coin-scene" style={{ width: 122, height: 122 }}>
+                          <div
+                            className={`coin ${coinSpinning ? "coin--spin" : ""}`}
+                            style={
+                              coinSpinning
+                                ? undefined
+                                : { transform: `rotateY(${coinDeg}deg)` }
+                            }
+                          >
+                            <div className="coin-face coin-face--front">
+                              <img
+                                src="/art/owp_coin_frog.png"
+                                alt="Frog side"
+                                className="coin-face-art"
+                              />
+                              <span className="coin-face-sheen" aria-hidden />
+                            </div>
+                            <div className="coin-face coin-face--back">
+                              <img
+                                src="/art/owp_coin_fly.png"
+                                alt="Fly side"
+                                className="coin-face-art"
+                              />
+                              <span className="coin-face-sheen" aria-hidden />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="coin-cast" aria-hidden />
+                      </div>
+
+                      <div className="min-h-[2rem] flex items-center justify-center mb-3">
+                        {flipWinBanner ? (
+                          <span className="stat-number text-lg neon-text result-pop">
+                            {flipWinBanner}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-fog">
+                            Even odds · 1.92× payout · 4% published edge
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex justify-center gap-3 mb-4">
+                        {(["frog", "fly"] as const).map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => {
+                              setAutoPlay(false);
+                              setFlipCall(s);
+                            }}
+                            className={`btn px-6 ${
+                              flipCall === s ? "btn-primary" : "btn-ghost"
+                            }`}
+                          >
+                            {s === "frog" ? "🐸 Frog" : "🪰 Fly"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={triggerManualFlip}
+                        className="btn btn-primary w-full py-3"
+                      >
+                        {coinSpinning
+                          ? "Flipping in 3D…"
+                          : "Flip for 500 $OWP → Win 960 $OWP"}
+                      </button>
+                      <div
+                        className="mono text-[0.62rem] mt-2.5"
+                        style={{ color: "var(--text-dim)" }}
+                      >
+                        seedHash 9f8a4c21e7b09d3a… · SHA-256 commit-reveal
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Authentic Pond Dice Laser Track Stage */}
+                  <div className="panel panel-glow game-stage p-5 sm:p-6 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="kicker">Table 02 · Pond Dice</span>
+                        <span className="badge badge-live">
+                          <span className="live-dot" /> Custom Odds
+                        </span>
+                      </div>
+
+                      {/* Result Track */}
+                      <div
+                        className="relative h-12 rounded-lg mb-2 overflow-hidden"
+                        style={{
+                          background:
+                            "linear-gradient(180deg, oklch(0.13 0.01 165), oklch(0.16 0.012 165))",
+                          border: "1px solid var(--hairline-strong)",
+                          boxShadow: "inset 0 2px 10px oklch(0 0 0 / 0.45)",
+                        }}
+                      >
+                        <div
+                          className="absolute inset-y-0 left-0 transition-all duration-300"
+                          style={{
+                            width: `${diceTarget}%`,
+                            background:
+                              "linear-gradient(90deg, oklch(0.78 0.11 150 / 0.08), oklch(0.78 0.11 150 / 0.24))",
+                            borderRight: "2px solid var(--color-neon)",
+                          }}
+                        />
+                        {diceRolling && <div className="dice-scan" aria-hidden />}
+                        {diceResult && !diceRolling && (
+                          <div
+                            className="dice-marker absolute top-1/2"
+                            style={{ left: `${diceResult.rolled}%` }}
+                          >
+                            <img
+                              src="/art/owp_dice_orb.png"
+                              alt=""
+                              className="block w-7 h-7 -translate-x-1/2 -translate-y-1/2"
+                              style={{
+                                filter:
+                                  "drop-shadow(0 0 10px oklch(0.78 0.11 150 / 0.95))",
+                              }}
+                            />
+                          </div>
+                        )}
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neon mono">
+                          win zone &lt; {diceTarget}
+                        </span>
+                      </div>
+
+                      <input
+                        type="range"
+                        min={5}
+                        max={92}
+                        value={diceTarget}
+                        onChange={(e) => {
+                          setAutoPlay(false);
+                          setDiceTarget(Number(e.target.value));
+                        }}
+                        className="w-full accent-neon mb-4"
+                      />
+
+                      <div className="grid grid-cols-3 gap-2.5 text-center mb-4">
+                        <div className="panel p-2.5">
+                          <div className="text-[0.62rem] text-fog uppercase">
+                            Win Chance
+                          </div>
+                          <div className="stat-number text-neon text-base">
+                            {diceTarget}%
+                          </div>
+                        </div>
+                        <div className="panel p-2.5">
+                          <div className="text-[0.62rem] text-fog uppercase">
+                            Multiplier
+                          </div>
+                          <div className="stat-number text-portal text-base">
+                            {diceMult.toFixed(2)}×
+                          </div>
+                        </div>
+                        <div className="panel p-2.5">
+                          <div className="text-[0.62rem] text-fog uppercase">
+                            Payout
+                          </div>
+                          <div className="stat-number text-gold text-base">
+                            {Math.floor(1000 * diceMult).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="min-h-[1.75rem] text-center mb-2">
+                        {diceResult && !diceRolling && (
+                          <span className="stat-number text-lg neon-text result-pop">
+                            rolled {diceResult.rolled.toFixed(2)} — +
+                            {diceResult.payout.toLocaleString()} $OWP!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={triggerManualRoll}
+                        className="btn btn-primary w-full py-3"
+                      >
+                        {diceRolling
+                          ? "Rolling across laser track…"
+                          : `Roll 1,000 $OWP for ${diceMult.toFixed(2)}×`}
+                      </button>
+                      <div
+                        className="mono text-[0.62rem] text-center mt-2.5"
+                        style={{ color: "var(--text-dim)" }}
+                      >
+                        Drag slider or click Roll to test live odds
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── ACT III STAGE: 60 HZ HOPPER LIVE CANVAS & REPLAY VERIFIER ── */}
+              {act === 2 && (
+                <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-5 items-stretch page-enter">
+                  {/* Left: Authentic 60 Hz Hopper Canvas driven by Smart AI + User Keys */}
+                  <div className="panel panel-glow game-stage p-4 flex flex-col items-center justify-between">
+                    <div className="w-full flex items-center justify-between mb-2 px-1">
+                      <span className="kicker">Free Arcade · Hopper (60 Hz)</span>
+                      <div className="flex items-center gap-4 mono text-xs">
+                        <span>
+                          Score{" "}
+                          <strong className="text-neon">
+                            {hopperHud.score}
+                          </strong>
+                        </span>
+                        <span>
+                          Wave{" "}
+                          <strong className="text-gold">
+                            {hopperHud.wave}
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="relative w-full max-w-[356px]">
+                      <canvas
+                        ref={canvasRef}
+                        width={W}
+                        height={H}
+                        className="rounded-lg border block mx-auto"
+                        style={{
+                          borderColor: "var(--hairline-strong)",
+                          width: "100%",
+                          maxWidth: 356,
+                          height: "auto",
+                        }}
+                      />
+                    </div>
+
+                    {/* Interactive Hop Controls so user can hop the frog too */}
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="mono text-[0.62rem] text-fog mr-2">
+                        Take control:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          hopperRef.current && hopperHop(hopperRef.current, 2)
+                        }
+                        className="btn btn-ghost !py-1 !px-3 !text-xs"
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          hopperRef.current && hopperHop(hopperRef.current, 0)
+                        }
+                        className="btn btn-primary !py-1 !px-4 !text-xs"
+                      >
+                        ↑ Hop
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          hopperRef.current && hopperHop(hopperRef.current, 1)
+                        }
+                        className="btn btn-ghost !py-1 !px-3 !text-xs"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          hopperRef.current && hopperHop(hopperRef.current, 3)
+                        }
+                        className="btn btn-ghost !py-1 !px-3 !text-xs"
+                      >
+                        →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right: 60 Hz Server Replay Verifier & Free Episode Slate */}
+                  <div className="panel panel-glow p-5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="kicker">Anti-Cheat Protocol</span>
+                        <span className="badge badge-live">
+                          <span className="live-dot" /> 60 Hz Replay Verified
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg font-semibold mb-1.5">
+                        Zero wager required. Pure human skill.
+                      </h3>
+                      <p className="text-fog text-xs sm:text-sm leading-relaxed mb-4">
+                        Every arcade run seeds traffic from a signed server token and
+                        records your exact frame-by-frame input trace. When your run
+                        ends, the server re-simulates the entire game at 60 Hz before
+                        posting your score to the weekly $OWP bounty board.
+                      </p>
+
+                      {/* Live Frame Trace Stream */}
+                      <div
+                        className="rounded-lg p-3 mono text-[0.66rem] mb-4 border"
+                        style={{
+                          background: "oklch(0.11 0.008 270)",
+                          borderColor: "var(--hairline-strong)",
+                        }}
+                      >
+                        <div className="flex items-center justify-between text-neon mb-1.5">
+                          <span>LIVE INPUT TRACE STREAM</span>
+                          <span>60.0 FPS LOCKED</span>
+                        </div>
+                        <div className="space-y-1">
+                          {replayTrace.map((t, idx) => (
+                            <div
+                              key={`${t.frame}-${idx}`}
+                              className="flex items-center justify-between text-fog"
+                            >
+                              <span>frame #{t.frame}</span>
+                              <span className="text-frost">{t.dir}</span>
+                              <span className="text-neon">✓ {t.hash}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Other Free Arcade Episodes */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="panel p-2.5 flex items-center gap-2.5">
+                        <img
+                          src="/art/owp_frogris.png"
+                          alt="Frogris"
+                          className="w-11 h-11 rounded object-cover"
+                        />
+                        <div>
+                          <div className="text-xs font-semibold">Frogris</div>
+                          <div className="mono text-[0.6rem] text-neon">
+                            Free · Weekly Pool
+                          </div>
+                        </div>
+                      </div>
+                      <div className="panel p-2.5 flex items-center gap-2.5">
+                        <img
+                          src="/art/owp_worm.png"
+                          alt="Worm Frog"
+                          className="w-11 h-11 rounded object-cover"
+                        />
+                        <div>
+                          <div className="text-xs font-semibold">Worm Frog</div>
+                          <div className="mono text-[0.6rem] text-neon">
+                            Free · Weekly Pool
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── ACT IV STAGE: SELF-FILLING BOUNTY POOLS ── */}
+              {act === 3 && (
+                <div className="grid md:grid-cols-2 gap-5 items-stretch page-enter">
+                  {/* Left: House Edge -> Bounty Rakeback Engine */}
+                  <div className="panel panel-glow panel-etched p-6 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="kicker">The Treasury Loop</span>
+                        <span className="badge badge-gold">
+                          50% Edge → Bounty Pool
+                        </span>
+                      </div>
+
+                      <h3 className="text-xl font-semibold mb-2">
+                        Every table bet fuels that game&apos;s bounty.
+                      </h3>
+                      <p className="text-fog text-sm leading-relaxed mb-5">
+                        Instead of keeping the full 4% table edge, the house routes
+                        half of the edge from every Frog Flip, Pond Dice, and Blackjack
+                        wager straight into that game&apos;s active bounty pool.
+                      </p>
+
+                      <div className="space-y-2.5 mb-5">
+                        <div className="panel p-3 flex items-center justify-between">
+                          <span className="text-xs text-fog">
+                            1. Players wager $OWP at the tables
+                          </span>
+                          <span className="mono text-xs text-frost">
+                            4.0% House Edge
+                          </span>
+                        </div>
+                        <div className="panel p-3 flex items-center justify-between">
+                          <span className="text-xs text-fog">
+                            2. Half of the edge feeds the live bounty meter
+                          </span>
+                          <span className="mono text-xs text-neon">
+                            +50% Rakeback to Pool
+                          </span>
+                        </div>
+                        <div className="panel p-3 flex items-center justify-between">
+                          <span className="text-xs text-fog">
+                            3. Meter reaches 100% → Instant automatic payout
+                          </span>
+                          <span className="mono text-xs text-gold">
+                            Pro-Rata to Winners
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoPlay(false);
+                        setBountyPct((p) => {
+                          const next = Math.min(100, p + 14);
+                          if (next >= 100) {
+                            setBountyUnlocked(true);
+                            celebrate();
+                          }
+                          return next;
+                        });
+                      }}
+                      className="btn btn-primary w-full py-3"
+                    >
+                      ⚡ Simulate Table Activity (+Fill Bounty Meter)
+                    </button>
+                  </div>
+
+                  {/* Right: Live Bounty Contract & Automatic Payout Ledger */}
+                  <div className="panel panel-glow p-6 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-3.5 mb-4">
+                        <img
+                          src="/art/owp_pump.png"
+                          alt="Frog Flip Bounty"
+                          className="w-14 h-14 rounded-lg object-cover border"
+                          style={{ borderColor: "var(--hairline-strong)" }}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="kicker !text-[0.58rem]">
+                              Wing III · Active Contract
+                            </span>
+                            <span className="badge badge-live">
+                              <span className="live-dot" />{" "}
+                              {bountyUnlocked ? "Paid Out" : "Filling"}
+                            </span>
+                          </div>
+                          <div className="text-lg font-semibold">
+                            Frog Flip High-Roller Hunt
+                          </div>
+                          <div className="stat-number text-gold text-base">
+                            100,000 $OWP Prize Pool
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Unlock Progress Meter */}
+                      <div className="mb-4">
+                        <div className="flex justify-between mono text-xs mb-1.5">
+                          <span className="text-fog">Pool Unlock Meter</span>
+                          <span className="text-neon font-semibold">
+                            {bountyPct}% Unlocked
+                          </span>
+                        </div>
+                        <div
+                          className="h-3 w-full rounded-full overflow-hidden p-0.5"
+                          style={{ background: "oklch(0.1 0.008 270)" }}
+                        >
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${bountyPct}%`,
+                              background:
+                                "linear-gradient(90deg, var(--color-neon), var(--color-gold))",
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Pro-Rata Standings / Automatic Payouts */}
+                      <div className="kicker !text-[0.58rem] mb-2">
+                        {bountyUnlocked
+                          ? "✓ Automatic Pro-Rata Payouts Credited"
+                          : "Live Hunter Standings (Pro-Rata Share)"}
+                      </div>
+                      <div className="space-y-2">
+                        {[
+                          {
+                            rank: "01",
+                            wallet: "7xKp…9mQv (You)",
+                            share: "50%",
+                            payout: "+50,000 $OWP",
+                          },
+                          {
+                            rank: "02",
+                            wallet: "4vBn…2kLp",
+                            share: "30%",
+                            payout: "+30,000 $OWP",
+                          },
+                          {
+                            rank: "03",
+                            wallet: "9pQr…8xWz",
+                            share: "20%",
+                            payout: "+20,000 $OWP",
+                          },
+                        ].map((row) => (
+                          <div
+                            key={row.rank}
+                            className="panel px-3.5 py-2 flex items-center justify-between text-xs mono"
+                          >
+                            <span>
+                              <span className="text-fog mr-2">#{row.rank}</span>
+                              <span className="text-frost">{row.wallet}</span>
+                            </span>
+                            <span
+                              className={
+                                bountyUnlocked
+                                  ? "text-gold font-semibold"
+                                  : "text-neon"
+                              }
+                            >
+                              {bountyUnlocked ? row.payout : `${row.share} share`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── ACT V STAGE: AUCTION HOUSE & INSTANT ON-CHAIN WITHDRAWALS ── */}
+              {act === 4 && (
+                <div className="grid md:grid-cols-2 gap-5 items-stretch page-enter">
+                  {/* Left: Authentic Auction House Lot Card */}
+                  <div className="panel panel-glow p-5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="kicker">Wing II · The Auction House</span>
+                        <span className="badge badge-urgent">
+                          Anti-Snipe Protected
+                        </span>
+                      </div>
+
+                      <div className="lot-card mb-4">
+                        <div className="card-media !aspect-[16/9]">
+                          <img
+                            src="/art/hero-auction.jpg"
+                            alt="Genesis Crown"
+                          />
+                          <span className="badge badge-live absolute top-2 right-2">
+                            <span className="live-dot" /> 1/1 Lot
+                          </span>
+                        </div>
+                        <div className="card-body">
+                          <div className="flex items-center justify-between">
+                            <h3 className="!text-base">
+                              The Sovereign Frog Reliquary (1/1)
+                            </h3>
+                            <span className="mono text-xs text-fog">04m : 12s</span>
+                          </div>
+                          <div className="card-price-row">
+                            <div>
+                              <div className="card-price-label">Current High Bid</div>
+                              <div className="price text-neon">
+                                {topBid.toLocaleString()} $OWP
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="card-price-label">Status</div>
+                              <div className="mono text-xs text-gold">
+                                {userIsHighBidder
+                                  ? "✓ You lead (Escrowed)"
+                                  : "Outbid auto-refunds"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoPlay(false);
+                        setTopBid((b) => b + 2500);
+                        setUserIsHighBidder(true);
+                      }}
+                      className="btn btn-primary w-full py-3"
+                    >
+                      Place Escrowed Bid ({(topBid + 2500).toLocaleString()} $OWP)
+                    </button>
+                  </div>
+
+                  {/* Right: Instant Self-Custody Withdrawal & Direct Launchpad */}
+                  <div className="panel panel-glow panel-etched p-6 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="kicker">Self-Custody Treasury</span>
+                        <span className="badge badge-live">
+                          <span className="live-dot" /> Solana Mainnet
+                        </span>
+                      </div>
+
+                      <h3 className="text-xl font-semibold mb-1.5">
+                        Withdraw anytime. Paid automatically.
+                      </h3>
+                      <p className="text-fog text-sm leading-relaxed mb-4">
+                        Your in-app balance is never locked. Request a withdrawal and
+                        the same house treasury wallet automatically signs and
+                        broadcasts your $OWP transfer on Solana.
+                      </p>
+
+                      <div className="panel p-4 mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="kicker !text-[0.58rem]">
+                            Withdrawable Balance
+                          </span>
+                          <span className="mono text-xs text-neon">
+                            0 Lockups · Instant Queue
+                          </span>
+                        </div>
+                        <div className="stat-number text-2xl text-gold">
+                          {withdrawDone ? "0 $OWP" : "62,460 $OWP"}
+                        </div>
+                        {withdrawDone && (
+                          <div className="mt-2 mono text-xs text-neon">
+                            ✓ 62,460 $OWP sent on-chain to 7xKp…9mQv (Tx confirmed in
+                            1.1s)
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAutoPlay(false);
+                          setWithdrawDone((w) => !w);
+                          if (!withdrawDone) celebrate();
+                        }}
+                        className="btn btn-ghost w-full py-2.5 mb-5"
+                      >
+                        {withdrawDone
+                          ? "✓ On-Chain Payout Confirmed (Click to Reset)"
+                          : "Test Instant On-Chain Withdrawal (62,460 $OWP)"}
+                      </button>
+                    </div>
+
+                    {/* Direct Launchpad into the Real App */}
+                    <div>
+                      <div className="kicker !text-[0.58rem] mb-2">
+                        Ready to jump in? Choose your wing
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <a
+                          href="#buy"
+                          onClick={closeCinema}
+                          className="btn btn-primary !py-2 !text-xs text-center"
+                        >
+                          Buy $OWP →
+                        </a>
+                        <Link
+                          href="/games/flip"
+                          onClick={closeCinema}
+                          className="btn btn-ghost !py-2 !text-xs text-center"
+                        >
+                          Play Frog Flip →
+                        </Link>
+                        <Link
+                          href="/games/hopper"
+                          onClick={closeCinema}
+                          className="btn btn-ghost !py-2 !text-xs text-center"
+                        >
+                          Free Hopper →
+                        </Link>
+                        <Link
+                          href="/bounties"
+                          onClick={closeCinema}
+                          className="btn btn-ghost !py-2 !text-xs text-center"
+                        >
+                          Bounty Board →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── BOTTOM CINEMA SUBTITLE & TRANSPORT LETTERBOX BAR ── */}
+          <footer
+            className="relative z-20 border-t px-4 sm:px-8 py-3.5"
+            style={{
+              background: "oklch(0.09 0.008 270 / 0.94)",
+              backdropFilter: "blur(16px)",
+              borderColor: "var(--hairline-strong)",
+            }}
+          >
+            <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Synchronized Cinema Subtitle Track */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="mono text-[0.62rem] uppercase tracking-wider text-neon">
+                    {currentAct.roman}
+                  </span>
+                  <span className="text-xs font-semibold text-frost truncate">
+                    {currentAct.title}
+                  </span>
+                </div>
+                <p className="text-fog text-xs sm:text-[0.82rem] leading-snug">
+                  “{narration}”
+                </p>
+              </div>
+
+              {/* Transport & Live Route Jump Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() =>
-                    goToStep(
-                      ((step + TOUR_STOPS.length - 1) %
-                        TOUR_STOPS.length) as TourStepIndex,
-                      false
-                    )
+                    selectAct(((act + ACTS.length - 1) % ACTS.length) as ActIndex, false)
                   }
-                  className="btn btn-ghost !py-1 !px-2.5 !text-xs"
-                  title="Previous stop"
+                  className="btn btn-ghost !py-1.5 !px-3 !text-xs"
                 >
                   ← Prev
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setAutoPlay((p) => !p)}
-                  className="btn btn-ghost !py-1 !px-2.5 !text-xs mono"
-                  title={autoPlay ? "Pause auto-pilot" : "Resume auto-pilot"}
-                >
-                  {autoPlay ? "⏸ Auto" : "▶ Auto"}
-                </button>
-
-                {step < 5 ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      goToStep(((step + 1) % TOUR_STOPS.length) as TourStepIndex, true)
-                    }
-                    className="btn btn-primary !py-1 !px-3 !text-xs"
+                {currentAct.liveHref.startsWith("#") ? (
+                  <a
+                    href={currentAct.liveHref}
+                    onClick={closeCinema}
+                    className="btn btn-ghost !py-1.5 !px-3 !text-xs text-neon"
                   >
-                    Next Stop →
-                  </button>
+                    {currentAct.liveCta}
+                  </a>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      closeTour();
-                      router.push("/#buy");
-                    }}
-                    className="btn btn-primary !py-1 !px-3 !text-xs"
+                  <Link
+                    href={currentAct.liveHref}
+                    onClick={closeCinema}
+                    className="btn btn-ghost !py-1.5 !px-3 !text-xs text-neon"
                   >
-                    Buy $OWP →
-                  </button>
+                    {currentAct.liveCta}
+                  </Link>
                 )}
 
                 <button
                   type="button"
-                  onClick={closeTour}
-                  aria-label="Exit live walkthrough"
-                  className="btn btn-ghost !py-1 !px-2.5 !text-xs"
-                  title="Exit walkthrough (Esc)"
+                  onClick={() =>
+                    selectAct(((act + 1) % ACTS.length) as ActIndex, true)
+                  }
+                  className="btn btn-primary !py-1.5 !px-3.5 !text-xs"
                 >
-                  ✕
+                  {act < 4 ? "Next Act →" : "Replay Film ↺"}
                 </button>
               </div>
             </div>
-          </div>
+          </footer>
         </div>
-      </aside>
+      )}
     </>
   );
 }
