@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { SealMark } from "./seal";
 
 type Mood = "welcome" | "focused" | "excited" | "impressed";
+type VaultPhase = "idle" | "closing" | "locked" | "opening";
 
 interface ChapterMeta {
   index: number;
@@ -665,6 +667,7 @@ export function OtherWorldDirector() {
   const [line, setLine] = useState(CHAPTERS[0].initialLine);
   const [mood, setMood] = useState<Mood>(CHAPTERS[0].initialMood);
   const [stepProgress, setStepProgress] = useState(0);
+  const [vaultPhase, setVaultPhase] = useState<VaultPhase>("idle");
 
   const runIdRef = useRef(0);
   const pausedRef = useRef(false);
@@ -694,6 +697,7 @@ export function OtherWorldDirector() {
     setActive(false);
     setCompleted(false);
     setPaused(false);
+    setVaultPhase("idle");
     cursorTargetElRef.current = null;
     if (typeof document !== "undefined") {
       document.documentElement.removeAttribute("data-owp-tour");
@@ -708,10 +712,11 @@ export function OtherWorldDirector() {
       document.documentElement.removeAttribute("data-owp-tour");
     }
     cleanupStageAttributes();
+    setVaultPhase("idle");
     setStepProgress(1);
     setMood("excited");
     setLine(
-      "You've toured all three wings, played all six games, and verified the cryptographic proof. Where would you like to play first?"
+      "The vault is open — three wings, one treasury. You've played all six games and verified the proof. Where would you like to start?"
     );
     setCompleted(true);
   }, [cleanupStageAttributes]);
@@ -735,6 +740,7 @@ export function OtherWorldDirector() {
     }
     setCompleted(false);
     setPaused(false);
+    setVaultPhase("idle");
     setChapter(idx);
     setLine(CHAPTERS[idx].initialLine);
     setMood(CHAPTERS[idx].initialMood);
@@ -1096,6 +1102,7 @@ export function OtherWorldDirector() {
     const runChapter = async () => {
       const meta = CHAPTERS[chapter] ?? CHAPTERS[0];
       cleanupStageAttributes();
+      setVaultPhase("idle");
       setLine(meta.initialLine);
       setMood(meta.initialMood);
       setStepProgress(0.1);
@@ -1431,16 +1438,87 @@ export function OtherWorldDirector() {
           if (!(await sleep(1300))) return;
         }
 
-        // Finally visit /treasury for the grand finale
-        setStepProgress(0.85);
+        // Visit /treasury — the vault that backs the whole house
+        setStepProgress(0.7);
         setLine(
-          "Finally, The Treasury page streams live Solana vault balances, deposits, and automatic prize payouts."
+          "Finally, The Treasury streams live Solana vault balances, deposits, and automatic prize payouts. Now — let's open the vault."
         );
         setMood("impressed");
         const treasuryStage = await waitForRouteAndStage("/treasury", "main");
         if (!treasuryStage || isCancelled()) return;
         window.scrollTo({ top: 0, behavior: "smooth" });
-        if (!(await sleep(1600))) return;
+        if (!(await sleep(2200))) return;
+
+        // GRAND FINALE: vault doors seal over the Treasury, the wheel turns,
+        // and they part onto the homepage's Three Wings.
+        // Vault timing is NOT pausable (the doors must never hang closed).
+        const hold = (ms: number) =>
+          new Promise<boolean>((r) => setTimeout(() => r(!isCancelled()), ms));
+        const reduceMotion =
+          window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+        setStepProgress(0.82);
+        setLine("The vault is unlocking… welcome to the house.");
+        setMood("excited");
+        cursorTargetElRef.current = null;
+        cursorFallbackRef.current = {
+          x: window.innerWidth * 0.5,
+          y: window.innerHeight * 0.5,
+        };
+
+        if (!reduceMotion) {
+          setVaultPhase("closing");
+          if (!(await hold(820))) return;
+          setVaultPhase("locked");
+        }
+
+        // Behind the closed doors: go home and park on the Three Wings
+        if (window.location.pathname !== "/") routerRef.current.push("/");
+        let wingsEl: HTMLElement | null = null;
+        for (let i = 0; i < 120 && !wingsEl; i++) {
+          if (isCancelled()) return;
+          if (window.location.pathname === "/") {
+            wingsEl = document.getElementById("owp-wings");
+          }
+          if (!wingsEl) await new Promise((r) => setTimeout(r, 50));
+        }
+        // Let Next.js finish its own scroll-to-top before we park the view
+        if (!(await hold(140))) return;
+        const parkOnWings = () => {
+          if (!wingsEl || !wingsEl.isConnected) return;
+          const top = wingsEl.getBoundingClientRect().top + window.scrollY - 84;
+          window.scrollTo({ top: Math.max(0, top), behavior: "instant" as ScrollBehavior });
+        };
+        parkOnWings();
+        if (!reduceMotion) {
+          if (!(await hold(1050))) return;
+          parkOnWings();
+          setVaultPhase("opening");
+          if (!(await hold(1500))) return;
+          setVaultPhase("idle");
+        }
+        if (isCancelled()) return;
+
+        // Present each wing on the real homepage cards
+        setStepProgress(0.92);
+        if (wingsEl) {
+          wingsEl.setAttribute("data-owp-stage", "active");
+          const cards = Array.from(
+            wingsEl.querySelectorAll<HTMLElement>("a.lot-card")
+          ).slice(0, 3);
+          const wingLines = [
+            "Wing I — The Arcade. Six provably fair games: the ones you just watched me play.",
+            "Wing II — The Auction House. Escrowed $OWP bids with anti-snipe closings.",
+            "Wing III — The Bounty Board. Fixed $OWP pools that unlock as the games are played.",
+          ];
+          for (let i = 0; i < cards.length; i++) {
+            if (isCancelled()) return;
+            setLine(wingLines[i] ?? wingLines[0]);
+            setMood(i === 2 ? "excited" : "impressed");
+            if (!(await aimAndClick(cards[i], 900, false))) return;
+            if (!(await sleep(1100))) return;
+          }
+        }
       }
 
       setStepProgress(1);
@@ -1470,6 +1548,27 @@ export function OtherWorldDirector() {
           className="pointer-events-none fixed inset-0 w-screen h-screen z-50"
           style={{ width: "100vw", height: "100vh" }}
         />
+      )}
+
+      {/* Grand-finale vault doors (reuses the site's vault-intro artwork) */}
+      {vaultPhase !== "idle" && (
+        <div className="owp-vault" data-phase={vaultPhase} aria-hidden="true">
+          <div className="vault-door vault-door--left" />
+          <div className="vault-door vault-door--right" />
+          <div className="vault-seam" />
+          <div className="owp-vault-center">
+            <div className="vault-wheel">
+              <span className="vault-wheel-ticks owp-vault-ticks" />
+              <span className="vault-wheel-ring" />
+              <div className="vault-seal">
+                <SealMark size={88} />
+              </div>
+            </div>
+            <div className="vault-word">
+              <span className="vault-word-main">Three Wings · One Treasury</span>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Compact Floating Glass Story Dock — bottom-right, never blocks the site */}

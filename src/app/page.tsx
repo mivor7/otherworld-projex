@@ -155,7 +155,7 @@ export default async function Home() {
       <ActivityTicker />
 
       {/* The wings */}
-      <section className="mt-16">
+      <section id="owp-wings" className="mt-16 scroll-mt-24">
         <Reveal>
           <div className="flex items-end justify-between mb-6">
             <div>

@@ -1497,3 +1497,98 @@ button:focus-visible,
   animation: owp-click-pulse 0.42s var(--hs-ease);
 }
 
+
+/* ——— Enter the Other World · Grand-Finale Vault ———
+   Reuses the vault-intro door artwork. Phases are driven by the tour
+   director via data-phase: closing (doors seal over the Treasury) →
+   locked (wheel turns while the homepage loads behind) → opening (doors
+   part onto the Three Wings). Sits under the tour dock (z-50). */
+.owp-vault {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  perspective: 1400px;
+  pointer-events: none;
+}
+.owp-vault[data-phase="closing"] .vault-door--left {
+  animation: owp-vault-close-left 0.8s cubic-bezier(0.7, 0, 0.25, 1) both;
+}
+.owp-vault[data-phase="closing"] .vault-door--right {
+  animation: owp-vault-close-right 0.8s cubic-bezier(0.7, 0, 0.25, 1) both;
+}
+@keyframes owp-vault-close-left {
+  0% { transform: translateX(-103%) rotateY(7deg); }
+  100% { transform: translateX(0) rotateY(0deg); }
+}
+@keyframes owp-vault-close-right {
+  0% { transform: translateX(103%) rotateY(-7deg); }
+  100% { transform: translateX(0) rotateY(0deg); }
+}
+.owp-vault[data-phase="opening"] .vault-door--left {
+  animation: vault-door-left 1.15s cubic-bezier(0.76, 0, 0.18, 1) 0.2s both;
+}
+.owp-vault[data-phase="opening"] .vault-door--right {
+  animation: vault-door-right 1.15s cubic-bezier(0.76, 0, 0.18, 1) 0.2s both;
+}
+
+.owp-vault .vault-seam { opacity: 0; }
+.owp-vault[data-phase="locked"] .vault-seam {
+  animation: owp-vault-fade-in 0.4s ease both;
+  opacity: 0.55;
+}
+.owp-vault[data-phase="opening"] .vault-seam {
+  opacity: 0.55;
+  animation:
+    vault-seam-bloom 0.5s cubic-bezier(0.3, 0, 0.4, 1) both,
+    vault-seam-fade 0.55s ease-out 0.35s forwards;
+}
+
+.owp-vault-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.owp-vault[data-phase="closing"] .owp-vault-center {
+  animation: owp-vault-center-in 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.55s both;
+}
+.owp-vault[data-phase="locked"] .owp-vault-center {
+  opacity: 1;
+}
+.owp-vault[data-phase="opening"] .owp-vault-center {
+  opacity: 1;
+  animation: vault-center-out 0.55s cubic-bezier(0.6, 0, 0.8, 1) 0.15s forwards;
+}
+@keyframes owp-vault-center-in {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes owp-vault-fade-in {
+  from { opacity: 0; }
+  to { opacity: 0.55; }
+}
+
+.owp-vault-ticks { transform: rotate(96deg); opacity: 0.4; will-change: transform; }
+.owp-vault[data-phase="locked"] .owp-vault-ticks {
+  animation: vault-wheel-turn 0.95s cubic-bezier(0.34, 0.05, 0.14, 1.18) 0.05s both;
+}
+.owp-vault[data-phase="opening"] .owp-vault-ticks {
+  transform: rotate(-84deg);
+  opacity: 1;
+}
+.owp-vault[data-phase="locked"] .vault-wheel-ring {
+  animation: vault-ring-glow 0.9s ease-in-out both;
+}
+.owp-vault[data-phase="locked"] .vault-seal {
+  animation: vault-unlock-beat 0.28s cubic-bezier(0.3, 0, 0.3, 1.4) 0.85s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owp-vault { display: none; }
+}
