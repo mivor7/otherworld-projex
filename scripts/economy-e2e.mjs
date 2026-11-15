@@ -4,15 +4,17 @@
 // HTTP by hitting the bounties list, which runs autoSettleBounties.
 //
 // The dev server must run with BOUNTY_AUTO_PAY=true. Self-cleaning.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.chdir(ROOT);
-for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
-  const m = line.match(/^([A-Z0-9_]+)="?([^"]*)"?\s*$/);
-  if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+if (existsSync(path.join(ROOT, ".env"))) {
+  for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
+    const m = line.match(/^([A-Z0-9_]+)="?([^"]*)"?\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  }
 }
 const require_ = (await import("node:module")).createRequire(path.join(ROOT, "package.json"));
 const { PrismaClient } = require_("@prisma/client");
@@ -53,9 +55,9 @@ let parkedIds = [];
 async function makeWinner(tag, net, vol, bountyStart, game = "dice") {
   const u = await prisma.user.create({ data: { wallet: `econ-${tag}-${Math.round(performance.now())}` } });
   userIds.push(u.id);
-  // eligibility: lifetime + in-window burns
-  await prisma.burnEvent.create({ data: { userId: u.id, signature: `econ-life-${u.id}`, amountRaw: 2000n * RAW, credits: 20, createdAt: new Date(Date.now() - 40 * 864e5) } });
-  await prisma.burnEvent.create({ data: { userId: u.id, signature: `econ-win-${u.id}`, amountRaw: 200n * RAW, credits: 2, createdAt: new Date(bountyStart.getTime() + 500) } });
+  // eligibility: lifetime + in-window deposits
+  await prisma.deposit.create({ data: { userId: u.id, signature: `econ-life-${u.id}`, amountRaw: 2000n * RAW, createdAt: new Date(Date.now() - 40 * 864e5) } });
+  await prisma.deposit.create({ data: { userId: u.id, signature: `econ-win-${u.id}`, amountRaw: 200n * RAW, createdAt: new Date(bountyStart.getTime() + 500) } });
   // a settled round: net = payout - wager, volume = wager
   await prisma.gameRound.create({
     data: {
@@ -73,20 +75,15 @@ async function seedId(userId) {
 }
 
 // Mirror of the app's requiredCreditSpend (src/lib/bounty.ts), read from the
-// LIVE house config so the suite tracks price/split/margin changes instead of
-// hardcoding a derived number. Keeps the tests correct at any credit price.
-// Mirrors src/lib/bounty.requiredCreditSpend (pot model): the pot earns
-// potShare × edge × (1−burn) × price per credit wagered; seed covers the head
-// start and play funds prize − seed.
+// LIVE house config so the suite tracks potShare/edge changes instead of
+// hardcoding a derived number.
 async function requiredCredits(prizeRaw, seedRaw = 0n) {
   const s = Object.fromEntries((await prisma.houseSetting.findMany()).map((x) => [x.key, x.value]));
   const num = (k, envK, def) =>
     s[k] !== undefined && s[k] !== "" ? Number(s[k]) : Number(process.env[envK] ?? def);
-  const ribbitPerCredit = num("ribbitPerCredit", "RIBBIT_PER_CREDIT", 100);
-  const buyBurnShare = num("buyBurnShare", "BUY_BURN_SHARE", 0.5);
   const potShare = num("bountyPotShare", "BOUNTY_POT_SHARE", 0.5);
   const edge = num("houseEdge", "HOUSE_EDGE", 0.04);
-  const rate = potShare * edge * (1 - buyBurnShare) * ribbitPerCredit;
+  const rate = potShare * edge;
   const funded = Math.max(0, Number((prizeRaw - seedRaw) / RAW));
   if (funded === 0) return 1;
   return Math.max(1, Math.ceil(funded / rate));
@@ -120,13 +117,19 @@ try {
   });
   console.log(`parked ${parkedIds.length} standing bounties for the run\n`);
 
-  // ---------------- buy-credits endpoint guards ----------------
-  console.log("— Buy-credits endpoint guards");
+  // ---------------- deposit & retired buy-credits endpoint guards ----------------
+  console.log("— Deposit & retired buy-credits endpoint guards");
   const buyNoAuth = await fetch(BASE + "/api/credits/buy", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ signature: "x".repeat(80) }),
   });
-  check("buy requires sign-in (401)", buyNoAuth.status === 401, `got ${buyNoAuth.status}`);
+  const depNoAuth = await fetch(BASE + "/api/deposits/verify", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ signature: "x".repeat(80) }),
+  });
+  check("retired /api/credits/buy returns 410 and /api/deposits/verify requires sign-in (401)",
+    buyNoAuth.status === 410 && depNoAuth.status === 401,
+    `buy=${buyNoAuth.status} dep=${depNoAuth.status}`);
 
   // ---------------- auto-bounty: below threshold does NOT pay ----------------
   console.log("— Auto-bounty stays open below the spend threshold");
@@ -135,6 +138,7 @@ try {
     data: {
       title: "ECON below-threshold", description: "e2e", game: "dice", kind: "leaderboard",
       prizeRibbit: 10000n * RAW, autoPay: true, triggerCreditVolume: req1,
+      startsAt: new Date(Date.now() - 10_000),
       endsAt: new Date(Date.now() + 7 * 864e5),
     },
   });
@@ -301,19 +305,19 @@ try {
   bountyIds.push(b6.id);
   const buyer = await prisma.user.create({ data: { wallet: `econ-buyer-${Math.round(performance.now())}` } });
   userIds.push(buyer.id);
-  // NO BurnEvent — only a credit purchase (part burned, part to house).
-  await prisma.creditPurchase.create({
-    data: { userId: buyer.id, signature: `econ-buy-life-${buyer.id}`, ribbitRaw: 2000n * RAW, burnedRaw: 1000n * RAW, houseRaw: 1000n * RAW, credits: 20, createdAt: new Date(Date.now() - 40 * 864e5) },
+  // Eligible via $OWP deposits (lifetime + in-window).
+  await prisma.deposit.create({
+    data: { userId: buyer.id, signature: `econ-buy-life-${buyer.id}`, amountRaw: 2000n * RAW, createdAt: new Date(Date.now() - 40 * 864e5) },
   });
-  await prisma.creditPurchase.create({
-    data: { userId: buyer.id, signature: `econ-buy-win-${buyer.id}`, ribbitRaw: 300n * RAW, burnedRaw: 150n * RAW, houseRaw: 150n * RAW, credits: 3, createdAt: new Date(b6.startsAt.getTime() + 500) },
+  await prisma.deposit.create({
+    data: { userId: buyer.id, signature: `econ-buy-win-${buyer.id}`, amountRaw: 300n * RAW, createdAt: new Date(b6.startsAt.getTime() + 500) },
   });
   const bseed = await prisma.serverSeed.create({ data: { userId: buyer.id, seed: "s", seedHash: "h", active: false } });
   await prisma.gameRound.create({
     data: { userId: buyer.id, seedId: bseed.id, game: "blackjack", nonce: 0, clientSeed: "x", params: "{}", outcome: "{}", wager: 120, payout: 320, houseTake: 0, settled: true, createdAt: new Date(b6.startsAt.getTime() + 1000) },
   });
   const buyerLive = await api("/api/bounties/live?game=blackjack");
-  check("credit-buyer with no pure burn is eligible & ranked",
+  check("depositor is eligible & ranked",
     buyerLive.data.entries?.some((e) => e.projectedRibbit > 0),
     JSON.stringify(buyerLive.data.entries));
 
@@ -329,8 +333,8 @@ try {
   bountyIds.push(b4.id);
   const wc = await prisma.user.create({ data: { wallet: `econ-free-${Math.round(performance.now())}` } });
   userIds.push(wc.id);
-  await prisma.burnEvent.create({ data: { userId: wc.id, signature: `econ-fl-${wc.id}`, amountRaw: 2000n * RAW, credits: 20, createdAt: new Date(Date.now() - 40 * 864e5) } });
-  await prisma.burnEvent.create({ data: { userId: wc.id, signature: `econ-fw-${wc.id}`, amountRaw: 200n * RAW, credits: 2, createdAt: new Date(b4.startsAt.getTime() + 500) } });
+  await prisma.deposit.create({ data: { userId: wc.id, signature: `econ-fl-${wc.id}`, amountRaw: 2000n * RAW, createdAt: new Date(Date.now() - 40 * 864e5) } });
+  await prisma.deposit.create({ data: { userId: wc.id, signature: `econ-fw-${wc.id}`, amountRaw: 200n * RAW, createdAt: new Date(b4.startsAt.getTime() + 500) } });
   await prisma.arcadeScore.create({ data: { userId: wc.id, game: "worm", score: 500, runToken: `econ-r-${wc.id}`, createdAt: new Date(b4.startsAt.getTime() + 1000) } });
   await settleSweep();
   const b4r = await prisma.bounty.findUnique({ where: { id: b4.id } });
@@ -428,6 +432,7 @@ try {
     await prisma.arcadeRun.deleteMany({ where: { userId: id } });
     await prisma.gameRound.deleteMany({ where: { userId: id } });
     await prisma.serverSeed.deleteMany({ where: { userId: id } });
+    await prisma.deposit.deleteMany({ where: { userId: id } });
     await prisma.burnEvent.deleteMany({ where: { userId: id } });
     await prisma.creditPurchase.deleteMany({ where: { userId: id } });
     await prisma.bountyAward.deleteMany({ where: { userId: id } });

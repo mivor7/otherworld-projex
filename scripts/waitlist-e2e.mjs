@@ -2,15 +2,17 @@
 // idempotence (one place per wallet), and referral crediting. Self-cleaning:
 // every row it creates is removed, and the owner's 260 imported members are
 // never touched (asserted at the end).
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.chdir(ROOT);
-for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
-  const m = line.match(/^([A-Z0-9_]+)="?([^"]*)"?\s*$/);
-  if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+if (existsSync(path.join(ROOT, ".env"))) {
+  for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
+    const m = line.match(/^([A-Z0-9_]+)="?([^"]*)"?\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  }
 }
 const require_ = (await import("node:module")).createRequire(path.join(ROOT, "package.json"));
 const nacl = require_("tweetnacl");

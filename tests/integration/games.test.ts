@@ -8,6 +8,7 @@ import { roll } from "@/lib/fairness";
 import { playRound } from "@/lib/games";
 import { act, deal } from "@/lib/blackjack";
 import { maxDiceTarget } from "@/lib/dice";
+import { potRatePerCredit, requiredCreditSpend } from "@/lib/bounty";
 import { cleanup, HAS_DB, makeUser } from "./helpers";
 
 async function playable(userId: string): Promise<number> {
@@ -167,5 +168,13 @@ describe.skipIf(!HAS_DB)("balance adjustments", () => {
   it("rejects fractional amounts", async () => {
     const user = await makeUser(100);
     await expect(prisma.$transaction((tx) => adjustOwp(tx, user.id, 1.5, "admin"))).rejects.toThrow(/integer/);
+  });
+
+  it("derives table bounty trigger volume from houseEdge × bountyPotShare in $OWP", async () => {
+    const rate = await potRatePerCredit();
+    // Default houseEdge (0.04) × default bountyPotShare (0.5) = 0.02 $OWP per $OWP wagered.
+    expect(rate).toBeCloseTo(0.02, 8);
+    const trigger = await requiredCreditSpend(toRaw(500));
+    expect(trigger).toBe(25_000);
   });
 });

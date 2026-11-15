@@ -90,13 +90,12 @@ export const POST = handler(async (req: Request) => {
   invalidateSettingsCache();
   const after = (await houseConfig())[def.key as keyof HouseConfig];
 
-  // The credit price, buy-split and margin all feed the required credit-spend,
-  // so a change to any of them re-derives every open auto-pay credit bounty's
+  // The house edge and bounty pot share determine the required table wager,
+  // so a change to either re-derives every open auto-pay table bounty's
   // stored threshold — keeping the meter and the payout gate in agreement.
-  // (The house edge is NOT here — it no longer affects bounties.)
   let rederived = 0;
   if (
-    ["ribbitPerCredit", "buyBurnShare", "houseEdge", "bountyPotShare"].includes(def.key) &&
+    ["houseEdge", "bountyPotShare"].includes(def.key) &&
     String(before) !== String(after)
   ) {
     const open = await prisma.bounty.findMany({

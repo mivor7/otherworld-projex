@@ -99,7 +99,7 @@ check("/api/auctions", auctions.status === 200, `status ${auctions.status}`);
 console.log("— Pages");
 for (const [p, marker] of [
   ["/", "bounty"],
-  ["/games", "chip"],
+  ["/games", "arcade"],
   ["/bounties", ""],
   ["/treasury", ""],
   ["/fairness", ""],

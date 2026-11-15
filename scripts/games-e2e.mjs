@@ -8,16 +8,18 @@
 // (lifetime + window rules) on the public boards, escrow races (double bid,
 // bid vs withdraw, double settlement). Self-cleaning: all test users, rows
 // and auctions are deleted at the end. Needs .env with DATABASE_URL.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createHmac } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.chdir(ROOT);
-for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
-  const m = line.match(/^([A-Z0-9_]+)="?([^"]*)"?\s*$/);
-  if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+if (existsSync(path.join(ROOT, ".env"))) {
+  for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
+    const m = line.match(/^([A-Z0-9_]+)="?([^"]*)"?\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  }
 }
 const require_ = (await import("node:module")).createRequire(path.join(ROOT, "package.json"));
 const nacl = require_("tweetnacl");
@@ -468,7 +470,7 @@ try {
   await B.signIn();
   const userA = await prisma.user.findUnique({ where: { wallet: A.wallet } });
   const userB = await prisma.user.findUnique({ where: { wallet: B.wallet } });
-  await prisma.user.update({ where: { id: userA.id }, data: { credits: 1000 } });
+  await prisma.user.update({ where: { id: userA.id }, data: { ribbitBalance: 1000n * RAW } });
 
   // ---------------- FLIP ----------------
   console.log("— Frog Flip (payout math × 6 rounds)");
@@ -490,8 +492,8 @@ try {
   check("6 rounds: payout = floor(w×1.92) on win, 0 on loss; balance reconciles", flipOk);
 
   // ---------------- DICE ----------------
-  console.log("— Pond Dice (edge cases target 2 / 50 / 98)");
-  for (const target of [2, 50, 98]) {
+  console.log("— Pond Dice (edge cases target 2 / 50 / 95)");
+  for (const target of [2, 50, 95]) {
     const r = await A.api("/api/games/dice", {
       method: "POST",
       body: JSON.stringify({ target, wager: 10, clientSeed: flipSeed }),
@@ -511,6 +513,11 @@ try {
     body: JSON.stringify({ target: 1, wager: 10, clientSeed: flipSeed }),
   });
   check("target 1 rejected (bounds, 422)", badTarget.status === 422, `got ${badTarget.status}`);
+  const highTarget = await A.api("/api/games/dice", {
+    method: "POST",
+    body: JSON.stringify({ target: 96, wager: 10, clientSeed: flipSeed }),
+  });
+  check("target 96 rejected at 4% edge (bounds, 422)", highTarget.status === 422, `got ${highTarget.status}`);
 
   // ---------------- BLACKJACK ----------------
   console.log("— Blackjack (lifecycle, deck audit, rotation block)");
@@ -549,13 +556,13 @@ try {
     view.dealer.slice(2).every((c, i) => c === deck[4 + i])
   );
 
-  await prisma.user.update({ where: { id: userA.id }, data: { credits: 3 } });
+  await prisma.user.update({ where: { id: userA.id }, data: { ribbitBalance: 3n * RAW } });
   const poor = await A.api("/api/games/blackjack", {
     method: "POST",
     body: JSON.stringify({ action: "deal", wager: 10, clientSeed: "x" }),
   });
-  check("deal with 3 credits & wager 10 rejected", poor.status !== 200);
-  await prisma.user.update({ where: { id: userA.id }, data: { credits: 1000 } });
+  check("deal with 3 $OWP & wager 10 rejected", poor.status !== 200);
+  await prisma.user.update({ where: { id: userA.id }, data: { ribbitBalance: 1000n * RAW } });
 
   // ---------------- BLACKJACK SPLIT ----------------
   console.log("— Blackjack split (pair hunt, second stake, dual settle, deck audit)");
@@ -584,7 +591,7 @@ try {
   // A same-rank pair lands ~5.9% of deals — hunt with a big bankroll so
   // variance can't strand the hunt, and settle every non-pair hand to keep
   // the one-open-round rule happy.
-  await prisma.user.update({ where: { id: userA.id }, data: { credits: 5000 } });
+  await prisma.user.update({ where: { id: userA.id }, data: { ribbitBalance: 5000n * RAW } });
   let pairView = null;
   let nonPairSplitChecked = false;
   for (let i = 0; i < 120 && !pairView; i++) {
@@ -605,7 +612,7 @@ try {
   }
   check("pair found within 120 deals", !!pairView);
   if (pairView) {
-    const before = (await prisma.user.findUnique({ where: { id: userA.id } })).credits;
+    const before = Number((await prisma.user.findUnique({ where: { id: userA.id } })).ribbitBalance / RAW);
     const sp = await bjPost({ action: "split", roundId: pairView.roundId });
     check("split accepted", sp.status === 200, JSON.stringify(sp.data));
     let v = sp.data;
@@ -629,9 +636,9 @@ try {
     };
     const expected = settleHand(v.player) + settleHand(v.split.cards);
     check("dual-hand payout math exact", v.payout === expected, `payout ${v.payout} expected ${expected}`);
-    const after = (await prisma.user.findUnique({ where: { id: userA.id } })).credits;
+    const after = Number((await prisma.user.findUnique({ where: { id: userA.id } })).ribbitBalance / RAW);
     check(
-      "credits: second stake debited, settle credited",
+      "balance: second stake debited, settle credited",
       after === before - 10 + expected,
       `before ${before} after ${after} expected ${before - 10 + expected}`
     );
@@ -654,7 +661,7 @@ try {
       );
     }
   }
-  await prisma.user.update({ where: { id: userA.id }, data: { credits: 1000 } });
+  await prisma.user.update({ where: { id: userA.id }, data: { ribbitBalance: 1000n * RAW } });
 
   // ---------------- WORM ----------------
   console.log("— Worm Frog (replay, tamper, rush, seed-shopping void)");
@@ -743,18 +750,17 @@ try {
     hopHonest.status === 200 && hopHonest.data.verified === true,
     `got ${hopHonest.status} ${JSON.stringify(hopHonest.data)}`);
 
-  // ---------------- ELIGIBILITY (lifetime + window burns) ----------------
-  console.log("— Prize eligibility (burners only, fresh burns required)");
+  // ---------------- ELIGIBILITY (lifetime + window deposits) ----------------
+  console.log("— Prize eligibility (depositors only, fresh deposits required)");
   let board = (await A.api("/api/leaderboard?game=worm")).data;
   const shortA = `${A.wallet.slice(0, 4)}…${A.wallet.slice(-4)}`;
-  check("no-burn wallet absent from prize board", !board.some((r) => r.player === shortA));
+  check("no-deposit wallet absent from prize board", !board.some((r) => r.player === shortA));
 
-  await prisma.burnEvent.create({
+  await prisma.deposit.create({
     data: {
       userId: userA.id,
       signature: `e2e-old-${Date.now()}`,
       amountRaw: 1_500n * RAW,
-      credits: 15,
       createdAt: new Date(Date.now() - 30 * 24 * 3600 * 1000),
     },
   });
@@ -763,21 +769,20 @@ try {
   // (0) — assert whichever behavior the CURRENT config promises.
   const liveCfg = (await A.api("/api/config")).data;
   if (liveCfg.rankedMinWindowBurnedRibbit > 0) {
-    check("lifetime-only burner still absent (window rule bites)", !board.some((r) => r.player === shortA));
+    check("lifetime-only depositor still absent (window rule bites)", !board.some((r) => r.player === shortA));
   } else {
-    check("lifetime-only burner ranks (window rule disabled by config)", board.some((r) => r.player === shortA));
+    check("lifetime-only depositor ranks (window rule disabled by config)", board.some((r) => r.player === shortA));
   }
 
-  await prisma.burnEvent.create({
+  await prisma.deposit.create({
     data: {
       userId: userA.id,
       signature: `e2e-fresh-${Date.now()}`,
       amountRaw: 150n * RAW,
-      credits: 1,
     },
   });
   board = (await A.api("/api/leaderboard?game=worm")).data;
-  check("lifetime + fresh window burn → ranked on the board", board.some((r) => r.player === shortA));
+  check("lifetime + fresh window deposit → ranked on the board", board.some((r) => r.player === shortA));
 
   // ---------------- ESCROW RACES ----------------
   console.log("— Escrow races (double bid, bid vs withdraw, double settle)");
@@ -865,6 +870,7 @@ try {
     await prisma.gameRound.deleteMany({ where: { userId: u.id } });
     await prisma.serverSeed.deleteMany({ where: { userId: u.id } });
     await prisma.ledgerEntry.deleteMany({ where: { userId: u.id } });
+    await prisma.deposit.deleteMany({ where: { userId: u.id } });
     await prisma.burnEvent.deleteMany({ where: { userId: u.id } });
     await prisma.bid.deleteMany({ where: { userId: u.id } });
     await prisma.withdrawal.deleteMany({ where: { userId: u.id } });

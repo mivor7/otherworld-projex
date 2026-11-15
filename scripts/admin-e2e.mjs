@@ -5,15 +5,17 @@
 //   ADMIN_WALLETS=<that wallet>  npm run dev
 //   TEST_ADMIN_KEYPAIR=/path/admin-kp.json node scripts/admin-e2e.mjs
 // Self-cleaning: all test users, bounties, auctions and rows are deleted.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.chdir(ROOT);
-for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
-  const m = line.match(/^([A-Z0-9_]+)="?([^"]*)"?\s*$/);
-  if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+if (existsSync(path.join(ROOT, ".env"))) {
+  for (const line of readFileSync(path.join(ROOT, ".env"), "utf8").split("\n")) {
+    const m = line.match(/^([A-Z0-9_]+)="?([^"]*)"?\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  }
 }
 const require_ = (await import("node:module")).createRequire(path.join(ROOT, "package.json"));
 const nacl = require_("tweetnacl");
@@ -37,11 +39,9 @@ async function requiredCredits(prizeRaw, seedRaw = 0n) {
   const s = Object.fromEntries((await prisma.houseSetting.findMany()).map((x) => [x.key, x.value]));
   const num = (k, envK, def) =>
     s[k] !== undefined && s[k] !== "" ? Number(s[k]) : Number(process.env[envK] ?? def);
-  const ribbitPerCredit = num("ribbitPerCredit", "RIBBIT_PER_CREDIT", 100);
-  const buyBurnShare = num("buyBurnShare", "BUY_BURN_SHARE", 0.5);
   const potShare = num("bountyPotShare", "BOUNTY_POT_SHARE", 0.5);
   const edge = num("houseEdge", "HOUSE_EDGE", 0.04);
-  const rate = potShare * edge * (1 - buyBurnShare) * ribbitPerCredit;
+  const rate = potShare * edge;
   const funded = Math.max(0, Number((prizeRaw - seedRaw) / RAW));
   if (funded === 0) return 1;
   return Math.max(1, Math.ceil(funded / rate));
@@ -105,17 +105,17 @@ const auctionIds = [];
 const wallets = [admin.wallet];
 
 async function seedEligible(userId, score, windowStart) {
-  await prisma.burnEvent.create({
+  await prisma.deposit.create({
     data: {
       userId, signature: `adm-life-${userId}-${Math.round(performance.now())}`,
-      amountRaw: 2_000n * RAW, credits: 20,
+      amountRaw: 2_000n * RAW,
       createdAt: new Date(Date.now() - 40 * 24 * 3600 * 1000),
     },
   });
-  await prisma.burnEvent.create({
+  await prisma.deposit.create({
     data: {
       userId, signature: `adm-win-${userId}-${Math.round(performance.now())}`,
-      amountRaw: 200n * RAW, credits: 2,
+      amountRaw: 200n * RAW,
       createdAt: new Date(windowStart.getTime() + 1000),
     },
   });
@@ -527,7 +527,7 @@ try {
 
   // the edge must bite actual gameplay: dice multiplier = (100/target)·(1−edge)
   await prisma.user.update({
-    where: { wallet: banned.wallet }, data: { credits: 50 },
+    where: { wallet: banned.wallet }, data: { ribbitBalance: 50n * RAW },
   });
   const diceRound = await banned.api("/api/games/dice", {
     method: "POST",
@@ -651,6 +651,7 @@ try {
     if (!u) continue;
     await prisma.arcadeScore.deleteMany({ where: { userId: u.id } });
     await prisma.arcadeRun.deleteMany({ where: { userId: u.id } });
+    await prisma.deposit.deleteMany({ where: { userId: u.id } });
     await prisma.burnEvent.deleteMany({ where: { userId: u.id } });
     await prisma.withdrawal.deleteMany({ where: { userId: u.id } });
     await prisma.bid.deleteMany({ where: { userId: u.id } });

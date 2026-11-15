@@ -2,7 +2,7 @@
 // operator to DO something, derived live (same source as the admin overview).
 // Unlike the player feed this needs no "seen" watermark: it's a queue, so the
 // number falls on its own as items are processed. Everything here self-clears:
-//   · withdrawals pending/processing → pay or reject them
+//   · withdrawals review/pending/processing → approve, pay, or reject them
 //   · listing applications pending    → approve or reject
 //   · settled auctions unfulfilled    → arrange delivery, mark fulfilled
 import { handler, ok, requireAdmin } from "@/lib/api";
@@ -18,7 +18,7 @@ export const GET = handler(async () => {
   await requireAdmin();
 
   const [withdrawals, applications, unfulfilled, bounties] = await Promise.all([
-    prisma.withdrawal.count({ where: { status: { in: ["pending", "processing"] } } }),
+    prisma.withdrawal.count({ where: { status: { in: ["review", "pending", "processing"] } } }),
     prisma.listingApplication.count({ where: { status: "pending" } }),
     prisma.auction.count({ where: { status: "settled", fulfilled: false } }),
     // Leaderboard bounties needing a human in Payout review: closed-unpaid,

@@ -362,8 +362,16 @@ clear payouts by hand in `/admin`. The key on this box is the treasury key.
     admin wallet) — the owner holds it.
   - Last verified green against prod: economy 20/20, games 34/34.
 
-There is no unit-test harness. Type-checking (`npm run build`) and lint are the
-first line of defense; the smoke test is the second.
+- **Unit & integration tests (`npm test`, `npm run test:unit`)** — Vitest suite in
+  `tests/unit/` (commit-reveal fairness, blackjack deck derivation, dice target
+  limits, pricing & sell floor, prize splits, SIWS sign-in format) and
+  `tests/integration/` (table wagering & ledger invariants, payout worker
+  single-pay guarantees, admin bounty close race, waitlist serializable joins).
+  Set `TEST_DATABASE_URL` to a dedicated test Postgres database to run the
+  integration tests; without it, `npm test` runs the unit tests and cleanly
+  skips the DB-backed suites. Type-checking (`npm run typecheck`), lint
+  (`npm run lint`), and `npm test` are the first line of defense; the smoke test
+  is the second.
 
 ---
 

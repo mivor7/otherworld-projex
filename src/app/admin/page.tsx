@@ -421,17 +421,15 @@ export default function AdminPage() {
     const row = settings.find((x) => x.key === key);
     return row && typeof row.effective === "number" ? row.effective : fallback;
   };
-  // Mirror of the server's pot math: the pot earns potShare × edge ×
-  // (1−burn) × price per credit wagered; the seed covers the head start and
-  // play funds prize − seed. One open bounty per game — flag duplicates.
+  // Mirror of the server's pot math: the pot earns potShare × edge per $OWP
+  // wagered; the seed covers the head start and play funds prize − seed.
+  // One open bounty per game — flag duplicates.
   const openForGame = manage.find(
     (b) => b.game === bountyForm.game && b.status === "open"
   );
   const potRate =
     liveNum("bountyPotShare", CLIENT_CONFIG.bountyPotShare) *
-    liveNum("houseEdge", CLIENT_CONFIG.houseEdge) *
-    (1 - liveNum("buyBurnShare", CLIENT_CONFIG.buyBurnShare)) *
-    liveNum("ribbitPerCredit", CLIENT_CONFIG.ribbitPerCredit);
+    liveNum("houseEdge", CLIENT_CONFIG.houseEdge);
   const fundedRibbit = Math.max(0, bountyForm.prizeRibbit - bountyForm.seedRibbit);
   const requiredCredits =
     fundedRibbit === 0 ? 1 : Math.max(1, Math.ceil(fundedRibbit / Math.max(potRate, 1e-9)));
@@ -1313,12 +1311,12 @@ export default function AdminPage() {
               }
               return (
                 <div className="panel p-3 text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                  <span className="text-frost font-medium">Auto-pay · credit pot.</span> The pot opens at{" "}
+                  <span className="text-frost font-medium">Auto-pay · table pot.</span> The pot opens at{" "}
                   <span className="stat-number text-gold">{bountyForm.seedRibbit.toLocaleString()} $OWP</span>{" "}
                   (your seed{bountyForm.seedRibbit > 0 ? `, ${Math.round((bountyForm.seedRibbit / Math.max(1, bountyForm.prizeRibbit)) * 100)}% of the prize` : ""}) and
-                  grows <span className="stat-number text-neon">{potRate.toFixed(2)} $OWP per credit wagered</span>{" "}
+                  grows <span className="stat-number text-neon">{potRate.toFixed(2)} $OWP per $OWP wagered</span>{" "}
                   — its share of the house edge. It fills at{" "}
-                  <span className="stat-number text-neon">≈ {requiredCredits.toLocaleString()} credits</span> wagered on{" "}
+                  <span className="stat-number text-neon">≈ {requiredCredits.toLocaleString()} $OWP</span> wagered on{" "}
                   {bountyForm.game}, then pays all eligible winners pro-rata
                   {bountyForm.autoRenew
                     ? " and re-opens automatically as the next numbered round."
@@ -1809,7 +1807,7 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div>
-                  <div className="kicker !text-[0.6rem]">Burned / bought</div>
+                  <div className="kicker !text-[0.6rem]">Deposited / bought</div>
                   <div className="stat-number text-gold">
                     {player.burnedRibbit.toLocaleString()} / {player.boughtRibbit.toLocaleString()}
                   </div>
@@ -2040,7 +2038,7 @@ export default function AdminPage() {
                                   {e.entries} {e.volume !== undefined ? `rounds · ${e.volume} wagered` : "runs"}
                                 </td>
                                 <td className="py-1.5 pr-3 text-xs text-fog">
-                                  {e.burnedRibbit.toLocaleString()} burned
+                                  {e.burnedRibbit.toLocaleString()} deposited
                                   <span style={{ color: "var(--text-dim)" }}>
                                     {" "}· {e.windowBurnedRibbit.toLocaleString()} in window
                                   </span>

@@ -49,7 +49,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "houseEdge",
     label: "House edge",
-    desc: "Flat edge applied to table payout multipliers (0.04 = 4%). Game fairness only — it does NOT affect bounty triggers.",
+    desc: "Flat edge applied to table payout multipliers (0.04 = 4%). Together with bountyPotShare, sets the rate at which table wagers fill bounty pots (bountyPotShare × houseEdge).",
     group: "Economy",
     kind: "share",
     min: 0.005,
@@ -59,7 +59,7 @@ export const SETTING_DEFS: readonly SettingDef[] = [
   {
     key: "bountyPotShare",
     label: "Bounty pot share",
-    desc: "Share of the realized house edge that fills bounty pots. 0.5 = the pot gets half of every credit the edge collects, the house keeps the other half. Higher = pots fill faster, house keeps less.",
+    desc: "Share of the realized house edge that fills bounty pots. 0.5 = the pot gets half of the edge on every $OWP wagered, the house keeps the other half. Higher = pots fill faster, house keeps less.",
     group: "Economy",
     kind: "share",
     min: 0.05,

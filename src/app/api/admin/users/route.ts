@@ -21,16 +21,21 @@ export const GET = handler(async (req: Request) => {
     where: { wallet },
     include: {
       _count: {
-        select: { burns: true, purchases: true, rounds: true, scores: true, bids: true, withdrawals: true },
+        select: { deposits: true, burns: true, purchases: true, owpPurchases: true, rounds: true, scores: true, bids: true, withdrawals: true },
       },
     },
   });
   if (!user) return err("No player with that wallet", 404);
 
-  const [burnAgg, buyAgg] = await Promise.all([
+  const [depositAgg, burnAgg, buyAgg, owpBuyAgg] = await Promise.all([
+    prisma.deposit.aggregate({ where: { userId: user.id }, _sum: { amountRaw: true } }),
     prisma.burnEvent.aggregate({ where: { userId: user.id }, _sum: { amountRaw: true } }),
     prisma.creditPurchase.aggregate({ where: { userId: user.id }, _sum: { ribbitRaw: true } }),
+    prisma.owpPurchase.aggregate({ where: { userId: user.id }, _sum: { owpRaw: true } }),
   ]);
+
+  const depositedRaw = (depositAgg._sum.amountRaw ?? 0n) + (burnAgg._sum.amountRaw ?? 0n);
+  const boughtRaw = (owpBuyAgg._sum.owpRaw ?? 0n) + (buyAgg._sum.ribbitRaw ?? 0n);
 
   return ok({
     wallet: user.wallet,
@@ -39,8 +44,8 @@ export const GET = handler(async (req: Request) => {
     credits: playableWhole(user.ribbitBalance, user.ribbitLocked),
     ribbitBalance: user.ribbitBalance.toString(),
     ribbitLocked: user.ribbitLocked.toString(),
-    burnedRibbit: Math.round(fromRaw(burnAgg._sum.amountRaw ?? 0n)),
-    boughtRibbit: Math.round(fromRaw(buyAgg._sum.ribbitRaw ?? 0n)),
+    burnedRibbit: Math.round(fromRaw(depositedRaw)),
+    boughtRibbit: Math.round(fromRaw(boughtRaw)),
     createdAt: user.createdAt,
     counts: user._count,
   });
