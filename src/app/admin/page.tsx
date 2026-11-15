@@ -879,7 +879,7 @@ export default function AdminPage() {
                             <input
                               className="input !text-xs mono max-w-[8.5rem]"
                               type="number"
-                              step={row.integer ? 1 : 0.01}
+                              step={row.integer ? 1 : "any"}
                               min={row.min ?? undefined}
                               max={row.max ?? undefined}
                               value={settingDrafts[row.key] ?? String(row.effective)}
@@ -1027,12 +1027,38 @@ export default function AdminPage() {
                       {w.status === "processing" && (
                         <span className="badge badge-live">processing</span>
                       )}
+                      {w.status === "review" && (
+                        <span className="badge badge-gold">needs review</span>
+                      )}
                     </div>
                   </div>
+                  {w.status === "review" && (
+                    <p className="text-xs text-fog mb-2 leading-relaxed">
+                      This SOL payment was handed in long after it confirmed, so it was not
+                      priced automatically. The amount above is at the price when it was
+                      handed in. Check the payment and that amount. Approve to queue it, or
+                      reject it and send the SOL back yourself.
+                    </p>
+                  )}
                   <div className="flex gap-2 items-center flex-wrap">
+                    {w.status === "review" && (
+                      <button
+                        className="btn btn-primary text-xs"
+                        disabled={busy}
+                        onClick={() =>
+                          act(
+                            `/api/admin/withdrawals/${w.id}`,
+                            { action: "approve" },
+                            "Approve this buy at the amount shown? It joins the payout queue."
+                          )
+                        }
+                      >
+                        Approve
+                      </button>
+                    )}
                     <button
-                      className="btn btn-primary text-xs"
-                      disabled={busy || payingId === w.id || w.status === "processing" || recordFailed[w.id]}
+                      className={`btn btn-primary text-xs ${w.status === "review" ? "hidden" : ""}`}
+                      disabled={busy || payingId === w.id || w.status !== "pending" || recordFailed[w.id]}
                       onClick={() => payNow(w.id, w.destination, w.amountRaw)}
                       title={
                         recordFailed[w.id]
@@ -1773,11 +1799,11 @@ export default function AdminPage() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                 <div>
-                  <div className="kicker !text-[0.6rem]">Credits</div>
+                  <div className="kicker !text-[0.6rem]">Playable $OWP</div>
                   <div className="stat-number text-neon">{player.credits.toLocaleString()}</div>
                 </div>
                 <div>
-                  <div className="kicker !text-[0.6rem]">Escrow / locked</div>
+                  <div className="kicker !text-[0.6rem]">Balance / locked in bids</div>
                   <div className="stat-number">
                     {fmtRibbit(player.ribbitBalance)} / {fmtRibbit(player.ribbitLocked)}
                   </div>
@@ -1814,7 +1840,7 @@ export default function AdminPage() {
                   {player.isBanned ? "Unban wallet" : "Ban wallet"}
                 </button>
                 <div>
-                  <label className="text-[0.65rem] text-fog">Credits ±</label>
+                  <label className="text-[0.65rem] text-fog">$OWP ±</label>
                   <input className="input !text-xs max-w-28" type="number" value={creditDelta || ""}
                     placeholder="±"
                     onChange={(e) => setCreditDelta(Math.trunc(Number(e.target.value)) || 0)} />
@@ -1829,14 +1855,16 @@ export default function AdminPage() {
                     await act(
                       "/api/admin/users",
                       { wallet: player.wallet, action: "credits", delta: creditDelta, note: creditNote.trim() },
-                      `${creditDelta > 0 ? "Grant" : "Remove"} ${Math.abs(creditDelta)} credits ${creditDelta > 0 ? "to" : "from"} this wallet?`
+                      creditDelta > 0
+                        ? `Grant ${Math.abs(creditDelta).toLocaleString()} $OWP to this wallet's app balance? It is real: the player can withdraw it from the house wallet.`
+                        : `Remove ${Math.abs(creditDelta).toLocaleString()} $OWP from this wallet's app balance?`
                     );
                     setCreditDelta(0);
                     setCreditNote("");
                     lookupPlayer(player.wallet);
                   }}
                 >
-                  Apply credits
+                  Apply to balance
                 </button>
               </div>
             </div>

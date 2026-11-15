@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handler, ok } from "@/lib/api";
 import { rateLimit } from "@/lib/ratelimit";
-import { buildSignInMessage, issueNonce } from "@/lib/session";
+import { issueNonce } from "@/lib/session";
 
 const body = z.object({ wallet: z.string().min(32).max(44) });
 
@@ -18,6 +18,7 @@ export const POST = handler(async (req: Request) => {
     "?";
   rateLimit(`nonce:${ip}`, 30, 60_000);
   const { wallet } = body.parse(await req.json());
-  const nonce = await issueNonce(wallet);
-  return ok({ message: buildSignInMessage(wallet, nonce) });
+  // The challenge names the site it was issued by: the origin this request
+  // reached, which a caller cannot choose.
+  return ok({ message: await issueNonce(wallet, new URL(new URL(req.url).origin)) });
 });

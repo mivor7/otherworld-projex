@@ -113,6 +113,14 @@ export const CONFIG = {
   // a wager threshold and could never track real revenue.
   bountyPotShare: nonneg(process.env.BOUNTY_POT_SHARE, 0.5),
 
+  // Website buys: the house refuses to sell while the Raydium price is below
+  // this many SOL per 1,000,000 $OWP. 0 = no floor. Env default only — the
+  // live value is the "owpMinSellPrice" house setting.
+  owpMinSellPrice: nonneg(process.env.OWP_MIN_SELL_PRICE, 0),
+  // A SOL payment is priced automatically only while it is this fresh.
+  // Older ones are held for a human — see /api/owp/buy.
+  owpBuyMaxPaymentAgeS: num(process.env.OWP_BUY_MAX_PAYMENT_AGE_S, 600),
+
   adminWallets: (process.env.ADMIN_WALLETS ?? "")
     .split(",")
     .map((w) => w.trim())

@@ -8,6 +8,7 @@ import { celebrate } from "@/components/confetti";
 import { usePractice } from "@/components/practice";
 import { randomClientSeed, useClientSeed } from "@/components/use-client-seed";
 import { useHouseConfig } from "@/components/use-house-config";
+import { DICE_MAX_TARGET, DICE_MIN_TARGET, diceMultiplier, maxDiceTarget } from "@/lib/dice";
 import { FairCommit } from "@/components/fair-commit";
 import { BountyStandings } from "@/components/bounty-standings";
 import { GameBountyStrip } from "@/components/game-bounty-strip";
@@ -22,9 +23,14 @@ type DiceResult = {
   seedHash: string;
 };
 
+/** A sandbox roll, 0.00 – 99.99. Local randomness: no seed, no $OWP. */
+function practiceRoll(): number {
+  return Math.floor(Math.random() * 100 * 100) / 100;
+}
+
 export default function DicePage() {
   const { me, refresh, setCredits, loading } = useSession();
-  const [target, setTarget] = useState(50);
+  const [chosenTarget, setTarget] = useState(50);
   const [wager, setWager] = useState(5);
   const [rolling, setRolling] = useState(false);
   const [result, setResult] = useState<DiceResult | null>(null);
@@ -45,7 +51,11 @@ export default function DicePage() {
   const { seed: clientSeed } = useClientSeed();
   const house = useHouseConfig();
 
-  const multiplier = (100 / target) * (1 - house.houseEdge); // live edge
+  // The live edge decides both the multiplier and how high the line can go:
+  // past maxTarget a win would pay back the stake or less.
+  const maxTarget = maxDiceTarget(house.houseEdge);
+  const target = Math.min(chosenTarget, maxTarget);
+  const multiplier = diceMultiplier(target, house.houseEdge);
   const balance = sandbox ? practice.credits : (me.credits ?? 0);
   const canPlay = sandbox || me.signedIn;
 
@@ -57,7 +67,7 @@ export default function DicePage() {
       // Practice table: same odds, local roll, zero $OWP. Bottomless
       // bankroll — top up first so the roll can never be blocked.
       practice.ensure(wager);
-      const rolled = Math.floor(Math.random() * 100 * 100) / 100;
+      const rolled = practiceRoll();
       const win = rolled < target;
       const payout = win ? Math.floor(wager * multiplier) : 0;
       practice.adjust(-wager + payout);
@@ -215,12 +225,17 @@ export default function DicePage() {
         </div>
         <input
           type="range"
-          min={2}
-          max={98}
+          min={DICE_MIN_TARGET}
+          max={DICE_MAX_TARGET}
           value={target}
-          onChange={(e) => setTarget(Number(e.target.value))}
-          className="w-full accent-neon mb-6"
+          onChange={(e) => setTarget(Math.min(Number(e.target.value), maxTarget))}
+          className={`w-full accent-neon ${maxTarget < DICE_MAX_TARGET ? "mb-2" : "mb-6"}`}
         />
+        {maxTarget < DICE_MAX_TARGET && (
+          <p className="text-[0.7rem] mb-5 text-center" style={{ color: "var(--text-dim)" }}>
+            The line tops out at {maxTarget}. Above it a win would not pay more than the wager.
+          </p>
+        )}
 
         <div className="grid grid-cols-3 gap-3 text-center mb-6">
           <div className="panel p-3">

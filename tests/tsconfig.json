@@ -1,0 +1,13 @@
+{
+  // Tests are type-checked on their own (npm run typecheck), never by
+  // `next build`: a typo in a test must not be able to fail a deploy.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": { "@/*": ["./src/*"] },
+    "incremental": false,
+    "plugins": []
+  },
+  "include": ["./**/*.ts", "../vitest.config.mts"],
+  "exclude": []
+}

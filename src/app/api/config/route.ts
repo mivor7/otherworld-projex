@@ -1,9 +1,6 @@
 // Public, live house configuration — the admin can tune these at runtime, so
 // clients that price or build transactions MUST read them from here (the
 // NEXT_PUBLIC_ values in CLIENT_CONFIG are only build-time fallbacks).
-// Notably: use-chain buyCredits fetches the burn/house split from this route
-// right before building the split transaction, so a split change can never
-// strand a player's payment against a stale ratio.
 import { PublicKey } from "@solana/web3.js";
 import { handler, ok } from "@/lib/api";
 import { CONFIG } from "@/lib/config";

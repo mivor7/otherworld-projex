@@ -344,6 +344,11 @@ export async function act(
 ) {
   const round = await loadRound(userId, roundId);
   if (round.settled) throw new ApiError("Round already settled", 409);
+  // A hand must never be played against a revealed seed: the whole deck can
+  // be derived from it. rotateSeed refuses to reveal while a hand is open, so
+  // this should not happen. If it ever does, the player gets no decision —
+  // every action stands, and the hand settles on the cards already dealt.
+  if (!round.seed.active) action = "stand";
   const s = JSON.parse(round.outcome) as BJState;
   if (s.phase !== "player" && s.phase !== "split") {
     throw new ApiError("No action available", 409);

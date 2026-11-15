@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tests",
+    "test": "vitest run",
     "postinstall": "prisma generate",
     "vercel-build": "prisma migrate deploy && next build",
     "db:migrate": "prisma migrate dev",
@@ -40,6 +42,7 @@
     "eslint-config-next": "16.2.10",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.12"
   }
 }

@@ -6,7 +6,15 @@ import { toRaw } from "@/lib/config";
 const body = z.object({
   title: z.string().min(3).max(80),
   description: z.string().min(10).max(2000),
-  imageUrl: z.string().url().max(500).optional().or(z.literal("")),
+  // https only: this URL is shown to every visitor and to the admin who
+  // reviews the listing, so it must never be a javascript: or data: link.
+  imageUrl: z
+    .string()
+    .url()
+    .max(500)
+    .regex(/^https:\/\//i, "Image link must start with https://")
+    .optional()
+    .or(z.literal("")),
   category: z.enum(["collectible", "nft", "merch", "service", "other"]),
   askRibbit: z.number().positive().max(1_000_000_000),
   contact: z.string().max(120).optional(),

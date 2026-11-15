@@ -9,48 +9,59 @@
 //   - MAX_PAYOUT_OWP per withdrawal or prize (default 1,000,000 whole tokens).
 //   - MAX_BUY_OWP per SOL purchase (default 1,000,000,000). A launch-curve
 //     buy of a fraction of a SOL is already more than the withdrawal cap.
-//   - Bigger rows wait for a human in /admin.
-//   - Marks the row "sent" with the tx signature before moving on; re-running
-//     never double-pays.
+//   - Bigger rows wait for a human in /admin. They do not hold up the rows
+//     behind them.
+//   - Every payout's signature is recorded BEFORE it is broadcast, and a row
+//     is only re-sent once its previous transaction is proven dead on-chain.
+//     A crash, a timeout, or a flaky RPC never causes a second payment. The
+//     rules live in scripts/payout-core.mjs.
+//   - PAYOUT_CREATE_TOKEN_ACCOUNTS=false stops the house paying the rent
+//     (~0.002 SOL) to open a recipient's missing $OWP account. Those payouts
+//     then wait until the recipient opens one. Leave it unset unless someone
+//     is farming that rent by closing their account between withdrawals.
 import fs from "node:fs";
 import { PrismaClient } from "@prisma/client";
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-  Transaction,
-  sendAndConfirmTransaction,
-} from "@solana/web3.js";
-import {
-  createAssociatedTokenAccountIdempotentInstruction,
-  createTransferCheckedInstruction,
-  getAssociatedTokenAddressSync,
-  TOKEN_2022_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { createPayoutEngine } from "./payout-core.mjs";
 
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
 const RPC_FALLBACKS = [
   "https://solana-rpc.publicnode.com",
   "https://api.mainnet-beta.solana.com",
 ];
+// A hung RPC call must not wedge the worker (it did once, mid-claim), so
+// every request has a deadline. A request that times out or is refused moves
+// on to the next endpoint. Repeating a send on another endpoint is safe: it
+// is the same signed transaction, and the network accepts it at most once.
+const RPC_TIMEOUT_MS = 20_000;
 function rpcFetch(primary) {
   const urls = [...new Set([primary, ...RPC_FALLBACKS])];
   return async (_input, init) => {
     let last = null;
+    let failure = null;
     for (const url of urls) {
-      const res = await fetch(url, init);
-      if (res.status !== 403 && res.status !== 429) return res;
-      last = res;
+      try {
+        const res = await fetch(url, { ...init, signal: AbortSignal.timeout(RPC_TIMEOUT_MS) });
+        if (res.status !== 403 && res.status !== 429) return res;
+        last = res;
+      } catch (e) {
+        failure = e;
+      }
     }
-    return last;
+    if (last) return last;
+    throw failure ?? new Error("no RPC endpoint answered");
   };
 }
 // Public mint. OWP_MINT overrides it. The retired Ribbit mint is not a fallback.
 const OWP_MINT_FALLBACK = "w63qPqQwjjgtCkgypRTCTMeWH9vfJaH6xtFGJpTAray";
 const MINT_ADDRESS = process.env.OWP_MINT || OWP_MINT_FALLBACK;
 const MINT = new PublicKey(MINT_ADDRESS);
-const INTERVAL_MS = Number(process.env.PAYOUT_INTERVAL_MS ?? 15_000);
+const whole = (v, fallback) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+};
+// At least a second between passes, whatever the env says.
+const INTERVAL_MS = Math.max(1_000, whole(process.env.PAYOUT_INTERVAL_MS, 15_000));
 
 // The signer is the house wallet (the same key as admin / treasury / Phantom).
 // It can move the whole treasury. Keep it on this box only — never in Vercel.
@@ -109,172 +120,33 @@ if (process.env.TREASURY_WALLET && process.env.TREASURY_WALLET !== payoutWallet)
   console.log("Single-wallet mode: deposits, SOL buys, and payouts use this signer.");
 }
 
-// The mint account's owner is the token program. Until that account exists,
-// payouts wait in the queue instead of this process exiting.
-let mintReady = false;
-let tokenProgram = null;
-let decimals = Number(process.env.OWP_DECIMALS ?? process.env.RIBBIT_DECIMALS ?? 6);
-let fromAta = null;
+const engine = createPayoutEngine({
+  prisma,
+  connection,
+  signer,
+  mint: MINT,
+  options: {
+    maxPayoutWhole: whole(process.env.MAX_PAYOUT_OWP ?? process.env.MAX_PAYOUT_RIBBIT, 1_000_000),
+    maxBuyWhole: whole(process.env.MAX_BUY_OWP, 1_000_000_000),
+    createTokenAccounts: process.env.PAYOUT_CREATE_TOKEN_ACCOUNTS !== "false",
+    fallbackDecimals: whole(process.env.OWP_DECIMALS ?? process.env.RIBBIT_DECIMALS, 6),
+  },
+});
 
-async function ensureMint() {
-  if (mintReady) return true;
-  try {
-    const info = await connection.getAccountInfo(MINT);
-    if (!info || info.data.length < 45) {
-      console.error("$OWP mint account is not on mainnet yet — payouts wait.");
-      return false;
-    }
-    const owner = info.owner.toBase58();
-    if (owner === TOKEN_PROGRAM_ID.toBase58()) tokenProgram = TOKEN_PROGRAM_ID;
-    else if (owner === TOKEN_2022_PROGRAM_ID.toBase58()) tokenProgram = TOKEN_2022_PROGRAM_ID;
-    else {
-      console.error(`$OWP mint owner ${owner} is not a token program — payouts wait.`);
-      return false;
-    }
-    decimals = info.data[44];
-    fromAta = getAssociatedTokenAddressSync(MINT, signer.publicKey, true, tokenProgram);
-    mintReady = true;
-    console.log(`$OWP mint ready. Decimals ${decimals}. Program ${owner}.`);
-    return true;
-  } catch (e) {
-    console.error(`mint lookup failed: ${e.message}`);
-    return false;
-  }
-}
-
-function wholeToRaw(whole) {
-  return BigInt(Math.round(Number(whole) * 10 ** decimals));
-}
-
-// Rows stuck in "processing" mean a previous run died between sending and
-// marking. NEVER auto-retry those — verify on-chain first, then resolve in
-// /admin (mark sent with the signature, or reject to refund).
-const limbo = await prisma.withdrawal.findMany({ where: { status: "processing" } });
-for (const wd of limbo) {
+// "processing" rows with a signature are settled by the engine from chain
+// state. Rows WITHOUT one were claimed by an admin's "Pay now" and never
+// finished — only that admin knows whether money moved.
+const adminClaims = await prisma.withdrawal.findMany({
+  where: { status: "processing", signature: null },
+});
+for (const wd of adminClaims) {
   console.error(
-    `⚠ ${wd.id}: stuck in "processing" (${wd.amountRaw} raw → ${wd.destination}). ` +
-      "Check the chain before resolving in /admin."
+    `⚠ ${wd.id}: claimed in /admin but never marked sent (${wd.amountRaw} raw → ${wd.destination}). ` +
+      "Check the chain, then mark it sent or release it in /admin."
   );
 }
 
-async function processQueue() {
-  if (!(await ensureMint())) return;
-  const maxPayout = wholeToRaw(process.env.MAX_PAYOUT_OWP ?? process.env.MAX_PAYOUT_RIBBIT ?? 1_000_000);
-  const maxBuy = wholeToRaw(process.env.MAX_BUY_OWP ?? 1_000_000_000);
-  // Admin kill switch: the queue keeps accepting requests, but nothing is
-  // claimed or sent while payouts are paused from the House controls panel.
-  const paused = await prisma.houseSetting.findUnique({
-    where: { key: "payoutsPaused" },
-  });
-  if (paused?.value === "true") {
-    console.log("⏸ payouts paused from the admin panel — skipping this pass");
-    return;
-  }
-  const pending = await prisma.withdrawal.findMany({
-    where: { status: "pending" },
-    orderBy: { createdAt: "asc" },
-    take: 5,
-  });
-
-  for (const wd of pending) {
-    const cap = wd.kind === "buy" ? maxBuy : maxPayout;
-    if (wd.amountRaw > cap) {
-      console.log(
-        `↷ ${wd.id}: above ${wd.kind === "buy" ? "MAX_BUY_OWP" : "MAX_PAYOUT"}, leaving for manual review`
-      );
-      continue;
-    }
-    // Claim the row BEFORE touching the chain — if an admin rejected (and
-    // refunded) it a moment ago, or another worker instance grabbed it, we
-    // must not send. An on-chain payment is irreversible.
-    const claimed = await prisma.withdrawal.updateMany({
-      where: { id: wd.id, status: "pending" },
-      data: { status: "processing" },
-    });
-    if (claimed.count === 0) {
-      console.log(`↷ ${wd.id}: no longer pending, skipping`);
-      continue;
-    }
-    try {
-      const dest = new PublicKey(wd.destination);
-      const toAta = getAssociatedTokenAddressSync(MINT, dest, true, tokenProgram);
-      const tx = new Transaction().add(
-        createAssociatedTokenAccountIdempotentInstruction(
-          signer.publicKey, toAta, dest, MINT, tokenProgram
-        ),
-        createTransferCheckedInstruction(
-          fromAta, MINT, toAta, signer.publicKey, wd.amountRaw, decimals, [], tokenProgram
-        )
-      );
-      // Hard ceiling: the public RPC can hang indefinitely (it wedged the
-      // whole worker once, mid-claim). After 90s we assume the transaction
-      // MAY have been broadcast and stop touching this row automatically.
-      const signature = await Promise.race([
-        sendAndConfirmTransaction(connection, tx, [signer]),
-        new Promise((_, reject) =>
-          setTimeout(
-            () =>
-              reject(
-                Object.assign(
-                  new Error("send timed out after 90s — transaction MAY have broadcast"),
-                  { maybeSent: true }
-                )
-              ),
-            90_000
-          )
-        ),
-      ]);
-      await prisma.$transaction([
-        prisma.withdrawal.update({
-          where: { id: wd.id },
-          data: { status: "sent", signature, processedAt: new Date() },
-        }),
-        prisma.treasuryEvent.create({
-          data: {
-            kind: "payout",
-            amount: wd.amountRaw,
-            asset: "RIBBIT",
-            note:
-              wd.kind === "bounty"
-                ? `Bounty prize → ${wd.destination.slice(0, 4)}…`
-                : wd.kind === "buy"
-                  ? `Sold $OWP to ${wd.destination.slice(0, 4)}…`
-                  : `Withdrawal to ${wd.destination.slice(0, 4)}…`,
-            ref: signature,
-          },
-        }),
-      ]);
-      console.log(`✓ ${wd.id}: paid ${wd.amountRaw} raw → ${wd.destination} (${signature})`);
-    } catch (e) {
-      // CRITICAL split: if the transaction may already be on the chain, a
-      // retry would PAY TWICE. Confirmation timeouts (web3.js attaches the
-      // signature) and our 90s ceiling both mean "maybe broadcast" — keep
-      // the row claimed, preserve the signature, and hand it to a human.
-      const sig = e?.signature;
-      if (sig || e?.maybeSent) {
-        if (sig) {
-          await prisma.withdrawal.updateMany({
-            where: { id: wd.id, status: "processing" },
-            data: { signature: sig },
-          });
-        }
-        console.error(
-          `⚠ ${wd.id}: ${e.message} — LEFT IN "processing"${sig ? ` (sig ${sig})` : ""}. ` +
-            "Verify on-chain, then resolve in /admin (mark sent, or release if nothing landed). Never auto-retried."
-        );
-        continue;
-      }
-      // Failed strictly BEFORE broadcast — safe to release for a retry.
-      await prisma.withdrawal.updateMany({
-        where: { id: wd.id, status: "processing" },
-        data: { status: "pending" },
-      });
-      console.error(`✗ ${wd.id}: ${e.message} — will retry next cycle`);
-    }
-  }
-}
-
 for (;;) {
-  await processQueue().catch((e) => console.error("cycle failed:", e.message));
+  await engine.cycle().catch((e) => console.error("cycle failed:", e.message));
   await new Promise((r) => setTimeout(r, INTERVAL_MS));
 }

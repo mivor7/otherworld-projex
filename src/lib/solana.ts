@@ -1,6 +1,6 @@
 // On-chain verification helpers. The server never holds user keys — users
-// sign burns/deposits in their own wallet, then submit the tx signature here
-// for verification against the configured RPC.
+// sign deposits and SOL payments in their own wallet, then submit the tx
+// signature here for verification against the configured RPC.
 import {
   Connection,
   LAMPORTS_PER_SOL,
@@ -52,36 +52,6 @@ async function getVerifiedTx(signature: string) {
   return tx;
 }
 
-/**
- * Verify `signature` is a confirmed tx in which `wallet` burned $OWP.
- * Returns the total raw amount burned, or null if it doesn't check out.
- */
-export async function verifyBurnTx(
-  signature: string,
-  wallet: string
-): Promise<bigint | null> {
-  if (!CONFIG.ribbitMint) return null;
-  const tx = await getVerifiedTx(signature);
-  if (!tx) return null;
-  let total = 0n;
-  for (const ix of parsedInstructions(tx)) {
-    const { type, info } = ix.parsed as {
-      type: string;
-      info: Record<string, unknown>;
-    };
-    if (type !== "burn" && type !== "burnChecked") continue;
-    if (info.mint !== CONFIG.ribbitMint) continue;
-    const authority = (info.authority ?? info.multisigAuthority) as string;
-    if (authority !== wallet) continue;
-    const amount =
-      type === "burnChecked"
-        ? (info.tokenAmount as { amount: string }).amount
-        : (info.amount as string);
-    total += BigInt(amount);
-  }
-  return total > 0n ? total : null;
-}
-
 async function treasuryAta(): Promise<string | null> {
   if (!CONFIG.treasuryWallet || !CONFIG.ribbitMint) return null;
   const program = await detectTokenProgram(connection(), new PublicKey(CONFIG.ribbitMint));
@@ -96,7 +66,7 @@ async function treasuryAta(): Promise<string | null> {
 
 /**
  * Verify `signature` is a confirmed tx in which `wallet` transferred $OWP
- * to the treasury's associated token account (auction deposit).
+ * to the house wallet's associated token account (a deposit).
  */
 export async function verifyDepositTx(
   signature: string,
@@ -127,58 +97,10 @@ export async function verifyDepositTx(
   return total > 0n ? total : null;
 }
 
-/**
- * Verify a "buy credits" tx: one tx, signed by `wallet`, that BOTH burns
- * $OWP and transfers $OWP to the treasury ATA. Returns the two raw
- * amounts, or null if it doesn't check out. Both legs must be present — a tx
- * that only burns (or only transfers) is not a valid buy.
- */
-export async function verifyBuyTx(
-  signature: string,
-  wallet: string
-): Promise<{ burnedRaw: bigint; houseRaw: bigint } | null> {
-  const treasuryAtaAddress = await treasuryAta();
-  if (!treasuryAtaAddress) return null;
-
-  const tx = await getVerifiedTx(signature);
-  if (!tx) return null;
-
-  let burnedRaw = 0n;
-  let houseRaw = 0n;
-  for (const ix of parsedInstructions(tx)) {
-    const { type, info } = ix.parsed as {
-      type: string;
-      info: Record<string, unknown>;
-    };
-    const authority = (info.authority ?? info.multisigAuthority) as string;
-    if (authority !== wallet) continue;
-
-    if (type === "burn" || type === "burnChecked") {
-      if (info.mint !== CONFIG.ribbitMint) continue;
-      const amount =
-        type === "burnChecked"
-          ? (info.tokenAmount as { amount: string }).amount
-          : (info.amount as string);
-      burnedRaw += BigInt(amount);
-    } else if (type === "transfer" || type === "transferChecked") {
-      if (type === "transferChecked" && info.mint !== CONFIG.ribbitMint) continue;
-      if (info.destination !== treasuryAtaAddress) continue;
-      const amount =
-        type === "transferChecked"
-          ? (info.tokenAmount as { amount: string }).amount
-          : (info.amount as string);
-      houseRaw += BigInt(amount);
-    }
-  }
-
-  // Both legs required, and each must be non-zero.
-  if (burnedRaw <= 0n || houseRaw <= 0n) return null;
-  return { burnedRaw, houseRaw };
-}
-
 export type SolPayment =
-  | { status: "ok"; lamports: bigint }
+  | { status: "ok"; lamports: bigint; blockTime: number | null }
   | { status: "pending" }
+  | { status: "failed" }
   | { status: "no-payment" }
   | { status: "too-small"; lamports: bigint }
   | { status: "too-large"; lamports: bigint };
@@ -187,11 +109,17 @@ export type SolPayment =
  * A confirmed System Program transfer of SOL from `wallet` to the house
  * wallet. The network fee is not part of the payment. `pending` means the
  * transaction is not visible yet — the caller must not consume the signature.
+ * `failed` means it landed and failed: no SOL moved, and it never will.
+ * `blockTime` is when the payment confirmed (unix seconds), when the RPC knows.
  */
 export async function verifySolPayment(signature: string, wallet: string): Promise<SolPayment> {
   if (!CONFIG.treasuryWallet) return { status: "no-payment" };
-  const tx = await getVerifiedTx(signature);
+  const tx = await connection().getParsedTransaction(signature, {
+    maxSupportedTransactionVersion: 1,
+    commitment: "confirmed",
+  });
   if (!tx) return { status: "pending" };
+  if (tx.meta?.err) return { status: "failed" };
   const top = tx.transaction.message.instructions;
   const inner = (tx.meta?.innerInstructions ?? []).flatMap((i) => i.instructions);
   let total = 0n;
@@ -208,7 +136,7 @@ export async function verifySolPayment(signature: string, wallet: string): Promi
   if (total <= 0n) return { status: "no-payment" };
   if (total < MIN_BUY_LAMPORTS) return { status: "too-small", lamports: total };
   if (total > MAX_BUY_LAMPORTS) return { status: "too-large", lamports: total };
-  return { status: "ok", lamports: total };
+  return { status: "ok", lamports: total, blockTime: tx.blockTime ?? null };
 }
 
 export type TreasuryStats = {
@@ -222,84 +150,102 @@ export type TreasuryStats = {
 // briefly per instance so anonymous traffic can't amplify into RPC-quota
 // burn. 30s staleness is immaterial for a dashboard (and the payout cap that
 // reads this is best-effort by design).
-let statsCache: { at: number; value: TreasuryStats } | null = null;
 const STATS_TTL_MS = 30_000;
 
-/** Live treasury balances for the transparency dashboard. Never throws. */
-export async function getTreasuryStats(): Promise<TreasuryStats> {
-  if (!CONFIG.treasuryWallet) {
-    return { configured: false, solBalance: null, ribbitBalance: null, wallet: null };
-  }
-  if (statsCache && Date.now() - statsCache.at < STATS_TTL_MS) {
-    return statsCache.value;
-  }
-  try {
-    const owner = new PublicKey(CONFIG.treasuryWallet);
-    const conn = connection();
-    const lamports = await conn.getBalance(owner);
-    let ribbit: number | null = null;
-    if (CONFIG.ribbitMint) {
-      const tokenAccounts = await conn.getParsedTokenAccountsByOwner(owner, {
-        mint: new PublicKey(CONFIG.ribbitMint),
-      });
-      ribbit = tokenAccounts.value.reduce(
-        (sum, a) =>
-          sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0),
+// getTokenAccountsByOwner is an indexed lookup. Free and public RPCs refuse
+// it ("Indexed requests require a personal token"), and every RPC rejects it
+// while the mint account does not exist. After a refusal, skip it for a while
+// and read the associated token account directly — a plain account read that
+// every endpoint serves.
+let indexedRefusedAt = 0;
+const INDEXED_RETRY_MS = 10 * 60_000;
+
+/**
+ * Whole $OWP held by `owner`. Null when the mint is not on-chain yet or the
+ * RPC could not answer; 0 when the wallet simply holds none.
+ */
+async function owpBalance(conn: Connection, owner: PublicKey): Promise<number | null> {
+  if (!CONFIG.ribbitMint) return null;
+  const mint = new PublicKey(CONFIG.ribbitMint);
+  const program = await detectTokenProgram(conn, mint);
+  if (!program) return null;
+
+  if (Date.now() - indexedRefusedAt > INDEXED_RETRY_MS) {
+    try {
+      const accounts = await conn.getParsedTokenAccountsByOwner(owner, { mint });
+      return accounts.value.reduce(
+        (sum, a) => sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0),
         0
       );
+    } catch {
+      indexedRefusedAt = Date.now();
     }
-    statsCache = {
-      at: Date.now(),
-      value: {
-        configured: true,
-        solBalance: lamports / LAMPORTS_PER_SOL,
-        ribbitBalance: ribbit,
-        wallet: CONFIG.treasuryWallet,
-      },
-    };
-    return statsCache.value;
-  } catch {
-    return {
-      configured: true,
-      solBalance: null,
-      ribbitBalance: null,
-      wallet: CONFIG.treasuryWallet,
-    };
   }
+
+  // The associated token account is where wallets hold a token and where the
+  // payout worker sends from, so for the house it is the spendable float.
+  const ata = getAssociatedTokenAddressSync(mint, owner, true, program);
+  const info = await conn.getParsedAccountInfo(ata);
+  if (!info.value) return 0;
+  const data = info.value.data;
+  if (!("parsed" in data)) return null;
+  const ui = data.parsed?.info?.tokenAmount?.uiAmount;
+  return typeof ui === "number" ? ui : null;
 }
 
-// SOL + $OWP for any PUBLIC address (e.g. the payout hot wallet), read-only.
-// Cached per-instance. Never throws. Only a public address is ever needed —
-// the payout wallet's private key stays on the worker box.
+/**
+ * SOL and $OWP for one address. The two reads fail independently: a token
+ * lookup the RPC refuses must not blank a SOL balance it answered. Never throws.
+ */
+async function readBalances(
+  address: string
+): Promise<{ solBalance: number | null; ribbitBalance: number | null }> {
+  let owner: PublicKey;
+  try {
+    owner = new PublicKey(address);
+  } catch {
+    return { solBalance: null, ribbitBalance: null };
+  }
+  const conn = connection();
+  const [solBalance, ribbitBalance] = await Promise.all([
+    conn
+      .getBalance(owner)
+      .then((lamports) => lamports / LAMPORTS_PER_SOL)
+      .catch(() => null),
+    owpBalance(conn, owner).catch(() => null),
+  ]);
+  return { solBalance, ribbitBalance };
+}
+
+// SOL + $OWP for any PUBLIC address (the house wallet, a waitlist applicant),
+// read-only and cached per instance. Only a public address is ever needed —
+// the house wallet's private key stays on the worker box.
 const walletCache = new Map<string, { at: number; value: TreasuryStats }>();
 
 export async function getWalletBalances(address: string): Promise<TreasuryStats> {
   if (!address) return { configured: false, solBalance: null, ribbitBalance: null, wallet: null };
   const hit = walletCache.get(address);
   if (hit && Date.now() - hit.at < STATS_TTL_MS) return hit.value;
-  try {
-    const owner = new PublicKey(address);
-    const conn = connection();
-    const lamports = await conn.getBalance(owner);
-    let ribbit: number | null = null;
-    if (CONFIG.ribbitMint) {
-      const tokenAccounts = await conn.getParsedTokenAccountsByOwner(owner, {
-        mint: new PublicKey(CONFIG.ribbitMint),
-      });
-      ribbit = tokenAccounts.value.reduce(
-        (sum, a) => sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0),
-        0
-      );
-    }
-    const value: TreasuryStats = {
-      configured: true,
-      solBalance: lamports / LAMPORTS_PER_SOL,
-      ribbitBalance: ribbit,
-      wallet: address,
-    };
+  const value: TreasuryStats = {
+    configured: true,
+    ...(await readBalances(address)),
+    wallet: address,
+  };
+  // A read the RPC could not answer is not worth remembering: let the next
+  // caller try again instead of serving 30 seconds of "unknown".
+  if (value.solBalance !== null || value.ribbitBalance !== null) {
     walletCache.set(address, { at: Date.now(), value });
-    return value;
-  } catch {
-    return { configured: true, solBalance: null, ribbitBalance: null, wallet: address };
+    // Applicants' addresses pass through here once each — keep the map small.
+    if (walletCache.size > 500) {
+      for (const [k, v] of walletCache) {
+        if (Date.now() - v.at > STATS_TTL_MS) walletCache.delete(k);
+      }
+    }
   }
+  return value;
+}
+
+/** Live treasury balances for the transparency dashboard. Never throws. */
+export async function getTreasuryStats(): Promise<TreasuryStats> {
+  return getWalletBalances(CONFIG.treasuryWallet);
 }

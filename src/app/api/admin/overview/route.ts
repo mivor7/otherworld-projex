@@ -26,7 +26,7 @@ export const GET = handler(async () => {
       take: 100,
     }),
     prisma.withdrawal.findMany({
-      where: { status: { in: ["pending", "processing"] } },
+      where: { status: { in: ["review", "pending", "processing"] } },
       orderBy: { createdAt: "asc" },
       include: { user: { select: { wallet: true } } },
       take: 100,

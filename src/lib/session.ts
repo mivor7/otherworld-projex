@@ -1,7 +1,7 @@
 // Sign-In With Solana, stateless and serverless-safe.
 //
 // 1. POST /api/auth/nonce   -> server issues a message to sign and stores the
-//    nonce in a short-lived signed cookie (no DB round-trip, works on Vercel).
+//    challenge in a short-lived signed cookie (no DB round-trip, works on Vercel).
 // 2. POST /api/auth/verify  -> client sends the ed25519 signature; we check it
 //    against the wallet pubkey and the nonce cookie, then set a session JWT.
 import { SignJWT, jwtVerify } from "jose";
@@ -19,21 +19,55 @@ function secretKey(): Uint8Array {
   return new TextEncoder().encode(requireSessionSecret());
 }
 
-export function buildSignInMessage(wallet: string, nonce: string): string {
+export type SignInChallenge = {
+  /** Host the player is signing in to, e.g. www.otherworldprojex.xyz. */
+  domain: string;
+  /** Origin of that host, e.g. https://www.otherworldprojex.xyz. */
+  uri: string;
+  wallet: string;
+  nonce: string;
+  /** ISO 8601 timestamp. */
+  issuedAt: string;
+};
+
+/**
+ * The text the wallet signs, in Sign-In With Solana form.
+ *
+ * The first line names the site the signature is for. Wallets that understand
+ * the format (Phantom, Solflare, Backpack) compare it with the page that asked
+ * and warn when they differ. That is what stops a look-alike site from
+ * fetching a challenge here and relaying it to a visitor to sign: the prompt
+ * the visitor sees names this domain, not the one they are on.
+ */
+export function buildSignInMessage(c: SignInChallenge): string {
   return [
-    `${CONFIG.appName} — sign in`,
+    `${c.domain} wants you to sign in with your Solana account:`,
+    c.wallet,
     ``,
-    `Wallet: ${wallet}`,
-    `Nonce: ${nonce}`,
+    `Sign in to ${CONFIG.appName}. This only proves you own this wallet. It does not authorize any transaction.`,
     ``,
-    `This signature only proves wallet ownership.`,
-    `It does not authorize any transaction.`,
+    `URI: ${c.uri}`,
+    `Version: 1`,
+    `Chain ID: mainnet`,
+    `Nonce: ${c.nonce}`,
+    `Issued At: ${c.issuedAt}`,
   ].join("\n");
 }
 
-export async function issueNonce(wallet: string): Promise<string> {
-  const nonce = bs58.encode(crypto.getRandomValues(new Uint8Array(16)));
-  const jwt = await new SignJWT({ wallet, nonce })
+/**
+ * Issue a sign-in challenge for `wallet` and return the message to sign.
+ * `origin` is the origin the request was made to — taken from the request
+ * itself, never from a client-supplied field.
+ */
+export async function issueNonce(wallet: string, origin: URL): Promise<string> {
+  const challenge: SignInChallenge = {
+    domain: origin.host,
+    uri: origin.origin,
+    wallet,
+    nonce: bs58.encode(crypto.getRandomValues(new Uint8Array(16))),
+    issuedAt: new Date().toISOString(),
+  };
+  const jwt = await new SignJWT(challenge)
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("5m")
     .sign(secretKey());
@@ -45,7 +79,7 @@ export async function issueNonce(wallet: string): Promise<string> {
     maxAge: 300,
     path: "/",
   });
-  return nonce;
+  return buildSignInMessage(challenge);
 }
 
 export type SignInResult =
@@ -69,17 +103,26 @@ export async function verifyWalletSignature(
   const jar = await cookies();
   const nonceJwt = jar.get(NONCE_COOKIE)?.value;
   if (!nonceJwt) return false;
-  let nonce: string;
+  let challenge: SignInChallenge;
   try {
     const { payload } = await jwtVerify(nonceJwt, secretKey());
     if (payload.wallet !== wallet) return false;
-    nonce = String(payload.nonce);
+    const { domain, uri, nonce, issuedAt } = payload;
+    if (
+      typeof domain !== "string" ||
+      typeof uri !== "string" ||
+      typeof nonce !== "string" ||
+      typeof issuedAt !== "string"
+    ) {
+      return false;
+    }
+    challenge = { domain, uri, wallet, nonce, issuedAt };
   } catch {
     return false;
   }
   try {
     return nacl.sign.detached.verify(
-      new TextEncoder().encode(buildSignInMessage(wallet, nonce)),
+      new TextEncoder().encode(buildSignInMessage(challenge)),
       bs58.decode(signatureB58),
       bs58.decode(wallet)
     );

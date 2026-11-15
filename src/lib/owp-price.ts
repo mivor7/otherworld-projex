@@ -6,6 +6,7 @@
 import { PublicKey } from "@solana/web3.js";
 import { CONFIG } from "./config";
 import { owpRawForQuote } from "./owp-quote";
+import { houseConfig } from "./settings";
 import { connection, getTreasuryStats } from "./solana";
 import { tokenProgramId } from "./token-program";
 
@@ -183,6 +184,31 @@ async function mintDecimals(mint: PublicKey): Promise<number | null> {
   return decimals;
 }
 
+/**
+ * Is the spot under the house's floor (SOL per 1,000,000 whole tokens)?
+ *
+ * The house sells at the spot of one pool, and a spot can be pushed: sell
+ * into the pool, buy from the house at the lowered price, buy back. A floor
+ * does not change the price of a sale — it only stops the house selling while
+ * the price is under a level the owner chose. Compared in integers, exact on
+ * a live curve.
+ */
+export function belowFloor(
+  floorSolPerMillion: number,
+  decimals: number,
+  curve: { virtualSol: bigint; virtualToken: bigint } | null,
+  lamportsPerWhole: bigint
+): boolean {
+  if (!(floorSolPerMillion > 0)) return false;
+  const floorLamportsPerMillion = BigInt(Math.round(floorSolPerMillion * 1_000_000_000));
+  if (curve) {
+    // spot per 1M whole = virtualSol × (1M × 10^decimals) ÷ virtualToken
+    const rawPerMillion = 1_000_000n * 10n ** BigInt(decimals);
+    return curve.virtualSol * rawPerMillion < floorLamportsPerMillion * curve.virtualToken;
+  }
+  return lamportsPerWhole * 1_000_000n < floorLamportsPerMillion;
+}
+
 /** Current Raydium spot price, plus how much $OWP the house wallet can pay. */
 export async function owpQuote(opts?: { fresh?: boolean }): Promise<OwpQuote | OwpQuoteMiss> {
   if (!opts?.fresh && cache.value && Date.now() - cache.at < TTL_MS) return cache.value;
@@ -222,6 +248,7 @@ export async function owpQuote(opts?: { fresh?: boolean }): Promise<OwpQuote | O
           source = "market";
         }
       }
+      const floor = (await houseConfig()).owpMinSellPrice;
       if (!lamportsPerWhole) {
         value = miss(
           pool.kind === "graduated"
@@ -229,6 +256,12 @@ export async function owpQuote(opts?: { fresh?: boolean }): Promise<OwpQuote | O
             : pool.kind === "reject"
               ? "This Raydium pool is not a SOL constant-product launch, so there is no price."
               : "No Raydium launchpad price for this mint yet."
+        );
+      } else if (
+        belowFloor(floor, decimals, virtualSol && virtualToken ? { virtualSol, virtualToken } : null, lamportsPerWhole)
+      ) {
+        value = miss(
+          "The house is not selling at the current price. You can still trade $OWP on Raydium."
         );
       } else {
         const stats = await getTreasuryStats();

@@ -26,6 +26,7 @@ import { getSession, verifyWalletSignature } from "@/lib/session";
 import { CONFIG, toRaw, fromRaw } from "@/lib/config";
 import { houseConfig } from "@/lib/settings";
 import { getWalletBalances } from "@/lib/solana";
+import { claimWaitlistPlace } from "@/lib/waitlist";
 
 export const dynamic = "force-dynamic";
 
@@ -169,39 +170,11 @@ export const POST = handler(async (req: Request) => {
     if (referrer) referredBy = ref;
   }
 
-  // Position = next in line, claimed inside a Serializable transaction so a
-  // double-tap or two tabs land exactly one place.
-  const created = await prisma.$transaction(async (tx) => {
-    // Re-check inside the transaction: without a unique index this is what
-    // stops a double-tap or two tabs from taking two places.
-    const raced = await tx.waitlistEntry.findFirst({ where: { wallet: walletAddr } });
-    if (raced) return raced;
-    const last = await tx.waitlistEntry.aggregate({ _max: { position: true } });
-    const entry = await tx.waitlistEntry.create({
-      data: {
-        position: (last._max.position ?? 0) + 1,
-        displayName: mask(walletAddr),
-        wallet: walletAddr,
-        joinedAt: new Date(),
-        referredBy,
-        heldRibbitRaw: toRaw(Math.floor(held)),
-      },
-    });
-    if (referredBy) {
-      // updateMany: credits the referrer's earliest place (wallet isn't unique).
-      const r = await tx.waitlistEntry.findFirst({
-        where: { wallet: referredBy },
-        orderBy: { position: "asc" },
-        select: { id: true },
-      });
-      if (r) {
-        await tx.waitlistEntry.update({
-          where: { id: r.id },
-          data: { referrals: { increment: 1 } },
-        });
-      }
-    }
-    return entry;
+  const created = await claimWaitlistPlace({
+    wallet: walletAddr,
+    displayName: mask(walletAddr),
+    referredBy,
+    heldRibbitRaw: toRaw(Math.floor(held)),
   });
 
   const count = await prisma.waitlistEntry.count();

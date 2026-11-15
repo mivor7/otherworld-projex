@@ -477,7 +477,7 @@ export default function AccountPage() {
                         </a>
                       ) : (
                         <span className={`badge ${w.status === "rejected" ? "" : "badge-gold"}`}>
-                          {w.status}
+                          {w.status === "review" ? "under review" : w.status}
                         </span>
                       )}
                     </td>

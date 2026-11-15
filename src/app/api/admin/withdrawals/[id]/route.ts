@@ -3,7 +3,7 @@ import { err, handler, ok, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/db";
 
 const body = z.object({
-  action: z.enum(["claim", "release", "reject", "mark_sent"]),
+  action: z.enum(["approve", "claim", "release", "reject", "mark_sent"]),
   signature: z.string().min(64).max(120).optional(),
 });
 
@@ -15,6 +15,18 @@ export const POST = handler(
 
     const wd = await prisma.withdrawal.findUnique({ where: { id } });
     if (!wd) return err("Withdrawal not found", 404);
+
+    // A row held for review (a SOL purchase whose payment was handed in too
+    // late to price automatically) joins the normal queue once a person has
+    // looked at it. From there the worker pays it, or "Pay now" does.
+    if (data.action === "approve") {
+      const approved = await prisma.withdrawal.updateMany({
+        where: { id, status: "review" },
+        data: { status: "pending" },
+      });
+      if (approved.count === 0) return err("Not waiting for review", 409);
+      return ok({ status: "pending" });
+    }
 
     // Claim BEFORE paying — the same discipline as the payout worker. "Pay
     // now" must win this claim before any money moves, so the worker and the
@@ -42,7 +54,7 @@ export const POST = handler(
     }
 
     if (data.action === "reject") {
-      if (wd.status !== "pending") {
+      if (wd.status !== "pending" && wd.status !== "review") {
         // Refunding a claimed/in-flight row could race a real send — resolve
         // those with mark_sent (money moved) or release (nothing moved) first.
         return err("Only pending withdrawals can be rejected", 409);
@@ -52,7 +64,7 @@ export const POST = handler(
       // worker can never refund twice or refund a paid withdrawal.
       const refunded = await prisma.$transaction(async (tx) => {
         const claimed = await tx.withdrawal.updateMany({
-          where: { id, status: "pending" },
+          where: { id, status: wd.status },
           data: { status: "rejected", processedAt: new Date() },
         });
         if (claimed.count === 0) return false;

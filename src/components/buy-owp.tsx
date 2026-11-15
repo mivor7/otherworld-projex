@@ -94,7 +94,14 @@ export function BuyOwp() {
     const decimals = quote?.decimals ?? CLIENT_CONFIG.ribbitDecimals;
     const whole =
       typeof raw === "string" || typeof raw === "number" ? Number(raw) / 10 ** decimals : estimate;
-    if (res.data.alreadyRedeemed) {
+    if (res.data.review) {
+      setMessage({
+        kind: "info",
+        text:
+          "Payment received, but it reached us too long after it confirmed to be priced automatically. " +
+          "It is recorded and waiting for a manual check. Its status is on your account page.",
+      });
+    } else if (res.data.alreadyRedeemed) {
       setMessage({ kind: "ok", text: "This payment was already accepted. The house wallet sends the $OWP." });
     } else {
       setMessage({

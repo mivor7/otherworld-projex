@@ -1,6 +1,14 @@
 // Buy $OWP from the house wallet. The user pays SOL to that wallet; this
 // route prices the payment at the live Raydium spot and queues a payout.
 // The web server never holds the key — the payout worker sends the tokens.
+//
+// The amount is meant to lock in when the payment confirms. The server can
+// only see the price as it is now, so it prices a payment automatically only
+// while the payment is fresh. Without that limit a buyer could pay, keep the
+// signature, and hand it in whenever the price dipped — a free option on the
+// house. A payment handed in late is still recorded and still owed, but it
+// waits for a person in /admin (status "review") instead of being paid at
+// whatever the price happens to be.
 import { z } from "zod";
 import { err, handler, ok, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/db";
@@ -31,6 +39,9 @@ export const POST = handler(async (req: Request) => {
   if (payment.status === "pending" || payment.status === "no-payment") {
     return err("Could not verify a SOL payment to the house wallet in that transaction", 422);
   }
+  if (payment.status === "failed") {
+    return err("That transaction failed on-chain, so no SOL was paid. Nothing to redeem.", 422);
+  }
   if (payment.status === "too-small") return err("Minimum buy is 0.01 SOL.", 422);
   if (payment.status === "too-large") return err("Maximum buy is 50 SOL.", 422);
 
@@ -55,6 +66,12 @@ export const POST = handler(async (req: Request) => {
     return err("The house wallet does not hold enough $OWP to fill this buy yet.", 409);
   }
 
+  // A payment the chain confirmed too long ago is not auto-priced (see the
+  // note at the top). An unknown block time is treated as fresh: only a
+  // just-confirmed transaction lacks one.
+  const ageS = payment.blockTime === null ? 0 : Date.now() / 1000 - payment.blockTime;
+  const late = ageS > CONFIG.owpBuyMaxPaymentAgeS;
+
   // Price and inventory checks happen BEFORE the signature is consumed, so a
   // failed quote leaves the SOL payment redeemable on a later try.
   const purchase = await prisma.$transaction(async (tx) => {
@@ -65,6 +82,9 @@ export const POST = handler(async (req: Request) => {
         amountRaw: owpRaw,
         destination: session.wallet,
         kind: "buy",
+        // "review" rows are invisible to the payout worker until an admin
+        // approves them.
+        ...(late ? { status: "review" } : {}),
       },
     });
     const row = await tx.owpPurchase.create({
@@ -96,5 +116,6 @@ export const POST = handler(async (req: Request) => {
     solLamports: purchase.solLamports,
     owpRaw: purchase.owpRaw,
     withdrawalId: purchase.withdrawalId,
+    review: late,
   });
 });

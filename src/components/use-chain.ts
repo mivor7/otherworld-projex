@@ -8,7 +8,6 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
-  createBurnCheckedInstruction,
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
@@ -197,125 +196,6 @@ export function useChain() {
     return detectTokenProgram(connection, new PublicKey(CLIENT_CONFIG.ribbitMint));
   }, [connection]);
 
-  /** Burn $OWP from the user's wallet, then redeem play credits. */
-  const burnForCredits = useCallback(
-    async (ribbitAmount: number): Promise<ChainResult> => {
-      if (!publicKey) return { ok: false, error: "Connect your wallet first" };
-      if (!CLIENT_CONFIG.ribbitMint) return { ok: false, error: MINT_NOT_LIVE };
-      try {
-        const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
-        const program = await mintProgram();
-        if (!program) return { ok: false, error: MINT_NOT_ON_CHAIN };
-        const ata = getAssociatedTokenAddressSync(mint, publicKey, false, program);
-        const shortfall = await insufficientFundsReason(
-          connection,
-          publicKey,
-          toRawClient(ribbitAmount),
-          program
-        );
-        if (shortfall) return { ok: false, error: shortfall };
-        const tx = new Transaction().add(
-          createBurnCheckedInstruction(
-            ata,
-            mint,
-            publicKey,
-            toRawClient(ribbitAmount),
-            CLIENT_CONFIG.ribbitDecimals,
-            [],
-            program
-          )
-        );
-        return await sendAndRedeem(
-          () => sendTransaction(tx, connection),
-          (sig) => connection.confirmTransaction(sig, "confirmed"),
-          "/api/burn/verify"
-        );
-      } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : "Burn failed" };
-      }
-    },
-    [publicKey, sendTransaction, connection, mintProgram]
-  );
-
-  /**
-   * Buy credits: one signed tx that burns part of the $OWP and transfers
-   * the rest to the treasury (real house revenue). Both legs are verified
-   * server-side. The burn/house split is a LIVE house setting, so it's
-   * fetched just-in-time — building against a stale build-time ratio could
-   * strand the payment at verification.
-   */
-  const buyCredits = useCallback(
-    async (ribbitAmount: number): Promise<ChainResult> => {
-      if (!publicKey) return { ok: false, error: "Connect your wallet first" };
-      if (!CLIENT_CONFIG.ribbitMint) return { ok: false, error: MINT_NOT_LIVE };
-      if (!CLIENT_CONFIG.treasuryWallet)
-        return { ok: false, error: "Buying credits isn't available yet" };
-      try {
-        let buyBurnShare = CLIENT_CONFIG.buyBurnShare;
-        try {
-          const live = await (await fetch("/api/config")).json();
-          if (live.creditSalesPaused)
-            return { ok: false, error: "Credit sales are paused — back shortly" };
-          if (typeof live.buyBurnShare === "number") buyBurnShare = live.buyBurnShare;
-        } catch {
-          // fall back to the build-time split; the server re-verifies anyway
-        }
-        const mint = new PublicKey(CLIENT_CONFIG.ribbitMint);
-        const program = await mintProgram();
-        if (!program) return { ok: false, error: MINT_NOT_ON_CHAIN };
-        const treasury = new PublicKey(CLIENT_CONFIG.treasuryWallet);
-        const ata = getAssociatedTokenAddressSync(mint, publicKey, false, program);
-        const treasuryAta = getAssociatedTokenAddressSync(mint, treasury, true, program);
-        // Split the payment; the burned side takes the rounding remainder so
-        // burn + house exactly equals what the player intends to pay.
-        const total = toRawClient(ribbitAmount);
-        const houseRaw =
-          (total * BigInt(Math.round((1 - buyBurnShare) * 1000))) / 1000n;
-        const burnRaw = total - houseRaw;
-        if (burnRaw <= 0n || houseRaw <= 0n)
-          return { ok: false, error: "Amount too small to split" };
-        const shortfall = await insufficientFundsReason(connection, publicKey, total, program);
-        if (shortfall) return { ok: false, error: shortfall };
-        const tx = new Transaction().add(
-          createAssociatedTokenAccountIdempotentInstruction(
-            publicKey,
-            treasuryAta,
-            treasury,
-            mint,
-            program
-          ),
-          createBurnCheckedInstruction(
-            ata,
-            mint,
-            publicKey,
-            burnRaw,
-            CLIENT_CONFIG.ribbitDecimals,
-            [],
-            program
-          ),
-          createTransferCheckedInstruction(
-            ata,
-            mint,
-            treasuryAta,
-            publicKey,
-            houseRaw,
-            CLIENT_CONFIG.ribbitDecimals,
-            [],
-            program
-          )
-        );
-        return await sendAndRedeem(
-          () => sendTransaction(tx, connection),
-          (sig) => connection.confirmTransaction(sig, "confirmed"),
-          "/api/credits/buy"
-        );
-      } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : "Purchase failed" };
-      }
-    },
-    [publicKey, sendTransaction, connection, mintProgram]
-  );
-
   /** Transfer $OWP to the treasury. It becomes withdrawable app balance. */
   const depositForBidding = useCallback(
     async (ribbitAmount: number): Promise<ChainResult> => {
@@ -493,5 +373,5 @@ export function useChain() {
     [publicKey, sendTransaction, connection]
   );
 
-  return { burnForCredits, buyCredits, depositForBidding, payRibbit, buyOwpWithSol };
+  return { depositForBidding, payRibbit, buyOwpWithSol };
 }

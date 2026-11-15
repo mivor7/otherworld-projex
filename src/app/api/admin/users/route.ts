@@ -1,14 +1,16 @@
-// Player management: look a wallet up, ban/unban it, or adjust its credits.
+// Player management: look a wallet up, ban/unban it, or adjust its balance.
 //   GET  ?wallet=…            → profile with balances + activity counts
 //   POST {wallet, action:"ban"|"unban"}
 //   POST {wallet, action:"credits", delta, note}  → ledger-logged adjustment
 // Bans block sign-in AND bite live sessions (requireSession re-checks).
-// Credit adjustments go through the same guarded ledger as everything else —
-// a negative delta can never overdraw.
+// An adjustment moves whole $OWP on the app balance — the same balance the
+// tables, bids, and withdrawals use — through the guarded ledger, so a
+// negative delta can never overdraw or eat tokens locked in a bid. A grant is
+// real: the player can withdraw it from the house wallet.
 import { z } from "zod";
 import { err, handler, ok, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { adjustCredits, InsufficientCredits } from "@/lib/credits";
+import { adjustOwp, InsufficientCredits, playableWhole } from "@/lib/credits";
 import { fromRaw } from "@/lib/config";
 
 export const GET = handler(async (req: Request) => {
@@ -33,7 +35,8 @@ export const GET = handler(async (req: Request) => {
   return ok({
     wallet: user.wallet,
     isBanned: user.isBanned,
-    credits: user.credits,
+    // Playable balance: unlocked whole $OWP.
+    credits: playableWhole(user.ribbitBalance, user.ribbitLocked),
     ribbitBalance: user.ribbitBalance.toString(),
     ribbitLocked: user.ribbitLocked.toString(),
     burnedRibbit: Math.round(fromRaw(burnAgg._sum.amountRaw ?? 0n)),
@@ -65,15 +68,16 @@ export const POST = handler(async (req: Request) => {
     return ok({ isBanned: data.action === "ban" });
   }
 
-  // credits adjustment — comps, support refunds, corrections. Ledger-logged
+  // Balance adjustment — comps, support refunds, corrections. Ledger-logged
   // with the admin's wallet + note for the audit trail.
   if (!data.delta) return err("Provide a non-zero delta");
+  const delta = data.delta;
   try {
     const balance = await prisma.$transaction((tx) =>
-      adjustCredits(
+      adjustOwp(
         tx,
         user.id,
-        data.delta!,
+        delta,
         "admin",
         `by ${admin.wallet.slice(0, 8)}: ${data.note ?? "no note"}`
       )
@@ -81,7 +85,7 @@ export const POST = handler(async (req: Request) => {
     return ok({ credits: balance });
   } catch (e) {
     if (e instanceof InsufficientCredits) {
-      return err("Player doesn't have that many credits to remove", 409);
+      return err("Player doesn't have that much unlocked $OWP to remove", 409);
     }
     throw e;
   }

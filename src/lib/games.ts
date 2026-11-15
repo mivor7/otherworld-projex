@@ -8,6 +8,7 @@ import { adjustOwp, InsufficientCredits, playableWhole } from "./credits";
 import { prisma } from "./db";
 import { houseConfig, type HouseConfig } from "./settings";
 import { ApiError } from "./api";
+import { DICE_MAX_TARGET, DICE_MIN_TARGET, diceMultiplier, maxDiceTarget } from "./dice";
 
 // Wager bounds are LIVE settings (admin-tunable), so the schemas only shape-
 // check; assertWagerAllowed() enforces the effective bounds per round.
@@ -18,8 +19,9 @@ export const flipParams = z.object({
 });
 
 export const diceParams = z.object({
-  // Win if roll*100 < target. target 2..98 keeps multipliers sane.
-  target: z.number().int().min(2).max(98),
+  // Win if roll*100 < target. The live edge narrows the top of this range
+  // per round — see maxDiceTarget.
+  target: z.number().int().min(DICE_MIN_TARGET).max(DICE_MAX_TARGET),
   wager: z.number().int().min(1).max(100_000_000),
   clientSeed: z.string().min(1).max(64),
 });
@@ -60,7 +62,7 @@ function flipResolve(r: number, side: "frog" | "fly", wager: number, edge: numbe
 function diceResolve(r: number, target: number, wager: number, edge: number) {
   const rolled = Math.floor(r * 100 * 100) / 100; // 0.00 – 99.99
   const win = rolled < target;
-  const multiplier = (100 / target) * (1 - edge);
+  const multiplier = diceMultiplier(target, edge);
   const payout = win ? Math.floor(wager * multiplier) : 0;
   return { outcome: { rolled, target, multiplier: Number(multiplier.toFixed(4)) }, payout, win };
 }
@@ -79,6 +81,15 @@ export async function playRound(
 ): Promise<RoundResult> {
   const cfg = await houseConfig();
   assertWagerAllowed(cfg, params.wager);
+  if (game === "dice") {
+    const top = maxDiceTarget(cfg.houseEdge);
+    if (params.target! > top) {
+      throw new ApiError(
+        `Target must be ${top} or lower — above that a win would not pay more than the wager`,
+        422
+      );
+    }
+  }
   const seed = await getActiveSeed(userId);
 
   return prisma.$transaction(async (tx) => {
@@ -87,7 +98,9 @@ export async function playRound(
       where: { id: seed.id, nonce: seed.nonce, active: true },
       data: { nonce: { increment: 1 } },
     });
-    if (claimed.count === 0) throw new Error("Concurrent round in flight — retry");
+    // 409, not a bare Error: two rounds sent at once is a client timing
+    // issue, and the player should see "retry", not "Internal error".
+    if (claimed.count === 0) throw new ApiError("Concurrent round in flight — retry", 409);
     const nonce = seed.nonce;
 
     await adjustOwp(tx, userId, -params.wager, "wager");

@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { requireSession, ApiError } from "@/lib/api";
+import { rateLimit } from "@/lib/ratelimit";
 
 export async function POST(request: Request) {
   try {
@@ -15,7 +16,10 @@ export async function POST(request: Request) {
       body,
       request,
       onBeforeGenerateToken: async () => {
-        await requireSession();
+        const session = await requireSession();
+        // Every token is up to 4 MB of public storage on the house's bill.
+        // A consignment needs one photo; a handful an hour covers retries.
+        rateLimit(`upload:${session.userId}`, 12, 3_600_000);
         return {
           allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
           maximumSizeInBytes: 4 * 1024 * 1024,

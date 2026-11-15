@@ -90,6 +90,16 @@ export const SETTING_DEFS: readonly SettingDef[] = [
     envDefault: CONFIG.maxWager,
   },
   {
+    key: "owpMinSellPrice",
+    label: "Lowest sell price",
+    desc: "Website buys are refused while the Raydium price is below this many SOL per 1,000,000 $OWP. 0 = no floor. A sale is always at the live Raydium price — this only decides when the house is not selling. It is the guard against someone pushing the pool price down for a moment to buy house $OWP cheap.",
+    group: "Limits",
+    kind: "number",
+    min: 0,
+    max: 1_000_000,
+    envDefault: CONFIG.owpMinSellPrice,
+  },
+  {
     key: "arcadeDailySubmissions",
     label: "Arcade scores per day",
     desc: "Max ranked arcade score submissions per wallet per game per UTC day.",
@@ -207,6 +217,7 @@ export type HouseConfig = {
   bountyPotShare: number;
   minWager: number;
   maxWager: number;
+  owpMinSellPrice: number;
   arcadeDailySubmissions: number;
   rankedMinBurnedRibbit: number;
   rankedMinWindowBurnedRibbit: number;
