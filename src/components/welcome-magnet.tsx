@@ -2,19 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { playFlip } from "@/lib/games";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ShareOnX } from "@/components/share-x";
-
-function randomHex(bytes = 16): string {
-  const arr = new Uint8Array(bytes);
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    crypto.getRandomValues(arr);
-  } else {
-    for (let i = 0; i < bytes; i++) arr[i] = Math.floor(Math.random() * 256);
-  }
-  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 export function WelcomeMagnet({
   waitlistCount,
@@ -30,7 +19,6 @@ export function WelcomeMagnet({
   const house = useHouseConfig();
   const [side, setSide] = useState<"frog" | "fly">("frog");
   const [spinning, setSpinning] = useState(false);
-  const [nonce, setNonce] = useState(0);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [practiceBank, setPracticeBank] = useState(1_000);
@@ -41,7 +29,8 @@ export function WelcomeMagnet({
   } | null>(null);
 
   const wager = 100;
-  const mult = (2 * (1 - house.houseEdge)).toFixed(2);
+  const flipMult = 2 * (1 - house.houseEdge);
+  const mult = flipMult.toFixed(2);
   const spotsLeft = Math.max(0, waitlistGoal - waitlistCount);
   const fillPct = Math.min(100, Math.round((waitlistCount / Math.max(1, waitlistGoal)) * 100));
 
@@ -49,25 +38,18 @@ export function WelcomeMagnet({
     if (spinning) return;
     setSide(picked);
     setSpinning(true);
-    const nextNonce = nonce + 1;
-    setNonce(nextNonce);
-    const out = playFlip(
-      randomHex(16),
-      "homepage-instant-preview",
-      nextNonce,
-      picked,
-      wager,
-      house.houseEdge
-    );
+    const landed: "frog" | "fly" = Math.random() < 0.5 ? "frog" : "fly";
+    const win = landed === picked;
+    const payout = win ? Math.floor(wager * flipMult) : 0;
     setTimeout(() => {
       setSpinning(false);
       setLastResult({
-        win: out.win,
-        landed: out.landed,
-        payout: out.payout,
+        win,
+        landed,
+        payout,
       });
-      setPracticeBank((b) => Math.max(100, b - wager + out.payout));
-      if (out.win) {
+      setPracticeBank((b) => Math.max(100, b - wager + payout));
+      if (win) {
         setStreak((s) => {
           const next = s + 1;
           setBestStreak((bs) => Math.max(bs, next));
