@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer";
 import { InteractiveFX, ScrollProgress } from "@/components/fx";
 import { PwaRegister } from "@/components/pwa-register";
 import { VaultIntro } from "@/components/vault-intro";
+import { OtherWorldDirector } from "@/components/enter-other-world";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://otherworldprojex.xyz"),
@@ -85,6 +86,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <OtherWorldDirector />
         </Providers>
       </body>
     </html>

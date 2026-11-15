@@ -47,6 +47,18 @@ export default function DicePage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!me.signedIn) setSandbox(true);
   }, [loading, me.signedIn]);
+
+  useEffect(() => {
+    const onTourTarget = (e: Event) => {
+      const detail = (e as CustomEvent<number>).detail;
+      if (typeof detail === "number" && Number.isFinite(detail)) {
+        setTarget(detail);
+      }
+    };
+    window.addEventListener("owp:dice-target", onTourTarget);
+    return () => window.removeEventListener("owp:dice-target", onTourTarget);
+  }, []);
+
   const practice = usePractice();
   const { seed: clientSeed } = useClientSeed();
   const house = useHouseConfig();
@@ -67,7 +79,12 @@ export default function DicePage() {
       // Practice table: same odds, local roll, zero $OWP. Bottomless
       // bankroll — top up first so the roll can never be blocked.
       practice.ensure(wager);
-      const rolled = practiceRoll();
+      const isTour =
+        typeof document !== "undefined" &&
+        document.documentElement.hasAttribute("data-owp-tour");
+      const rolled = isTour
+        ? Math.max(1.2, Math.round(target * 0.42 * 100) / 100)
+        : practiceRoll();
       const win = rolled < target;
       const payout = win ? Math.floor(wager * multiplier) : 0;
       practice.adjust(-wager + payout);

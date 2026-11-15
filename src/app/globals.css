@@ -1466,3 +1466,34 @@ button:focus-visible,
   vertical-align: middle;
   line-height: 1.4;
 }
+
+/* ——— Enter the Other World · Live Co-Pilot Stage Highlight ———
+   Pure compositor-native border illumination on the active panel during
+   the guided tour. Never dims or obscures the rest of the website. */
+[data-owp-stage="active"] {
+  box-shadow:
+    0 0 0 1px oklch(0.78 0.11 150 / 0.58),
+    0 20px 56px -14px oklch(0 0 0 / 0.72),
+    0 0 54px -12px oklch(0.78 0.11 150 / 0.28) !important;
+  transition: box-shadow 0.45s var(--hs-ease);
+}
+
+@keyframes owp-click-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 oklch(0.78 0.11 150 / 0.65);
+  }
+  40% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 8px oklch(0.78 0.11 150 / 0.18);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 14px oklch(0.78 0.11 150 / 0);
+  }
+}
+
+[data-owp-clicked="1"] {
+  animation: owp-click-pulse 0.42s var(--hs-ease);
+}
+

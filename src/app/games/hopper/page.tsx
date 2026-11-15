@@ -15,6 +15,7 @@ import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE, CAR_COLORS } from "@/lib/arcade-palette";
 import {
+  HCOLS,
   HROWS,
   HCELL,
   HW,
@@ -104,7 +105,10 @@ export default function HopperPage() {
       pendingSubmitRef.current = null;
     }
     runTokenRef.current = null;
-    if (me.signedIn) {
+    const isTour =
+      typeof document !== "undefined" &&
+      document.documentElement.hasAttribute("data-owp-tour");
+    if (me.signedIn && !isTour) {
       try {
         const res = await fetch("/api/arcade/start", {
           method: "POST",
@@ -185,12 +189,42 @@ export default function HopperPage() {
         if (acc > 250) acc = 250;
         while (acc >= HFRAME_MS && !g.over) {
           acc -= HFRAME_MS;
+          const isTour =
+            !runTokenRef.current &&
+            typeof document !== "undefined" &&
+            document.documentElement.hasAttribute("data-owp-tour");
+          if (isTour && queueRef.current.length === 0 && g.frame > 0 && g.frame % 13 === 0) {
+            const cellClear = (row: number, col: number) => {
+              if (col < 0 || col >= HCOLS) return false;
+              const fx0 = col * HCELL + 2;
+              const fx1 = (col + 1) * HCELL - 2;
+              for (const c of g.cars) {
+                if (c.lane !== row) continue;
+                const cx0 = c.x + c.speed * 4 - 10;
+                const cx1 = c.x + c.len + c.speed * 4 + 10;
+                if (fx1 > cx0 && fx0 < cx1) return false;
+              }
+              return true;
+            };
+            const nextRow = g.frog.row - 1;
+            if (nextRow >= 0 && cellClear(nextRow, g.frog.col)) {
+              queueRef.current.push(0);
+            } else if (g.frog.col + 1 < HCOLS && cellClear(g.frog.row, g.frog.col + 1)) {
+              queueRef.current.push(3);
+            } else if (g.frog.col - 1 >= 0 && cellClear(g.frog.row, g.frog.col - 1)) {
+              queueRef.current.push(2);
+            }
+          }
           if (queueRef.current.length > 0) {
             const d = queueRef.current.shift()!;
             traceRef.current.push({ f: g.frame, d });
             hopperHop(g, d);
           }
           hopperFrame(g);
+          if (isTour && g.lives < 3) {
+            g.lives = 3;
+            g.over = false;
+          }
         }
         if (g.over && !submittedRef.current) {
           submittedRef.current = true;

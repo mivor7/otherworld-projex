@@ -3,6 +3,7 @@ import { PageHero } from "@/components/hero";
 import { Reveal } from "@/components/reveal";
 import { ActivityTicker } from "@/components/activity-ticker";
 import { BuyOwp } from "@/components/buy-owp";
+import { EnterOtherWorld } from "@/components/enter-other-world";
 import { CopyChip } from "@/components/copy-chip";
 import { MatteMedia } from "@/components/matte-media";
 import { prisma } from "@/lib/db";
@@ -146,6 +147,8 @@ export default async function Home() {
         ]}
         brand
       />
+
+      <EnterOtherWorld />
 
       <BuyOwp />
 
