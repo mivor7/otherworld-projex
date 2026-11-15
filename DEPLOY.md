@@ -41,7 +41,7 @@ schema changes apply on every deploy. No manual migration step.
    its balance. The payout worker on the ops box signs with that wallet's
    key (`PAYOUT_WALLET_KEY`). Do not put the private key in Vercel. A stolen
    payout box can move the whole treasury; that is the accepted model.
-   Payouts above `MAX_PAYOUT_OWP` wait for a human in `/admin`.
+   Payouts above `MAX_PAYOUT_RIBBIT` wait for a human in `/admin`.
 3. Point `otherworldprojex.xyz` at the Vercel project (Settings → Domains).
 4. Upload `brand/avatar-800.png` and `brand/banner-x-1500x500.png` to X, and
    `brand/icon-512.png` to the token profile.

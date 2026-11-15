@@ -90,10 +90,7 @@ export default function FlipPage() {
 
     if (sandbox) {
       practice.ensure(amount);
-      const isTour =
-        typeof document !== "undefined" &&
-        document.documentElement.hasAttribute("data-owp-tour");
-      const landed = isTour ? side : Math.random() < 0.5 ? "frog" : "fly";
+      const landed = Math.random() < 0.5 ? "frog" : "fly";
       const win = landed === side;
       const payout = win ? Math.floor(amount * flipMult) : 0;
       practice.adjust(-amount + payout);

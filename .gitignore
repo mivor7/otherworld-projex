@@ -32,7 +32,6 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-!.env.example
 
 # secrets — wallet/payout keypairs must NEVER be committed
 *-wallet.json

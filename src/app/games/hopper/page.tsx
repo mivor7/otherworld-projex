@@ -15,7 +15,6 @@ import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useHouseConfig } from "@/components/use-house-config";
 import { ARCADE, CAR_COLORS } from "@/lib/arcade-palette";
 import {
-  HCOLS,
   HROWS,
   HCELL,
   HW,
@@ -105,10 +104,7 @@ export default function HopperPage() {
       pendingSubmitRef.current = null;
     }
     runTokenRef.current = null;
-    const isTour =
-      typeof document !== "undefined" &&
-      document.documentElement.hasAttribute("data-owp-tour");
-    if (me.signedIn && !isTour) {
+    if (me.signedIn) {
       try {
         const res = await fetch("/api/arcade/start", {
           method: "POST",
@@ -189,46 +185,12 @@ export default function HopperPage() {
         if (acc > 250) acc = 250;
         while (acc >= HFRAME_MS && !g.over) {
           acc -= HFRAME_MS;
-          if (
-            queueRef.current.length === 0 &&
-            !runTokenRef.current &&
-            g.frame > 0 &&
-            g.frame % 14 === 0 &&
-            document.documentElement.hasAttribute("data-owp-tour")
-          ) {
-            const isRowClear = (col: number, row: number) => {
-              if (row <= 0 || row >= HROWS - 1 || row === Math.floor(HROWS / 2)) return true;
-              const fx = col * HCELL + HCELL / 2;
-              for (const car of g!.cars) {
-                if (car.lane !== row) continue;
-                for (let f = 0; f <= 16; f += 2) {
-                  let cx = car.x + car.speed * f;
-                  if (car.speed > 0 && cx > HW + 20) cx -= HW + car.len + 40;
-                  if (car.speed < 0 && cx < -car.len - 20) cx += HW + car.len + 40;
-                  if (fx > cx - 18 && fx < cx + car.len + 18) return false;
-                }
-              }
-              return true;
-            };
-            const { col, row } = g.frog;
-            if (isRowClear(col, row - 1)) {
-              queueRef.current.push(0);
-            } else if (col < HCOLS - 2 && isRowClear(col + 1, row)) {
-              queueRef.current.push(3);
-            } else if (col > 1 && isRowClear(col - 1, row)) {
-              queueRef.current.push(2);
-            }
-          }
           if (queueRef.current.length > 0) {
             const d = queueRef.current.shift()!;
             traceRef.current.push({ f: g.frame, d });
             hopperHop(g, d);
           }
           hopperFrame(g);
-          if (!runTokenRef.current && document.documentElement.hasAttribute("data-owp-tour") && g.lives < 3) {
-            g.lives = 3;
-            g.over = false;
-          }
         }
         if (g.over && !submittedRef.current) {
           submittedRef.current = true;

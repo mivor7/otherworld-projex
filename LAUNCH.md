@@ -14,7 +14,7 @@ One wallet is the admin, the treasury, and the payout signer (`ONBOARDING.md` §
 
 On your always-on worker host (never on Vercel):
 1. Provide `PAYOUT_WALLET_KEY` (or a `chmod 600` keypair at `PAYOUT_KEYPAIR_PATH`) along with `DATABASE_URL` and `SOLANA_RPC_URL`.
-2. Start the worker under `systemd` or `pm2` (`npm run payout-worker`) and verify it prints the house wallet address and `$OWP` mint on startup.
+2. Start the worker under `systemd` or `pm2` (`npm run payout:worker`) and verify it prints the house wallet address and `$OWP` mint on startup.
 
 ## 3. Set live House controls in `/admin`
 
