@@ -324,95 +324,114 @@ function PortalVortexCanvas({ hovered }: { hovered: boolean }) {
     >
       <canvas
         ref={canvasRef}
-        className="block w-full h-[196px] sm:h-[216px] object-cover"
+        className="block w-[132px] h-[90px] sm:w-[148px] sm:h-[101px]"
       />
-      <div className="pointer-events-none absolute inset-x-3 bottom-2.5 flex items-center justify-between text-[0.65rem] mono uppercase tracking-wider">
-        <span className="px-2 py-0.5 rounded bg-abyss/80 text-neon border border-white/10">
-          Live Co-Pilot · 60 FPS
-        </span>
-        <span className="px-2 py-0.5 rounded bg-abyss/80 text-gold border border-white/10">
-          9 Live Chapters
-        </span>
-      </div>
     </div>
   );
 }
 
 export function EnterOtherWorld() {
   const [hovered, setHovered] = useState(false);
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const jumpRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!jumpOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (jumpRef.current && !jumpRef.current.contains(e.target as Node)) {
+        setJumpOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setJumpOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [jumpOpen]);
 
   return (
     <section className="mt-8" aria-label="Interactive walkthrough">
       <div
-        className="panel panel-glow panel-etched p-5 sm:p-7 transition-all"
+        className="panel panel-glow panel-etched p-3 sm:p-4 transition-all"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-center">
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
-              <span className="inline-flex items-center gap-2 text-xs mono uppercase tracking-widest text-neon">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
+            <div className="shrink-0 hidden sm:block">
+              <PortalVortexCanvas hovered={hovered} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-[0.65rem] mono uppercase tracking-widest text-neon mb-1">
                 <span className="live-dot" />
-                Interactive Grand House Tour
-              </span>
-              <span className="text-xs mono text-fog/70">
-                · Opt-in · Plays all 6 games &amp; all 3 wings live
-              </span>
-            </div>
-
-            <h2 className="display text-2xl sm:text-3xl text-frost tracking-tight mb-2.5">
-              Enter the <span className="neon-text">Other World.</span>
-            </h2>
-
-            <p className="text-fog text-sm sm:text-base leading-relaxed max-w-2xl mb-5">
-              Let the House Croupier take the wheel for a complete live-house
-              simulation — funding an in-memory{" "}
-              <span className="text-frost">$OWP balance</span>, filling a{" "}
-              <span className="text-gold">bounty pool to payout</span> on{" "}
-              <span className="text-frost">Frog Flip</span>, sniping{" "}
-              <span className="text-gold">4.00×</span> on{" "}
-              <span className="text-frost">Pond Dice</span>, doubling to 21 in{" "}
-              <span className="text-frost">Blackjack</span>, playing{" "}
-              <span className="text-frost">Hopper</span>,{" "}
-              <span className="text-frost">Frogris</span> &amp;{" "}
-              <span className="text-frost">Worm Frog</span>, bidding on a live
-              auction lot, withdrawing winnings, and opening the{" "}
-              <span className="text-frost">Vault Doors</span> onto all three wings.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3 mb-5">
-              <button
-                type="button"
-                data-owp-trigger="enter-other-world"
-                onClick={() => launchOtherWorldTour(0)}
-                className="btn btn-primary btn-lg group"
-              >
-                <span>Enter the Other World</span>
-                <span className="inline-block transition-transform group-hover:translate-x-1">
-                  →
-                </span>
-              </button>
-              <span className="text-xs text-fog">
-                Or jump straight to any of the 9 live stations:
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              {CHAPTERS.map((ch) => (
-                <button
-                  key={ch.code}
-                  type="button"
-                  onClick={() => launchOtherWorldTour(ch.index)}
-                  className="chip text-xs hover:border-neon/50 transition-colors"
-                >
-                  <span className="mono text-gold mr-1">{ch.code}</span>
-                  <span>{ch.shortLabel}</span>
-                </button>
-              ))}
+                Guided tour · 9 stops
+              </div>
+              <h2 className="display text-lg sm:text-xl text-frost tracking-tight leading-tight">
+                Enter the <span className="neon-text">Other World.</span>
+              </h2>
+              <p className="text-fog text-xs sm:text-sm leading-snug mt-1 max-w-xl">
+                Watch the House Croupier play every game, win a bounty, bid on a
+                lot and withdraw — all simulated, no wallet needed.
+              </p>
             </div>
           </div>
 
-          <PortalVortexCanvas hovered={hovered} />
+          <div ref={jumpRef} className="relative flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              data-owp-trigger="enter-other-world"
+              onClick={() => launchOtherWorldTour(0)}
+              className="btn btn-primary group whitespace-nowrap"
+            >
+              <span>Start tour</span>
+              <span className="inline-block transition-transform group-hover:translate-x-1">
+                →
+              </span>
+            </button>
+            <button
+              type="button"
+              data-owp-trigger="enter-other-world-jump"
+              aria-expanded={jumpOpen}
+              aria-haspopup="menu"
+              onClick={() => setJumpOpen((v) => !v)}
+              className="btn btn-ghost text-xs whitespace-nowrap"
+              title="Jump to a chapter"
+            >
+              Chapters {jumpOpen ? "▴" : "▾"}
+            </button>
+
+            {jumpOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-2 z-30 w-64 rounded-xl border p-1.5 shadow-2xl"
+                style={{
+                  background: "oklch(0.11 0.012 165 / 0.98)",
+                  borderColor: "var(--hairline-strong)",
+                }}
+              >
+                {CHAPTERS.map((ch) => (
+                  <button
+                    key={ch.code}
+                    type="button"
+                    role="menuitem"
+                    data-owp-trigger="enter-other-world-chapter"
+                    onClick={() => {
+                      setJumpOpen(false);
+                      launchOtherWorldTour(ch.index);
+                    }}
+                    className="w-full text-left flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-frost/90 hover:bg-white/5 transition-colors"
+                  >
+                    <span className="mono text-gold w-5">{ch.code}</span>
+                    <span className="truncate">{ch.shortLabel}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>
