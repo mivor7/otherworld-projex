@@ -1146,41 +1146,17 @@ export function OtherWorldDirector() {
         }
         if (!(await sleep(520))) return;
 
-        setStepProgress(0.5);
+        setStepProgress(0.6);
         const buyBtn = await waitForButtonByText("buy", stageEl, 2200);
         if (buyBtn) {
-          setLine("Filling the order — instant $OWP added directly to our simulated balance!");
+          setLine("Buying — the $OWP lands in our simulated balance up in the navbar.");
           setMood("excited");
           await aimAndClick(buyBtn, 560, true);
         }
-        if (!(await sleep(1050))) return;
-
-        // Scroll to the Three Wings grid
-        setStepProgress(0.78);
-        const wingsGrid = document.getElementById("owp-wings");
-        const firstWingLink =
-          wingsGrid?.querySelector<HTMLElement>("a.lot-card") ||
-          findButtonByText("view lots", document);
-        if (firstWingLink) {
-          scrollElementIntoComfortZone(wingsGrid || firstWingLink);
-          if (!(await sleep(480))) return;
-          setLine(
-            "Three interconnected wings — The Arcade, The Auction House, and The Bounty Board — all settle from one balance."
-          );
-          setMood("impressed");
-          await aimAndClick(firstWingLink, 680, false);
-        }
-        if (!(await sleep(1200))) return;
+        if (!(await sleep(1100))) return;
       } else if (chapter === 1) {
         // CHAPTER 02: Frog Flip (/games/flip) — Live 3x Streak, Bounty Pot Fill & Cash Out
-        setStepProgress(0.2);
-
-        const frogSideBtn = await waitForButtonByText("frog", stageEl, 2000);
-        if (frogSideBtn) {
-          await aimAndClick(frogSideBtn, 420, true);
-        }
-
-        setStepProgress(0.38);
+        setStepProgress(0.3);
         const flipBtn = await waitForButtonByText("flip it", stageEl, 2500);
         if (flipBtn) {
           setLine("Calling 🐸 Frog with 500 $OWP — watch both the navbar balance and bounty meter move!");
@@ -1312,16 +1288,10 @@ export function OtherWorldDirector() {
         }
 
         if (!(await sleep(2400))) return;
-        setStepProgress(0.65);
-        setLine(
-          "Halfway across at the safe median — now threading the upper lanes toward the +10 goal verge!"
-        );
+        setStepProgress(0.7);
+        setLine("Every hop is replayed on the server to verify the score frame-by-frame.");
         setMood("excited");
-        if (!(await sleep(2800))) return;
-        setStepProgress(0.95);
-        setLine("Full crossing completed! Server replay verifies every hop frame-by-frame.");
-        setMood("impressed");
-        if (!(await sleep(900))) return;
+        if (!(await sleep(2200))) return;
       } else if (chapter === 5) {
         // CHAPTER 06: Frogris (/games/frogris) — 60 Hz Falling Blocks!
         setStepProgress(0.25);
@@ -1472,17 +1442,6 @@ export function OtherWorldDirector() {
         const fairnessStage = await waitForRouteAndStage("/fairness", "main");
         if (!fairnessStage || isCancelled()) return;
         fairnessStage.setAttribute("data-owp-stage", "active");
-        if (!(await sleep(450))) return;
-
-        const randomizeBtn = findButtonByText("randomize", fairnessStage);
-        if (randomizeBtn) {
-          setLine(
-            "Half of every roll is your browser's Client Seed — click Randomize anytime after the House commits."
-          );
-          setMood("focused");
-          await aimAndClick(randomizeBtn, 520, true);
-        }
-        if (!(await sleep(750))) return;
 
         const verifierEl = document.getElementById("verifier");
         if (verifierEl) {
@@ -1495,33 +1454,24 @@ export function OtherWorldDirector() {
           const recomputeBtn = findButtonByText("recompute roll", verifierEl);
           if (recomputeBtn) {
             setLine(
-              "Running the Independent Verifier — computing HMAC-SHA256(serverSeed, clientSeed:nonce)…"
+              "Recomputing a roll with HMAC-SHA256 right in your browser — no trust required."
             );
             setMood("excited");
             await aimAndClick(recomputeBtn, 520, true);
           }
-          if (!(await sleep(800))) return;
-
-          const deriveBtn = findButtonByText("derive blackjack deck", verifierEl);
-          if (deriveBtn) {
-            setLine(
-              "And re-deriving all 52 cards of the committed Blackjack shoe right here in the browser!"
-            );
-            await aimAndClick(deriveBtn, 520, true);
-          }
-          if (!(await sleep(1100))) return;
+          if (!(await sleep(1000))) return;
         }
 
         // Visit /treasury — the vault that backs the whole house
         setStepProgress(0.7);
         setLine(
-          "Finally, The Treasury streams live Solana vault balances, deposits, and automatic prize payouts. Now — let's open the vault."
+          "Finally, The Treasury — live Solana vault balances and payouts. Now, let's open the vault."
         );
         setMood("impressed");
         const treasuryStage = await waitForRouteAndStage("/treasury", "main");
         if (!treasuryStage || isCancelled()) return;
         window.scrollTo({ top: 0, behavior: "smooth" });
-        if (!(await sleep(2100))) return;
+        if (!(await sleep(1500))) return;
 
         // GRAND FINALE: vault doors seal over the Treasury, the wheel turns,
         // and they part onto the homepage's Three Wings.
@@ -1573,26 +1523,8 @@ export function OtherWorldDirector() {
         }
         if (isCancelled()) return;
 
-        // Present each wing on the real homepage cards
-        setStepProgress(0.92);
-        if (wingsEl) {
-          wingsEl.setAttribute("data-owp-stage", "active");
-          const cards = Array.from(
-            wingsEl.querySelectorAll<HTMLElement>("a.lot-card")
-          ).slice(0, 3);
-          const wingLines = [
-            "Wing I — The Arcade. Six provably fair games: the ones you just watched me play.",
-            "Wing II — The Auction House. Escrowed $OWP bids with anti-snipe closings.",
-            "Wing III — The Bounty Board. Fixed $OWP pools that unlock as the games are played.",
-          ];
-          for (let i = 0; i < cards.length; i++) {
-            if (isCancelled()) return;
-            setLine(wingLines[i] ?? wingLines[0]);
-            setMood(i === 2 ? "excited" : "impressed");
-            if (!(await aimAndClick(cards[i], 900, false))) return;
-            if (!(await sleep(1100))) return;
-          }
-        }
+        // Doors are open on the Three Wings — finish right here.
+        if (wingsEl) wingsEl.setAttribute("data-owp-stage", "active");
       }
 
       setStepProgress(1);
